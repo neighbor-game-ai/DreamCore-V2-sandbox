@@ -1,8 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { v4: uuidv4 } = require('uuid');
+const db = require('./database');
 
+// Base directory for user files (game code, assets)
 const USERS_DIR = path.join(__dirname, '..', 'users');
 
 // Ensure users directory exists
@@ -10,7 +11,69 @@ if (!fs.existsSync(USERS_DIR)) {
   fs.mkdirSync(USERS_DIR, { recursive: true });
 }
 
-const INITIAL_HTML = `<!DOCTYPE html>
+// Initialize users directory git
+const initUsersGit = () => {
+  const gitDir = path.join(USERS_DIR, '.git');
+  if (!fs.existsSync(gitDir)) {
+    try {
+      execSync('git init', { cwd: USERS_DIR, stdio: 'ignore' });
+      execSync('git config user.email "gamecreator@local"', { cwd: USERS_DIR, stdio: 'ignore' });
+      execSync('git config user.name "Game Creator"', { cwd: USERS_DIR, stdio: 'ignore' });
+      // Create .gitignore
+      fs.writeFileSync(path.join(USERS_DIR, '.gitignore'), '# Exclude project-level git\n*/*/.git/\n');
+      execSync('git add -A', { cwd: USERS_DIR, stdio: 'ignore' });
+      execSync('git commit -m "Initialize users directory" --allow-empty', { cwd: USERS_DIR, stdio: 'ignore' });
+      console.log('Users directory git initialized');
+    } catch (e) {
+      console.log('Git init for users directory failed:', e.message);
+    }
+  }
+};
+
+initUsersGit();
+
+// Run migration from JSON files if needed
+const runMigration = () => {
+  try {
+    const result = db.migrateFromJsonFiles(USERS_DIR);
+    if (result.migratedUsers > 0 || result.migratedProjects > 0) {
+      console.log('Migration completed:', result);
+    }
+  } catch (e) {
+    console.error('Migration failed:', e);
+  }
+};
+
+runMigration();
+
+// Helper to execute git commands
+const execGit = (cmd, cwd) => {
+  try {
+    return execSync(cmd, { cwd, stdio: 'pipe', encoding: 'utf-8' }).trim();
+  } catch (e) {
+    return null;
+  }
+};
+
+// Get project directory path
+const getProjectDir = (visitorId, projectId) => {
+  return path.join(USERS_DIR, visitorId, projectId);
+};
+
+// Ensure project directory exists with git
+const ensureProjectDir = (visitorId, projectId) => {
+  const projectDir = getProjectDir(visitorId, projectId);
+
+  if (!fs.existsSync(projectDir)) {
+    fs.mkdirSync(projectDir, { recursive: true });
+
+    // Initialize git for the project
+    execGit('git init', projectDir);
+    execGit('git config user.email "gamecreator@local"', projectDir);
+    execGit('git config user.name "Game Creator"', projectDir);
+
+    // Create initial index.html
+    const initialHtml = `<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -41,425 +104,444 @@ const INITIAL_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-class UserManager {
-  constructor() {
-    this.sessions = new Map();
-    this.initUsersGit();
+    fs.writeFileSync(path.join(projectDir, 'index.html'), initialHtml);
+
+    // Initial commit
+    execGit('git add -A', projectDir);
+    execGit('git commit -m "Initial project setup"', projectDir);
+
+    console.log('Created project directory:', projectDir);
   }
 
-  // === Git Helper Methods ===
+  return projectDir;
+};
 
-  execGit(command, cwd) {
-    try {
-      return execSync(command, {
-        cwd,
-        encoding: 'utf-8',
-        stdio: ['pipe', 'pipe', 'pipe']
-      }).trim();
-    } catch (error) {
-      console.error(`Git error in ${cwd}:`, error.message);
-      return null;
+// Commit to users-level git (activity log)
+const commitToUsers = (message) => {
+  try {
+    execGit('git add -A', USERS_DIR);
+    const status = execGit('git status --porcelain', USERS_DIR);
+    if (status && status.trim()) {
+      execGit(`git commit -m "${message.replace(/"/g, '\\"')}"`, USERS_DIR);
+    }
+  } catch (e) {
+    // Ignore errors
+  }
+};
+
+// Commit to project git
+const commitToProject = (projectDir, message) => {
+  const status = execGit('git status --porcelain', projectDir);
+  if (!status) return null;
+
+  execGit('git add -A', projectDir);
+  const result = execGit(`git commit -m "${message.replace(/"/g, '\\"')}"`, projectDir);
+
+  if (result !== null) {
+    const hash = execGit('git rev-parse --short HEAD', projectDir);
+    return hash;
+  }
+  return null;
+};
+
+// ==================== User Operations ====================
+
+const getOrCreateUser = (visitorId) => {
+  const user = db.getOrCreateUser(visitorId);
+
+  // Ensure visitor directory exists
+  const visitorDir = path.join(USERS_DIR, visitorId);
+  if (!fs.existsSync(visitorDir)) {
+    fs.mkdirSync(visitorDir, { recursive: true });
+    commitToUsers(`New user: ${visitorId}`);
+  }
+
+  return user.visitor_id;
+};
+
+// ==================== Project Operations ====================
+
+const getProjects = (visitorId) => {
+  const user = db.getUserByVisitorId(visitorId);
+  if (!user) return [];
+
+  const projects = db.getProjectsByUserId(user.id);
+  return projects.map(p => ({
+    id: p.id,
+    name: p.name,
+    isPublic: !!p.is_public,
+    remixedFrom: p.remixed_from,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at
+  }));
+};
+
+const createProject = (visitorId, name = 'New Game') => {
+  const user = db.getUserByVisitorId(visitorId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const project = db.createProject(user.id, name);
+
+  // Create project directory
+  ensureProjectDir(visitorId, project.id);
+
+  // Commit to users git
+  commitToUsers(`Create project: ${name}`);
+
+  return {
+    id: project.id,
+    name: project.name,
+    createdAt: project.created_at,
+    updatedAt: project.updated_at
+  };
+};
+
+const deleteProject = (visitorId, projectId) => {
+  const project = db.getProjectById(projectId);
+  if (!project) return;
+
+  // Delete from database
+  db.deleteProject(projectId);
+
+  // Delete project directory
+  const projectDir = getProjectDir(visitorId, projectId);
+  if (fs.existsSync(projectDir)) {
+    fs.rmSync(projectDir, { recursive: true, force: true });
+  }
+
+  commitToUsers(`Delete project: ${projectId}`);
+};
+
+const renameProject = (visitorId, projectId, newName) => {
+  const project = db.updateProject(projectId, newName);
+  if (!project) return null;
+
+  commitToUsers(`Rename project: ${newName}`);
+
+  return {
+    id: project.id,
+    name: project.name,
+    createdAt: project.created_at,
+    updatedAt: project.updated_at
+  };
+};
+
+// ==================== File Operations ====================
+
+// Recursively list all files in project directory
+const listProjectFiles = (visitorId, projectId, subdir = '') => {
+  const projectDir = getProjectDir(visitorId, projectId);
+  const targetDir = subdir ? path.join(projectDir, subdir) : projectDir;
+
+  if (!fs.existsSync(targetDir)) return [];
+
+  const results = [];
+  const entries = fs.readdirSync(targetDir);
+
+  for (const entry of entries) {
+    if (entry.startsWith('.')) continue;  // Skip hidden files
+    if (entry.endsWith('.json') && !subdir) continue;  // Skip root-level json
+
+    const entryPath = path.join(targetDir, entry);
+    const relativePath = subdir ? `${subdir}/${entry}` : entry;
+    const stat = fs.statSync(entryPath);
+
+    if (stat.isDirectory()) {
+      // Recursively get files from subdirectory
+      const subFiles = listProjectFiles(visitorId, projectId, relativePath);
+      results.push(...subFiles);
+    } else if (stat.isFile()) {
+      results.push(relativePath);
     }
   }
 
-  // Initialize Git for users/ folder (global activity log)
-  initUsersGit() {
-    const gitDir = path.join(USERS_DIR, '.git');
-    if (!fs.existsSync(gitDir)) {
-      console.log('Initializing Git for users/ folder...');
-      this.execGit('git init', USERS_DIR);
-      this.execGit('git config user.email "gamecreator@local"', USERS_DIR);
-      this.execGit('git config user.name "GameCreator"', USERS_DIR);
+  return results;
+};
 
-      // Create .gitignore to exclude project .git folders
-      const gitignore = path.join(USERS_DIR, '.gitignore');
-      fs.writeFileSync(gitignore, '# Exclude project-level git\n*/*/.git/\n');
+// List only directories in project
+const listProjectDirs = (visitorId, projectId) => {
+  const projectDir = getProjectDir(visitorId, projectId);
+  if (!fs.existsSync(projectDir)) return [];
 
-      this.execGit('git add -A', USERS_DIR);
-      this.execGit('git commit -m "Initial commit" --allow-empty', USERS_DIR);
-      console.log('Users Git initialized');
+  return fs.readdirSync(projectDir).filter(f => {
+    const stat = fs.statSync(path.join(projectDir, f));
+    return stat.isDirectory() && !f.startsWith('.');
+  });
+};
+
+const readProjectFile = (visitorId, projectId, filename) => {
+  const filePath = path.join(getProjectDir(visitorId, projectId), filename);
+  if (fs.existsSync(filePath)) {
+    // Check if it's a binary file
+    const ext = path.extname(filename).toLowerCase();
+    const binaryExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.mp3', '.wav', '.ogg'];
+    if (binaryExtensions.includes(ext)) {
+      return `[Binary file: ${filename}]`;
     }
+    return fs.readFileSync(filePath, 'utf-8');
+  }
+  return null;
+};
+
+const writeProjectFile = (visitorId, projectId, filename, content) => {
+  const projectDir = ensureProjectDir(visitorId, projectId);
+  const filePath = path.join(projectDir, filename);
+
+  // Create subdirectory if needed
+  const fileDir = path.dirname(filePath);
+  if (!fs.existsSync(fileDir)) {
+    fs.mkdirSync(fileDir, { recursive: true });
   }
 
-  // Initialize Git for a project
-  initProjectGit(projectDir) {
+  fs.writeFileSync(filePath, content);
+
+  // Update project timestamp
+  db.touchProject(projectId);
+
+  return filePath;
+};
+
+// Search files in user's past projects using git
+const searchPastProjects = (visitorId, query) => {
+  const visitorDir = path.join(USERS_DIR, visitorId);
+  if (!fs.existsSync(visitorDir)) return [];
+
+  const results = [];
+  const projectDirs = fs.readdirSync(visitorDir).filter(f => {
+    const stat = fs.statSync(path.join(visitorDir, f));
+    return stat.isDirectory() && !f.startsWith('.');
+  });
+
+  for (const projectId of projectDirs) {
+    const projectDir = path.join(visitorDir, projectId);
     const gitDir = path.join(projectDir, '.git');
-    if (!fs.existsSync(gitDir)) {
-      this.execGit('git init', projectDir);
-      this.execGit('git config user.email "gamecreator@local"', projectDir);
-      this.execGit('git config user.name "GameCreator"', projectDir);
-      return true;
-    }
-    return false;
-  }
 
-  // Commit to users/ folder (global log)
-  commitToUsers(message) {
-    this.execGit('git add -A', USERS_DIR);
-    const result = this.execGit(`git commit -m "${message.replace(/"/g, '\\"')}" --allow-empty`, USERS_DIR);
-    if (result) {
-      console.log('Users commit:', message);
-    }
-  }
+    if (!fs.existsSync(gitDir)) continue;
 
-  // Commit to project folder
-  commitToProject(projectDir, message) {
-    // Skip if no changes
-    const status = this.execGit('git status --porcelain', projectDir);
-    if (!status) return null;
-
-    this.execGit('git add -A', projectDir);
-    const result = this.execGit(`git commit -m "${message.replace(/"/g, '\\"')}"`, projectDir);
-
-    if (result) {
-      // Get the commit hash
-      const hash = this.execGit('git rev-parse --short HEAD', projectDir);
-      console.log('Project commit:', hash, message);
-      return hash;
-    }
-    return null;
-  }
-
-  // === User Management ===
-
-  getOrCreateUser(visitorId) {
-    if (!visitorId) {
-      visitorId = uuidv4();
-    }
-
-    const userDir = path.join(USERS_DIR, visitorId);
-    const projectsFile = path.join(userDir, 'projects.json');
-    const isNew = !fs.existsSync(userDir);
-
-    if (isNew) {
-      fs.mkdirSync(userDir, { recursive: true });
-      fs.writeFileSync(projectsFile, JSON.stringify({ projects: [] }, null, 2));
-
-      // Commit to users/ git
-      this.commitToUsers(`New user: ${visitorId}`);
-    }
-
-    return visitorId;
-  }
-
-  // === Project Management ===
-
-  getProjects(visitorId) {
-    const projectsFile = path.join(USERS_DIR, visitorId, 'projects.json');
-    if (fs.existsSync(projectsFile)) {
-      const data = JSON.parse(fs.readFileSync(projectsFile, 'utf-8'));
-      return data.projects || [];
-    }
-    return [];
-  }
-
-  createProject(visitorId, name) {
-    const projectId = uuidv4();
-    const projectDir = path.join(USERS_DIR, visitorId, projectId);
-    const projectsFile = path.join(USERS_DIR, visitorId, 'projects.json');
-
-    // Create project directory
-    fs.mkdirSync(projectDir, { recursive: true });
-
-    // Create initial game file
-    fs.writeFileSync(path.join(projectDir, 'index.html'), INITIAL_HTML);
-
-    // Initialize project Git
-    this.initProjectGit(projectDir);
-    this.commitToProject(projectDir, 'Initial project setup');
-
-    // Update projects list
-    const data = fs.existsSync(projectsFile)
-      ? JSON.parse(fs.readFileSync(projectsFile, 'utf-8'))
-      : { projects: [] };
-
-    const project = {
-      id: projectId,
-      name: name || 'New Game',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    data.projects.unshift(project);
-    fs.writeFileSync(projectsFile, JSON.stringify(data, null, 2));
-
-    // Commit to users/ git
-    this.commitToUsers(`New project: ${name || 'New Game'} (${visitorId}/${projectId})`);
-
-    // Initialize session
-    this.sessions.set(`${visitorId}-${projectId}`, {
-      conversationHistory: [],
-      createdAt: new Date().toISOString()
-    });
-
-    return project;
-  }
-
-  deleteProject(visitorId, projectId) {
-    const projectDir = path.join(USERS_DIR, visitorId, projectId);
-    const projectsFile = path.join(USERS_DIR, visitorId, 'projects.json');
-
-    // Get project name for commit message
-    let projectName = projectId;
-    if (fs.existsSync(projectsFile)) {
-      const data = JSON.parse(fs.readFileSync(projectsFile, 'utf-8'));
-      const project = data.projects.find(p => p.id === projectId);
-      if (project) projectName = project.name;
-    }
-
-    // Remove project directory
-    if (fs.existsSync(projectDir)) {
-      fs.rmSync(projectDir, { recursive: true });
-    }
-
-    // Update projects list
-    if (fs.existsSync(projectsFile)) {
-      const data = JSON.parse(fs.readFileSync(projectsFile, 'utf-8'));
-      data.projects = data.projects.filter(p => p.id !== projectId);
-      fs.writeFileSync(projectsFile, JSON.stringify(data, null, 2));
-    }
-
-    // Commit to users/ git
-    this.commitToUsers(`Deleted project: ${projectName}`);
-
-    // Clear session
-    this.sessions.delete(`${visitorId}-${projectId}`);
-  }
-
-  renameProject(visitorId, projectId, newName) {
-    const projectsFile = path.join(USERS_DIR, visitorId, 'projects.json');
-    if (fs.existsSync(projectsFile)) {
-      const data = JSON.parse(fs.readFileSync(projectsFile, 'utf-8'));
-      const project = data.projects.find(p => p.id === projectId);
-      if (project) {
-        const oldName = project.name;
-        project.name = newName;
-        project.updatedAt = new Date().toISOString();
-        fs.writeFileSync(projectsFile, JSON.stringify(data, null, 2));
-
-        // Commit to users/ git
-        this.commitToUsers(`Renamed project: ${oldName} -> ${newName}`);
-
-        return project;
-      }
-    }
-    return null;
-  }
-
-  // === Session & History Management ===
-
-  getSessionKey(visitorId, projectId) {
-    return `${visitorId}-${projectId}`;
-  }
-
-  getSession(visitorId, projectId) {
-    const key = this.getSessionKey(visitorId, projectId);
-    if (!this.sessions.has(key)) {
-      const history = this.loadChatHistory(visitorId, projectId);
-      this.sessions.set(key, {
-        conversationHistory: history,
-        createdAt: new Date().toISOString()
+    // Search in git log for the query
+    const grepResult = execGit(`git log --all -p --grep="${query}" --oneline -5`, projectDir);
+    if (grepResult && grepResult.trim()) {
+      results.push({
+        projectId,
+        type: 'commit',
+        matches: grepResult.substring(0, 500)
       });
     }
-    return this.sessions.get(key);
-  }
 
-  loadChatHistory(visitorId, projectId) {
-    const historyFile = path.join(USERS_DIR, visitorId, projectId, 'chat-history.json');
-    if (fs.existsSync(historyFile)) {
-      try {
-        const data = JSON.parse(fs.readFileSync(historyFile, 'utf-8'));
-        return data.history || [];
-      } catch (e) {
-        return [];
-      }
-    }
-    return [];
-  }
-
-  saveChatHistory(visitorId, projectId) {
-    const session = this.sessions.get(this.getSessionKey(visitorId, projectId));
-    if (!session) return;
-
-    const historyFile = path.join(USERS_DIR, visitorId, projectId, 'chat-history.json');
-    const data = {
-      history: session.conversationHistory,
-      savedAt: new Date().toISOString()
-    };
-    fs.writeFileSync(historyFile, JSON.stringify(data, null, 2));
-  }
-
-  getProjectDir(visitorId, projectId) {
-    return path.join(USERS_DIR, visitorId, projectId);
-  }
-
-  addToHistory(visitorId, projectId, role, content) {
-    const session = this.getSession(visitorId, projectId);
-    if (session) {
-      session.conversationHistory.push({
-        role,
-        content,
-        timestamp: new Date().toISOString()
-      });
-      this.saveChatHistory(visitorId, projectId);
-    }
-    this.updateProjectTimestamp(visitorId, projectId);
-  }
-
-  updateProjectTimestamp(visitorId, projectId) {
-    const projectsFile = path.join(USERS_DIR, visitorId, 'projects.json');
-    if (fs.existsSync(projectsFile)) {
-      const data = JSON.parse(fs.readFileSync(projectsFile, 'utf-8'));
-      const project = data.projects.find(p => p.id === projectId);
-      if (project) {
-        project.updatedAt = new Date().toISOString();
-        fs.writeFileSync(projectsFile, JSON.stringify(data, null, 2));
-      }
-    }
-  }
-
-  getConversationHistory(visitorId, projectId, limit = 50) {
-    const session = this.getSession(visitorId, projectId);
-    if (!session) return [];
-    const history = session.conversationHistory;
-    return history.length > limit ? history.slice(-limit) : history;
-  }
-
-  getFullHistoryForContext(visitorId, projectId, maxItems = 20) {
-    const session = this.getSession(visitorId, projectId);
-    if (!session) return [];
-    const history = session.conversationHistory;
-    return history.length > maxItems ? history.slice(-maxItems) : history;
-  }
-
-  // === File Operations ===
-
-  readProjectFile(visitorId, projectId, filename) {
-    const filePath = path.join(USERS_DIR, visitorId, projectId, filename);
-    if (fs.existsSync(filePath)) {
-      return fs.readFileSync(filePath, 'utf-8');
-    }
-    return null;
-  }
-
-  writeProjectFile(visitorId, projectId, filename, content) {
-    const filePath = path.join(USERS_DIR, visitorId, projectId, filename);
-    fs.writeFileSync(filePath, content);
-  }
-
-  listProjectFiles(visitorId, projectId) {
-    const projectDir = path.join(USERS_DIR, visitorId, projectId);
-    if (fs.existsSync(projectDir)) {
-      return fs.readdirSync(projectDir).filter(f => {
-        if (f.startsWith('.')) return false;
-        const filePath = path.join(projectDir, f);
-        if (fs.statSync(filePath).isDirectory()) return false;
-        if (f.endsWith('.json')) return false;
-        return true;
-      });
-    }
-    return [];
-  }
-
-  // === Git-based Version Management ===
-
-  // Create a version (Git commit) after code update
-  createVersionSnapshot(visitorId, projectId, message = '') {
-    const projectDir = path.join(USERS_DIR, visitorId, projectId);
-    const indexPath = path.join(projectDir, 'index.html');
-
-    if (!fs.existsSync(indexPath)) return null;
-
-    const content = fs.readFileSync(indexPath, 'utf-8');
-
-    // Skip if it's just the initial welcome page
-    if (content.length < 1000 && content.includes('Welcome to Game Creator')) {
-      return null;
-    }
-
-    // Commit to project Git
-    const hash = this.commitToProject(projectDir, message || 'Update');
-
-    if (hash) {
-      // Also commit to users/ for global log
-      this.commitToUsers(`Update: ${message} (${visitorId}/${projectId})`);
-      return { id: hash, message };
-    }
-
-    return null;
-  }
-
-  // Get list of versions from Git log
-  getVersions(visitorId, projectId) {
-    const projectDir = path.join(USERS_DIR, visitorId, projectId);
-
-    if (!fs.existsSync(path.join(projectDir, '.git'))) {
-      return [];
-    }
-
-    // Get git log with hash, message, timestamp
-    const logOutput = this.execGit(
-      'git log --pretty=format:"%h|%s|%ai" -50',
-      projectDir
-    );
-
-    if (!logOutput) return [];
-
-    // Filter out restore-related commits
-    const restorePatterns = ['Before restore', 'Restored to', 'Initial project setup', 'Migration from'];
-
-    const allCommits = logOutput.split('\n').filter(line => line.trim());
-
-    const versions = [];
-    let versionNum = 1;
-
-    for (const line of allCommits) {
-      const [hash, message, timestamp] = line.split('|');
-
-      // Skip restore-related commits
-      const isRestoreCommit = restorePatterns.some(pattern =>
-        message && message.includes(pattern)
-      );
-
-      if (!isRestoreCommit) {
-        versions.push({
-          id: hash,
-          number: versionNum++,
-          message: message || 'Update',
-          timestamp: new Date(timestamp).toISOString(),
-          hash
+    // Search in current files
+    const files = listProjectFiles(visitorId, projectId);
+    for (const file of files) {
+      const content = readProjectFile(visitorId, projectId, file);
+      if (content && content.toLowerCase().includes(query.toLowerCase())) {
+        results.push({
+          projectId,
+          type: 'file',
+          file,
+          preview: content.substring(0, 200)
         });
       }
     }
-
-    // Limit to 20 versions for display
-    return versions.slice(0, 20);
   }
 
-  // Restore a specific version using Git
-  restoreVersion(visitorId, projectId, versionId) {
-    const projectDir = path.join(USERS_DIR, visitorId, projectId);
+  return results.slice(0, 10);  // Limit results
+};
 
-    if (!fs.existsSync(path.join(projectDir, '.git'))) {
-      return { success: false, error: 'Git not initialized' };
-    }
+// ==================== Chat History Operations ====================
 
-    // First, commit current state as backup
-    this.commitToProject(projectDir, 'Before restore');
+const getConversationHistory = (visitorId, projectId, limit = 50) => {
+  const messages = db.getChatHistory(projectId);
+  const result = messages.map(m => ({
+    role: m.role,
+    content: m.message,
+    timestamp: m.created_at
+  }));
+  return result.length > limit ? result.slice(-limit) : result;
+};
 
-    // Checkout the specific version's files (not the whole commit)
-    const result = this.execGit(`git checkout ${versionId} -- .`, projectDir);
+const addToHistory = (visitorId, projectId, role, content) => {
+  db.addChatMessage(projectId, role, content);
+  db.touchProject(projectId);
+};
 
-    if (result !== null) {
-      // Commit the restored state
-      this.commitToProject(projectDir, `Restored to ${versionId}`);
-      this.commitToUsers(`Restored: ${versionId} (${visitorId}/${projectId})`);
+// ==================== Version Control Operations ====================
 
-      return { success: true, versionId };
-    }
+const createVersionSnapshot = (visitorId, projectId, message = '') => {
+  const projectDir = getProjectDir(visitorId, projectId);
+  const indexPath = path.join(projectDir, 'index.html');
 
-    return { success: false, error: 'Failed to restore version' };
+  if (!fs.existsSync(indexPath)) return null;
+
+  const content = fs.readFileSync(indexPath, 'utf-8');
+
+  // Skip if it's just the initial welcome page
+  if (content.length < 1000 && content.includes('Welcome to Game Creator')) {
+    return null;
   }
-}
 
-module.exports = new UserManager();
+  // Commit to project Git
+  const hash = commitToProject(projectDir, message || 'Update');
+
+  if (hash) {
+    // Also commit to users/ for global log
+    commitToUsers(`Update: ${message} (${visitorId}/${projectId})`);
+    return { id: hash, message };
+  }
+
+  return null;
+};
+
+const getVersions = (visitorId, projectId) => {
+  const projectDir = getProjectDir(visitorId, projectId);
+
+  if (!fs.existsSync(path.join(projectDir, '.git'))) {
+    return [];
+  }
+
+  const logOutput = execGit('git log --pretty=format:"%h|%s|%ai" -50', projectDir);
+  if (!logOutput) return [];
+
+  // Filter out internal commits
+  const restorePatterns = ['Before restore', 'Restored to', 'Initial project setup', 'Migration from'];
+
+  const allCommits = logOutput.split('\n').filter(line => line.trim());
+  const versions = [];
+  let versionNum = 1;
+
+  for (const line of allCommits) {
+    const [hash, message, timestamp] = line.split('|');
+
+    const isRestoreCommit = restorePatterns.some(pattern =>
+      message && message.includes(pattern)
+    );
+
+    if (!isRestoreCommit) {
+      versions.push({
+        id: hash,
+        number: versionNum++,
+        message: message || 'Update',
+        timestamp: new Date(timestamp).toISOString(),
+        hash
+      });
+    }
+  }
+
+  return versions.slice(0, 20);
+};
+
+const restoreVersion = (visitorId, projectId, versionId) => {
+  const projectDir = getProjectDir(visitorId, projectId);
+
+  if (!fs.existsSync(path.join(projectDir, '.git'))) {
+    return { success: false, error: 'Git not initialized' };
+  }
+
+  // First, commit current state as backup
+  commitToProject(projectDir, 'Before restore');
+
+  // Checkout the specific version's files
+  const result = execGit(`git checkout ${versionId} -- .`, projectDir);
+
+  if (result !== null) {
+    commitToProject(projectDir, `Restored to ${versionId}`);
+    commitToUsers(`Restored: ${versionId} (${visitorId}/${projectId})`);
+    return { success: true, versionId };
+  }
+
+  return { success: false, error: 'Failed to restore version' };
+};
+
+// ==================== Public Projects ====================
+
+const setProjectPublic = (visitorId, projectId, isPublic) => {
+  const project = db.setProjectPublic(projectId, isPublic);
+  return {
+    id: project.id,
+    name: project.name,
+    isPublic: !!project.is_public
+  };
+};
+
+const getPublicProjects = (limit = 50) => {
+  return db.getPublicProjects(limit);
+};
+
+// ==================== Remix ====================
+
+const remixProject = (visitorId, sourceProjectId) => {
+  const sourceProject = db.getProjectById(sourceProjectId);
+  if (!sourceProject || !sourceProject.is_public) {
+    throw new Error('Project not found or not public');
+  }
+
+  const user = db.getUserByVisitorId(visitorId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Find source visitor
+  const sourceUser = db.getUserById(sourceProject.user_id);
+  if (!sourceUser) {
+    throw new Error('Source user not found');
+  }
+
+  // Create new project as remix
+  const newProject = db.createProject(user.id, `${sourceProject.name} (Remix)`, sourceProjectId);
+
+  // Copy files
+  const sourceDir = getProjectDir(sourceUser.visitor_id, sourceProjectId);
+  const targetDir = ensureProjectDir(visitorId, newProject.id);
+
+  const files = listProjectFiles(sourceUser.visitor_id, sourceProjectId);
+  for (const file of files) {
+    const content = fs.readFileSync(path.join(sourceDir, file));
+    fs.writeFileSync(path.join(targetDir, file), content);
+  }
+
+  // Commit the remix
+  execGit('git add -A', targetDir);
+  execGit(`git commit -m "Remixed from ${sourceProjectId}"`, targetDir);
+
+  commitToUsers(`Remix project: ${sourceProjectId} -> ${newProject.id}`);
+
+  return {
+    id: newProject.id,
+    name: newProject.name,
+    remixedFrom: sourceProjectId,
+    createdAt: newProject.created_at
+  };
+};
+
+module.exports = {
+  getProjectDir,
+  ensureProjectDir,
+
+  // User operations
+  getOrCreateUser,
+
+  // Project operations
+  getProjects,
+  createProject,
+  deleteProject,
+  renameProject,
+  setProjectPublic,
+  getPublicProjects,
+  remixProject,
+
+  // File operations
+  listProjectFiles,
+  listProjectDirs,
+  readProjectFile,
+  writeProjectFile,
+  searchPastProjects,
+
+  // Chat operations
+  getConversationHistory,
+  addToHistory,
+
+  // Version control
+  createVersionSnapshot,
+  getVersions,
+  restoreVersion,
+};

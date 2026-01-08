@@ -9,6 +9,12 @@ node_modules/
 # User data (contains generated games and personal data)
 users/
 
+# Database
+data/
+*.db
+*.db-wal
+*.db-shm
+
 # OS files
 .DS_Store
 Thumbs.db

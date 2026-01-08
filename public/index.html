@@ -4,13 +4,31 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Game Creator MVP</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <div class="container">
+  <!-- Project List View (shown at /) -->
+  <div class="project-list-view hidden" id="projectListView">
+    <div class="project-list-header">
+      <h1>Game Creator</h1>
+      <span class="status-indicator" id="listStatusIndicator">Connecting...</span>
+    </div>
+    <div class="project-list-content">
+      <div class="project-list-actions">
+        <button id="createProjectButton" class="create-project-btn">+ New Project</button>
+      </div>
+      <div class="project-grid" id="projectGrid">
+        <!-- Projects will be loaded here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Project Editor View (shown at /project/:id) -->
+  <div class="container hidden" id="editorView">
     <!-- Left: Chat Panel -->
     <div class="chat-panel">
       <div class="chat-header">
+        <button id="homeButton" class="home-btn" title="Back to Projects">←</button>
         <h1>Game Creator</h1>
         <div class="header-actions">
           <button id="newProjectButton" title="New Project">+ New</button>
@@ -38,6 +56,20 @@
         <div class="streaming-output" id="streamingOutput"></div>
       </div>
 
+      <!-- Debug Options -->
+      <div class="debug-options">
+        <label class="toggle-switch">
+          <input type="checkbox" id="disableSkillsToggle">
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">スキル無効</span>
+        </label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="useClaudeToggle">
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">Claude CLI使用</span>
+        </label>
+      </div>
+
       <div class="chat-input-container">
         <textarea
           id="chatInput"
@@ -46,8 +78,62 @@
           disabled
         ></textarea>
         <div class="input-buttons">
+          <button id="assetButton" title="Assets">📁</button>
           <button id="sendButton" disabled>送信</button>
           <button id="stopButton" class="hidden">停止</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Asset Library Modal -->
+    <div class="modal hidden" id="assetModal">
+      <div class="modal-content asset-modal">
+        <div class="modal-header">
+          <h3>Asset Library</h3>
+          <button class="modal-close" id="closeAssetModal">&times;</button>
+        </div>
+        <div class="asset-tabs">
+          <button class="asset-tab active" data-tab="my-assets">My Assets</button>
+          <button class="asset-tab" data-tab="public-assets">Public</button>
+          <button class="asset-tab" data-tab="upload">Upload</button>
+        </div>
+        <div class="asset-content">
+          <!-- My Assets Tab -->
+          <div class="asset-tab-content active" id="my-assets">
+            <div class="asset-search">
+              <input type="text" id="assetSearch" placeholder="Search assets...">
+            </div>
+            <div class="asset-grid" id="myAssetGrid">
+              <!-- Assets will be loaded here -->
+            </div>
+          </div>
+          <!-- Public Assets Tab -->
+          <div class="asset-tab-content" id="public-assets">
+            <div class="asset-grid" id="publicAssetGrid">
+              <!-- Public assets will be loaded here -->
+            </div>
+          </div>
+          <!-- Upload Tab -->
+          <div class="asset-tab-content" id="upload">
+            <div class="upload-area" id="uploadArea">
+              <input type="file" id="fileInput" accept="image/*,audio/*,.json" multiple hidden>
+              <div class="upload-prompt">
+                <span class="upload-icon">📤</span>
+                <p>Drag & drop files here or click to select</p>
+                <p class="upload-hint">Images, audio, JSON (max 10MB)</p>
+              </div>
+            </div>
+            <div class="upload-form hidden" id="uploadForm">
+              <input type="text" id="assetTags" placeholder="Tags (comma separated)">
+              <input type="text" id="assetDescription" placeholder="Description">
+              <button id="uploadSubmit">Upload</button>
+            </div>
+            <div class="upload-preview" id="uploadPreview"></div>
+          </div>
+        </div>
+        <div class="asset-footer">
+          <span id="selectedAssetInfo"></span>
+          <button id="insertAssetButton" class="hidden">Insert into Chat</button>
         </div>
       </div>
     </div>
@@ -77,10 +163,33 @@
         <div class="no-project-message" id="noProjectMessage">
           <p>Select or create a project to start</p>
         </div>
+
+        <!-- Error Panel -->
+        <div class="error-panel hidden" id="errorPanel">
+          <div class="error-panel-header">
+            <span class="error-panel-title">
+              <span class="error-icon">⚠️</span>
+              <span id="errorCount">0</span> Error(s) Detected
+            </span>
+            <div class="error-panel-actions">
+              <button id="autoFixButton" class="auto-fix-btn">🔧 Auto Fix</button>
+              <button id="closeErrorPanel" class="close-error-btn">&times;</button>
+            </div>
+          </div>
+          <div class="error-list" id="errorList">
+            <!-- Errors will be inserted here -->
+          </div>
+        </div>
+
+        <!-- Game Status Indicator -->
+        <div class="game-status" id="gameStatus">
+          <span class="game-status-icon" id="gameStatusIcon">⏳</span>
+          <span class="game-status-text" id="gameStatusText">Loading...</span>
+        </div>
       </div>
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="/app.js"></script>
 </body>
 </html>

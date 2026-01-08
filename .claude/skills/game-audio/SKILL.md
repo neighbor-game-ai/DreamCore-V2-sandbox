@@ -177,6 +177,121 @@ src: ['sound.webm', 'sound.mp3']
 - WebM/Opus: Smaller, better quality
 - MP3: Universal fallback
 
+## 【重要】音声ファイルがない場合の効果音生成
+
+ゲームに音声アセットがない場合は、Web Audio APIで効果音を合成できます：
+
+```javascript
+class SynthAudio {
+  constructor() {
+    this.ctx = null;
+  }
+
+  init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
+  // ヒット音（短いノイズ）
+  playHit() {
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.1);
+  }
+
+  // ジャンプ音（上昇するトーン）
+  playJump() {
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.15);
+  }
+
+  // コイン取得音
+  playCoin() {
+    this.init();
+    [523, 659, 784].forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime + i * 0.08);
+      gain.gain.setValueAtTime(0.15, this.ctx.currentTime + i * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.08 + 0.1);
+      osc.start(this.ctx.currentTime + i * 0.08);
+      osc.stop(this.ctx.currentTime + i * 0.08 + 0.1);
+    });
+  }
+
+  // 爆発音
+  playExplosion() {
+    this.init();
+    const bufferSize = this.ctx.sampleRate * 0.3;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    }
+    const noise = this.ctx.createBufferSource();
+    const gain = this.ctx.createGain();
+    noise.buffer = buffer;
+    noise.connect(gain);
+    gain.connect(this.ctx.destination);
+    gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+    noise.start();
+  }
+
+  // ゲームオーバー音
+  playGameOver() {
+    this.init();
+    [392, 330, 262].forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime + i * 0.3);
+      gain.gain.setValueAtTime(0.15, this.ctx.currentTime + i * 0.3);
+      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.3 + 0.25);
+      osc.start(this.ctx.currentTime + i * 0.3);
+      osc.stop(this.ctx.currentTime + i * 0.3 + 0.25);
+    });
+  }
+}
+
+// 使用例
+const audio = new SynthAudio();
+document.addEventListener('touchstart', () => audio.init(), { once: true });
+
+// ゲーム内で
+audio.playHit();
+audio.playJump();
+audio.playCoin();
+```
+
+**モバイルでは必ず touchstart/click イベントで `audio.init()` を呼んでください。**
+
 ## Common Mistakes
 
 | Wrong | Correct |
@@ -185,3 +300,4 @@ src: ['sound.webm', 'sound.mp3']
 | Playing without user interaction on mobile | Use unlock pattern |
 | Creating new Howl on every play | Reuse Howl instances |
 | Using only one format | Provide webm + mp3 fallback |
+| 音声ファイルなしで音を出そうとする | SynthAudioパターンを使用 |
