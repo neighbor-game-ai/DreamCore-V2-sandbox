@@ -309,6 +309,33 @@ const writeProjectFile = (visitorId, projectId, filename, content) => {
   return filePath;
 };
 
+// Save a generated image to the project's assets directory
+const saveGeneratedImage = (visitorId, projectId, filename, base64Data) => {
+  const projectDir = ensureProjectDir(visitorId, projectId);
+  const assetsDir = path.join(projectDir, 'assets');
+
+  // Ensure assets directory exists
+  if (!fs.existsSync(assetsDir)) {
+    fs.mkdirSync(assetsDir, { recursive: true });
+  }
+
+  // Extract base64 data (remove data:image/png;base64, prefix if present)
+  const base64Content = base64Data.includes(',')
+    ? base64Data.split(',')[1]
+    : base64Data;
+
+  // Convert base64 to buffer and save
+  const buffer = Buffer.from(base64Content, 'base64');
+  const filePath = path.join(assetsDir, filename);
+  fs.writeFileSync(filePath, buffer);
+
+  // Update project timestamp
+  db.touchProject(projectId);
+
+  console.log(`Saved generated image: assets/${filename}`);
+  return `assets/${filename}`;
+};
+
 // Search files in user's past projects using git
 const searchPastProjects = (visitorId, query) => {
   const visitorDir = path.join(USERS_DIR, visitorId);
@@ -547,6 +574,7 @@ module.exports = {
   listProjectDirs,
   readProjectFile,
   writeProjectFile,
+  saveGeneratedImage,
   searchPastProjects,
 
   // Chat operations

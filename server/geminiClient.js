@@ -202,6 +202,162 @@ class GeminiClient {
       req.end();
     });
   }
+
+  /**
+   * Generate image using Gemini Native Image Generation (Nano Banana)
+   * Uses gemini-2.5-flash-image model with generateContent endpoint
+   * @param {Object} options
+   * @param {string} options.prompt - Image description
+   * @param {string} options.style - Optional style hint (pixel, anime, kawaii, etc.)
+   * @param {string} options.size - Image size (default: 512x512)
+   */
+  async generateImage(options) {
+    if (!this.isAvailable()) {
+      throw new Error('Gemini API key not configured');
+    }
+
+    const {
+      prompt,
+      style = '',
+      size = '512x512',
+      transparent = true  // Default to transparent background for game assets
+    } = options;
+
+    // Build enhanced prompt with style
+    let enhancedPrompt = prompt;
+    if (style) {
+      const styleHints = {
+        pixel: 'ピクセルアート風、8ビットスタイル、ドット絵',
+        anime: 'アニメ風、日本のアニメスタイル',
+        kawaii: 'かわいい、キュート、丸みのあるデザイン',
+        realistic: '写実的、リアル、高品質',
+        watercolor: '水彩画風、柔らかいタッチ',
+        flat: 'フラットデザイン、シンプル、ミニマル'
+      };
+      if (styleHints[style]) {
+        enhancedPrompt = `${prompt}, ${styleHints[style]}`;
+      }
+    }
+
+    // Add transparent background instruction for game assets
+    if (transparent) {
+      enhancedPrompt = `${enhancedPrompt}, transparent background, PNG format with alpha channel, isolated game asset, no background, clean edges`;
+    }
+
+    // Parse size to determine aspect ratio
+    const [width, height] = size.split('x').map(Number);
+    let aspectRatio = '1:1';
+    if (width > height) {
+      aspectRatio = width / height >= 1.7 ? '16:9' : '4:3';
+    } else if (height > width) {
+      aspectRatio = height / width >= 1.7 ? '9:16' : '3:4';
+    }
+
+    // Use Gemini 2.5 Flash Image model (Nano Banana)
+    const IMAGE_MODEL = 'gemini-2.5-flash-image';
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+    const requestBody = {
+      contents: [
+        {
+          parts: [
+            { text: `Generate an image: ${enhancedPrompt}` }
+          ]
+        }
+      ],
+      generationConfig: {
+        responseModalities: ['Text', 'Image'],
+        responseMimeType: 'text/plain'
+      }
+    };
+
+    console.log('\n========== Image Generation Request ==========');
+    console.log('Model:', IMAGE_MODEL);
+    console.log('Prompt:', enhancedPrompt);
+    console.log('Aspect Ratio:', aspectRatio);
+    console.log('===============================================\n');
+
+    return new Promise((resolve, reject) => {
+      const url = new URL(endpoint);
+
+      const reqOptions = {
+        hostname: url.hostname,
+        path: url.pathname + url.search,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+
+      const req = https.request(reqOptions, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk.toString();
+        });
+
+        res.on('end', () => {
+          try {
+            const response = JSON.parse(data);
+
+            if (response.error) {
+              console.error('Gemini Image API error:', response.error);
+              reject(new Error(`Image generation failed: ${response.error.message}`));
+              return;
+            }
+
+            // Extract image from response
+            const candidates = response.candidates;
+            if (candidates && candidates.length > 0) {
+              const parts = candidates[0].content?.parts || [];
+
+              // Find the image part in the response
+              for (const part of parts) {
+                if (part.inlineData) {
+                  const imageData = part.inlineData.data;
+                  const mimeType = part.inlineData.mimeType || 'image/png';
+
+                  console.log('Image generated successfully');
+                  resolve({
+                    success: true,
+                    image: `data:${mimeType};base64,${imageData}`,
+                    prompt: enhancedPrompt
+                  });
+                  return;
+                }
+              }
+
+              // No image found, check for text response
+              const textPart = parts.find(p => p.text);
+              if (textPart) {
+                reject(new Error(`Model returned text instead of image: ${textPart.text.substring(0, 100)}`));
+              } else {
+                reject(new Error('No image in response'));
+              }
+            } else {
+              console.error('Unexpected response structure:', JSON.stringify(response).substring(0, 500));
+              reject(new Error('No candidates in response'));
+            }
+          } catch (e) {
+            console.error('Failed to parse Gemini response:', e.message);
+            console.error('Raw response:', data.substring(0, 500));
+            reject(new Error(`Failed to parse response: ${e.message}`));
+          }
+        });
+
+        res.on('error', (e) => {
+          reject(new Error(`Image generation error: ${e.message}`));
+        });
+      });
+
+      req.on('error', (e) => {
+        reject(new Error(`Image generation request failed: ${e.message}`));
+      });
+
+      req.write(JSON.stringify(requestBody));
+      req.end();
+    });
+  }
 }
 
 module.exports = new GeminiClient();

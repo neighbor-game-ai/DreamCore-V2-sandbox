@@ -7,6 +7,7 @@ const multer = require('multer');
 const userManager = require('./userManager');
 const { claudeRunner, jobManager } = require('./claudeRunner');
 const db = require('./database');
+const geminiClient = require('./geminiClient');
 
 const app = express();
 const server = http.createServer(app);
@@ -81,6 +82,39 @@ app.get('/api/projects/:projectId/jobs', (req, res) => {
 app.post('/api/jobs/:jobId/cancel', (req, res) => {
   const job = claudeRunner.cancelJob(req.params.jobId);
   res.json({ success: true, job });
+});
+
+// ==================== Image Generation API ====================
+
+// Generate image using Gemini Imagen (Nano Banana Pro)
+app.post('/api/generate-image', async (req, res) => {
+  try {
+    const { prompt, style, size } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({ error: 'prompt is required' });
+    }
+
+    if (!geminiClient.isAvailable()) {
+      return res.status(503).json({ error: 'Image generation service not available' });
+    }
+
+    console.log(`Image generation request: "${prompt}" (style: ${style || 'default'}, size: ${size || '512x512'})`);
+
+    const result = await geminiClient.generateImage({
+      prompt,
+      style: style || '',
+      size: size || '512x512'
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Image generation error:', error);
+    res.status(500).json({
+      error: error.message || 'Image generation failed',
+      success: false
+    });
+  }
 });
 
 // ==================== Asset API Endpoints ====================

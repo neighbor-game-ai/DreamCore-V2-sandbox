@@ -496,6 +496,97 @@ ${skillInstructions}
     return prompt;
   }
 
+  // Determine the best style for image generation based on game content
+  determineImageStyle(userMessage, currentCode, detectedSkills) {
+    const lowerMessage = userMessage.toLowerCase();
+    const lowerCode = (currentCode || '').toLowerCase();
+    const combined = lowerMessage + ' ' + lowerCode;
+
+    // Check for explicit style hints in user message
+    if (/ピクセル|pixel|ドット|8bit|8ビット|レトロ|retro/i.test(lowerMessage)) {
+      return 'pixel';
+    }
+    if (/アニメ|anime|漫画|manga/i.test(lowerMessage)) {
+      return 'anime';
+    }
+    if (/かわいい|kawaii|キュート|cute|ポップ|pop/i.test(lowerMessage)) {
+      return 'kawaii';
+    }
+    if (/リアル|real|写実|photo/i.test(lowerMessage)) {
+      return 'realistic';
+    }
+    if (/水彩|watercolor|柔らか/i.test(lowerMessage)) {
+      return 'watercolor';
+    }
+    if (/フラット|flat|シンプル|simple|ミニマル/i.test(lowerMessage)) {
+      return 'flat';
+    }
+
+    // Infer from detected skills
+    if (detectedSkills.includes('kawaii-colors') || detectedSkills.includes('kawaii-3d')) {
+      return 'kawaii';
+    }
+
+    // Infer from game type in code
+    if (/シューティング|shooting|shooter/i.test(combined)) {
+      return 'pixel';  // Classic shooting games are often pixel art
+    }
+    if (/rpg|冒険|adventure/i.test(combined)) {
+      return 'anime';
+    }
+
+    // Default to kawaii for GameCreator's aesthetic
+    return 'kawaii';
+  }
+
+  // Generate images for the project and save them
+  async generateProjectImages(visitorId, projectId, images, jobId) {
+    const generatedAssets = {};
+    const maxImages = 3;  // Limit to 3 images per request
+
+    const imagesToGenerate = images.slice(0, maxImages);
+    const totalImages = imagesToGenerate.length;
+
+    console.log(`Generating ${totalImages} image(s) for project...`);
+
+    for (let i = 0; i < imagesToGenerate.length; i++) {
+      const img = imagesToGenerate[i];
+
+      try {
+        jobManager.updateProgress(
+          jobId,
+          55 + Math.floor((i / totalImages) * 15),
+          `画像生成中: ${img.name} (${i + 1}/${totalImages})`
+        );
+
+        // Generate image with transparent background
+        const result = await geminiClient.generateImage({
+          prompt: img.prompt,
+          style: img.style || 'kawaii',
+          transparent: true
+        });
+
+        if (result.success && result.image) {
+          // Save to project assets directory
+          const assetPath = userManager.saveGeneratedImage(
+            visitorId,
+            projectId,
+            img.name,
+            result.image
+          );
+
+          generatedAssets[img.name] = assetPath;
+          console.log(`Generated and saved: ${img.name} -> ${assetPath}`);
+        }
+      } catch (err) {
+        console.error(`Failed to generate image ${img.name}:`, err.message);
+        // Continue with other images even if one fails
+      }
+    }
+
+    return generatedAssets;
+  }
+
   // Try Gemini first for code generation
   async tryGeminiGeneration(visitorId, projectId, userMessage, jobId, debugOptions = {}) {
     if (!geminiClient.isAvailable()) {
@@ -636,6 +727,32 @@ ${skillInstructions}
     const projectDir = userManager.getProjectDir(visitorId, projectId);
 
     try {
+      // Generate images if requested by Gemini
+      let generatedAssets = {};
+      if (geminiResult.images && geminiResult.images.length > 0) {
+        console.log(`Gemini requested ${geminiResult.images.length} image(s)`);
+        jobManager.updateProgress(jobId, 52, `画像を生成中...`);
+
+        generatedAssets = await this.generateProjectImages(
+          visitorId,
+          projectId,
+          geminiResult.images,
+          jobId
+        );
+
+        // Notify frontend about generated images
+        if (Object.keys(generatedAssets).length > 0) {
+          const imageList = Object.entries(generatedAssets)
+            .map(([name, path]) => `- ${name}: ${path}`)
+            .join('\n');
+          jobManager.notifySubscribers(jobId, {
+            type: 'imagesGenerated',
+            images: generatedAssets,
+            message: `画像を生成しました:\n${imageList}`
+          });
+        }
+      }
+
       if (geminiResult.mode === 'edit' && geminiResult.edits) {
         // Edit mode - apply diffs
         const totalEdits = geminiResult.edits.length;

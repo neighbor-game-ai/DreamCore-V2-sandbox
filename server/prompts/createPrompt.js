@@ -18,8 +18,28 @@ ${getBaseRules()}
   "files": [
     {"path": "index.html", "content": "完全なHTMLコード"}
   ],
+  "images": [
+    {
+      "name": "player.png",
+      "prompt": "cute cat character, game sprite, front view",
+      "style": "kawaii"
+    }
+  ],
   "summary": "作成内容の日本語説明（1-2文）"
-}`;
+}
+
+[画像生成について]
+ゲームにキャラクター、敵、背景、アイテムなどの画像が必要な場合、imagesフィールドで指定してください。
+- 最大3枚まで
+- 画像は透過背景（PNG）で生成されます
+- コード内では "assets/[name]" で参照できます
+- style: pixel, anime, kawaii, realistic, watercolor, flat から選択
+
+画像生成が必要な例：
+- 「猫のシューティングゲーム」→ player.png, enemy.png を生成
+- 「アイテム収集ゲーム」→ player.png, item.png を生成
+
+画像が不要な場合（幾何学的な図形のみ等）はimagesフィールドを省略してください。`;
 }
 
 /**

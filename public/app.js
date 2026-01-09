@@ -84,6 +84,23 @@ class GameCreatorApp {
     this.selectedAsset = null;
     this.pendingUploads = [];
 
+    // Image generation elements
+    this.imageGenButton = document.getElementById('imageGenButton');
+    this.imageGenModal = document.getElementById('imageGenModal');
+    this.closeImageGenModal = document.getElementById('closeImageGenModal');
+    this.imageGenPrompt = document.getElementById('imageGenPrompt');
+    this.imageGenStyle = document.getElementById('imageGenStyle');
+    this.imageGenSize = document.getElementById('imageGenSize');
+    this.generateImageButton = document.getElementById('generateImageButton');
+    this.imagePlaceholder = document.getElementById('imagePlaceholder');
+    this.generatedImage = document.getElementById('generatedImage');
+    this.imageGenLoading = document.getElementById('imageGenLoading');
+    this.insertImageButton = document.getElementById('insertImageButton');
+    this.downloadImageButton = document.getElementById('downloadImageButton');
+
+    // Image generation state
+    this.generatedImageData = null;
+
     // Debug toggles
     this.disableSkillsToggle = document.getElementById('disableSkillsToggle');
     this.useClaudeToggle = document.getElementById('useClaudeToggle');
@@ -104,6 +121,7 @@ class GameCreatorApp {
     this.connectWebSocket();
     this.setupEventListeners();
     this.setupAssetListeners();
+    this.setupImageGenListeners();
     this.setupRouting();
     this.setupErrorListeners();
   }
@@ -1541,6 +1559,125 @@ class GameCreatorApp {
 
     this.closeAssetModalHandler();
     this.chatInput.focus();
+  }
+
+  // ==================== Image Generation ====================
+
+  setupImageGenListeners() {
+    // Open/close modal
+    this.imageGenButton.addEventListener('click', () => this.openImageGenModal());
+    this.closeImageGenModal.addEventListener('click', () => this.closeImageGenModalHandler());
+    this.imageGenModal.addEventListener('click', (e) => {
+      if (e.target === this.imageGenModal) this.closeImageGenModalHandler();
+    });
+
+    // Generate button
+    this.generateImageButton.addEventListener('click', () => this.generateImage());
+
+    // Insert button
+    this.insertImageButton.addEventListener('click', () => this.insertGeneratedImage());
+
+    // Download button
+    this.downloadImageButton.addEventListener('click', () => this.downloadGeneratedImage());
+  }
+
+  openImageGenModal() {
+    this.imageGenModal.classList.remove('hidden');
+    this.imageGenPrompt.focus();
+  }
+
+  closeImageGenModalHandler() {
+    this.imageGenModal.classList.add('hidden');
+    this.resetImageGenState();
+  }
+
+  resetImageGenState() {
+    this.imageGenPrompt.value = '';
+    this.imageGenStyle.value = '';
+    this.imageGenSize.value = '512x512';
+    this.generatedImageData = null;
+    this.imagePlaceholder.classList.remove('hidden');
+    this.generatedImage.classList.add('hidden');
+    this.imageGenLoading.classList.add('hidden');
+    this.insertImageButton.classList.add('hidden');
+    this.insertImageButton.disabled = true;
+    this.downloadImageButton.classList.add('hidden');
+    this.downloadImageButton.disabled = true;
+  }
+
+  async generateImage() {
+    const prompt = this.imageGenPrompt.value.trim();
+    if (!prompt) {
+      alert('Please enter a description for the image.');
+      return;
+    }
+
+    const style = this.imageGenStyle.value;
+    const size = this.imageGenSize.value;
+
+    // Show loading state
+    this.imagePlaceholder.classList.add('hidden');
+    this.generatedImage.classList.add('hidden');
+    this.imageGenLoading.classList.remove('hidden');
+    this.generateImageButton.disabled = true;
+
+    try {
+      const response = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, style, size })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Image generation failed');
+      }
+
+      // Display generated image
+      this.generatedImageData = data.image;
+      this.generatedImage.src = data.image;
+      this.generatedImage.classList.remove('hidden');
+      this.imageGenLoading.classList.add('hidden');
+
+      // Enable action buttons
+      this.insertImageButton.classList.remove('hidden');
+      this.insertImageButton.disabled = false;
+      this.downloadImageButton.classList.remove('hidden');
+      this.downloadImageButton.disabled = false;
+
+    } catch (error) {
+      console.error('Image generation error:', error);
+      this.imageGenLoading.classList.add('hidden');
+      this.imagePlaceholder.classList.remove('hidden');
+      alert('Image generation failed: ' + error.message);
+    } finally {
+      this.generateImageButton.disabled = false;
+    }
+  }
+
+  insertGeneratedImage() {
+    if (!this.generatedImageData) return;
+
+    // Insert image data reference into chat
+    const prompt = this.imageGenPrompt.value.trim();
+    const imageRef = `[Generated Image: ${prompt}]\n画像データ: ${this.generatedImageData.substring(0, 100)}...`;
+    this.chatInput.value += (this.chatInput.value ? '\n' : '') + imageRef;
+
+    this.closeImageGenModalHandler();
+    this.chatInput.focus();
+  }
+
+  downloadGeneratedImage() {
+    if (!this.generatedImageData) return;
+
+    // Create download link
+    const link = document.createElement('a');
+    link.href = this.generatedImageData;
+    link.download = `generated-image-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 }
 

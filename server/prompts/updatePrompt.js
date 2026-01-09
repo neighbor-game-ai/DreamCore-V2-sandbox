@@ -50,8 +50,29 @@ ${getBaseRules()}
       "new_string": "置換後の文字列"
     }
   ],
+  "images": [
+    {
+      "name": "player.png",
+      "prompt": "cute cat character, game sprite, front view",
+      "style": "kawaii"
+    }
+  ],
   "summary": "変更内容の日本語説明（1-2文）"
 }
+
+[画像生成について]
+ゲームにキャラクター、敵、背景、アイテムなどの画像が必要な場合、imagesフィールドで指定してください。
+- 最大3枚まで
+- 画像は透過背景（PNG）で生成されます
+- コード内では "assets/[name]" で参照できます
+- style: pixel, anime, kawaii, realistic, watercolor, flat から選択
+
+画像生成が必要な例：
+- 「猫のキャラクターで」→ player.png を生成
+- 「敵を追加して」→ enemy.png を生成
+- 「アイテムを表示」→ item.png を生成
+
+画像が不要な場合はimagesフィールドを省略してください。
 
 ● restoreモードの場合：
 {

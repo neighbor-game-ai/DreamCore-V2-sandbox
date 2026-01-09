@@ -79,6 +79,7 @@
         ></textarea>
         <div class="input-buttons">
           <button id="assetButton" title="Assets">📁</button>
+          <button id="imageGenButton" title="AI Image Generation">🎨</button>
           <button id="sendButton" disabled>送信</button>
           <button id="stopButton" class="hidden">停止</button>
         </div>
@@ -134,6 +135,53 @@
         <div class="asset-footer">
           <span id="selectedAssetInfo"></span>
           <button id="insertAssetButton" class="hidden">Insert into Chat</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image Generation Modal -->
+    <div class="modal hidden" id="imageGenModal">
+      <div class="modal-content image-gen-modal">
+        <div class="modal-header">
+          <h3>AI Image Generation</h3>
+          <button class="modal-close" id="closeImageGenModal">&times;</button>
+        </div>
+        <div class="image-gen-content">
+          <div class="image-gen-form">
+            <textarea id="imageGenPrompt" placeholder="画像の説明を入力してください（例：かわいい猫のキャラクター、ピクセルアート風）" rows="3"></textarea>
+            <div class="image-gen-options">
+              <select id="imageGenStyle">
+                <option value="">スタイル選択（任意）</option>
+                <option value="pixel">ピクセルアート</option>
+                <option value="anime">アニメ風</option>
+                <option value="kawaii">かわいい系</option>
+                <option value="realistic">リアル調</option>
+                <option value="watercolor">水彩画風</option>
+                <option value="flat">フラットデザイン</option>
+              </select>
+              <select id="imageGenSize">
+                <option value="512x512">512x512（正方形）</option>
+                <option value="768x512">768x512（横長）</option>
+                <option value="512x768">512x768（縦長）</option>
+                <option value="1024x1024">1024x1024（高解像度）</option>
+              </select>
+            </div>
+            <button id="generateImageButton" class="generate-btn">生成</button>
+          </div>
+          <div class="image-gen-preview">
+            <div class="image-placeholder" id="imagePlaceholder">
+              <span>生成された画像がここに表示されます</span>
+            </div>
+            <img id="generatedImage" class="hidden" alt="Generated image">
+            <div class="image-gen-loading hidden" id="imageGenLoading">
+              <div class="spinner"></div>
+              <span>画像を生成中...</span>
+            </div>
+          </div>
+        </div>
+        <div class="image-gen-footer">
+          <button id="insertImageButton" class="hidden" disabled>チャットに挿入</button>
+          <button id="downloadImageButton" class="hidden" disabled>ダウンロード</button>
         </div>
       </div>
     </div>
