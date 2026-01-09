@@ -1,48 +1,72 @@
 #!/bin/bash
-# GameCreatorMVP GCE Setup Script
-# Run this on a fresh Ubuntu 22.04 VM
+# GameCreatorMVP 全自動セットアップスクリプト
+# 使い方: curl -fsSL https://raw.githubusercontent.com/notef-neighbor/GameCreatorMVP/feature/skill-improvement/deploy/setup-gce.sh | bash
 
 set -e
 
-echo "=== GameCreatorMVP GCE Setup ==="
+echo ""
+echo "========================================="
+echo "  GameCreatorMVP 自動セットアップ開始"
+echo "========================================="
+echo ""
 
-# Update system
-sudo apt update && sudo apt upgrade -y
+# 古いインストールを削除
+echo "[1/8] 古いファイルをクリーンアップ..."
+sudo rm -rf /opt/gamecreator 2>/dev/null || true
+sudo rm -rf ~/dreamcore* 2>/dev/null || true
+sudo rm -rf ~/GameCreator* 2>/dev/null || true
 
-# Install Node.js 20
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
+# システム更新
+echo "[2/8] システム更新中..."
+sudo apt update -qq
 
-# Install build essentials (for better-sqlite3)
-sudo apt install -y build-essential python3
+# Node.js 20 インストール
+echo "[3/8] Node.js 20 インストール中..."
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - > /dev/null 2>&1
+sudo apt install -y nodejs build-essential python3 git nginx -qq
 
-# Install Git
-sudo apt install -y git
+# PM2 インストール
+echo "[4/8] PM2 インストール中..."
+sudo npm install -g pm2 > /dev/null 2>&1
 
-# Install PM2 for process management
-sudo npm install -g pm2
-
-# Install Nginx
-sudo apt install -y nginx
-
-# Install Certbot for SSL
-sudo apt install -y certbot python3-certbot-nginx
-
-# Install Claude CLI
-npm install -g @anthropic-ai/claude-code
-
-# Create app directory
+# アプリディレクトリ作成
+echo "[5/8] アプリケーションをダウンロード中..."
 sudo mkdir -p /opt/gamecreator
 sudo chown $USER:$USER /opt/gamecreator
+cd /opt/gamecreator
+
+# GitHubからクローン
+git clone -b feature/skill-improvement https://github.com/notef-neighbor/GameCreatorMVP.git . 2>/dev/null
+
+# 依存関係インストール
+echo "[6/8] 依存関係インストール中..."
+npm install --silent 2>/dev/null
+
+# 環境変数ファイル作成
+echo "[7/8] 設定ファイル作成中..."
+cp deploy/.env.example .env
+
+# Nginx設定
+echo "[8/8] Nginx 設定中..."
+sudo cp deploy/nginx.conf /etc/nginx/sites-available/gamecreator
+sudo ln -sf /etc/nginx/sites-available/gamecreator /etc/nginx/sites-enabled/default
+sudo nginx -t > /dev/null 2>&1
+sudo systemctl reload nginx
 
 echo ""
-echo "=== Base setup complete ==="
+echo "========================================="
+echo "  セットアップ完了！"
+echo "========================================="
 echo ""
-echo "Next steps:"
-echo "1. Clone your repo: cd /opt/gamecreator && git clone <your-repo-url> ."
-echo "2. Install dependencies: npm install"
-echo "3. Create .env file with your API keys"
-echo "4. Configure Nginx (see nginx.conf template)"
-echo "5. Start with PM2: pm2 start server/index.js --name gamecreator"
-echo "6. Setup SSL: sudo certbot --nginx -d yourdomain.com"
+echo "あと2つだけ設定が必要です："
+echo ""
+echo "1. Gemini APIキーを設定:"
+echo "   nano /opt/gamecreator/.env"
+echo "   → GEMINI_API_KEY=あなたのキー を入力"
+echo "   → Ctrl+X → Y → Enter で保存"
+echo ""
+echo "2. アプリを起動:"
+echo "   cd /opt/gamecreator && pm2 start server/index.js --name gamecreator"
+echo ""
+echo "完了したら http://$(curl -s ifconfig.me) でアクセス！"
 echo ""
