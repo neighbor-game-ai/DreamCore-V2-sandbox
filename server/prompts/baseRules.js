@@ -39,12 +39,125 @@ const gameDesignRules = `[ゲームデザインルール]
 - 明確なフィードバック（視覚・音声）
 - スコアやプログレスの表示
 - ゲームオーバー・リトライ機能
-- チュートリアルまたは操作説明`;
+- ゲームは即座に開始（タイトル画面やスタート画面は不要）`;
+
+const touchControlRules = `[タッチ操作ルール - CRITICAL]
+
+仮想ジョイスティック実装:
+- touchstartで開始タッチのidentifierを記録し、touchmove/touchendでは同じidentifierのタッチのみ処理する
+- event.touches[0]は使用禁止（マルチタッチで破綻する）
+- リスナーは { passive: false } で登録し、preventDefault()を呼ぶ
+- CSS: .joystick { touch-action: none; pointer-events: auto; }
+- マルチタッチ時、ジョイスティックは元のidentifierに紐付けたまま、別の指でカメラ操作を許可
+
+カメラドラッグ実装:
+- ジョイスティックとは別のidentifierでカメラタッチを管理
+- touchstartでevent.changedTouchesからカメラエリア内のタッチを選択
+- アクティブな間はidentifierを再割り当てしない（touchend/touchcancelで解放）
+- FIRE/JUMPボタン上で開始したタッチはカメラドラッグから除外
+
+UI操作ルール:
+- オーバーレイコンテナは pointer-events: none; でOK
+- 明示的なインタラクティブ要素（ボタン、ジョイスティック）は pointer-events: auto; 必須
+- ボタンは touchstart と click 両方にリスナー登録
+- UI層のz-indexは最上位に（キャンバスより上）
+
+入力座標系の一貫性:
+- 入力軸とゲーム座標系を一致させる
+- 暗黙の軸反転を避け、必要な場合は一箇所で集中管理
+- 移動、照準、当たり判定で一貫した座標系を使用
+
+テキスト選択の無効化（モバイル長押し対策）:
+\`\`\`css
+{ -webkit-user-select: none; user-select: none; }
+\`\`\``;
+
+const cameraSystemRules = `[3Dカメラシステムルール]
+
+Yaw/Pitch カメラ実装（必須）:
+- yawとpitchを明示的なスカラー変数として保持（camera.rotation直接操作禁止）
+- 初期化時に camera.rotation.order = 'YXZ' を設定
+- クォータニオンで向きを設定: camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'))
+- pitchは [-Math.PI/2, Math.PI/2] にクランプ、yawは自由回転
+- camera.up = (0, 1, 0) を維持、rollは常に0
+- カメラ感度のデフォルト: CAMERA_SENSITIVITY = 0.006（ラジアン/ピクセル）
+
+カメラタイプ:
+- 一人称視点: プレイヤー視点からのカメラ配置
+- 三人称視点: プレイヤー背後からのフォローカメラ
+- 切り替え: トランジションエフェクトを使用`;
+
+const movementRules = `[3D移動ルール - カメラ相対]
+
+移動ベクトル計算（必須）:
+- カメラのforward vectorを水平面に投影（y=0にしてnormalize）
+- right vectorは normalize(cross(forward, camera.up)) で計算
+- 移動ベクトル: move = forward * inputY + right * inputX
+- 移動計算はyawのみ使用（pitchは移動に影響させない）
+
+実装例:
+\`\`\`javascript
+const forward = new THREE.Vector3();
+camera.getWorldDirection(forward);
+forward.y = 0;
+forward.normalize();
+const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+const move = forward.multiplyScalar(inputY).add(right.multiplyScalar(inputX));
+\`\`\``;
+
+const audioRules = `[オーディオルール]
+
+BGM（ストリーミング必須）:
+- <audio>タグを使用（decodeAudioDataは禁止）
+- DOM配置: <audio id="bgm" src="URL" preload="none" playsinline hidden></audio>
+- 再生開始は初回ユーザーインタラクション時のみ:
+  \`\`\`javascript
+  element.addEventListener('pointerdown', () => {
+    bgm.load();
+    bgm.addEventListener('canplay', () => bgm.play(), { once: true });
+  }, { once: true });
+  \`\`\`
+- canplaythroughを待たない
+
+効果音:
+- new Audio(url) で作成、preload='none'
+- 同時再生: cloneNode(true).play()
+- 短い効果音のみAudioContextでデコードOK`;
+
+const prohibitions = `[禁止事項 - CRITICAL]
+
+絶対禁止:
+- alert() の使用（モーダルやトースト通知を代用）
+- Base64データの直接埋め込み（画像・音声は必ず絶対URLを使用）
+- location.reload() でのリスタート（変数初期化でリセットすること）
+- 疑似ローディング画面の実装
+- フォッグの使用（scene.fog, THREE.Fog, THREE.FogExp2）
+
+リスタート実装:
+\`\`\`javascript
+function resetGame() {
+  score = 0;
+  playerX = startX;
+  playerY = startY;
+  gameOver = false;
+  // 全ての関連変数を初期値に戻す
+}
+\`\`\`
+
+パフォーマンス注意:
+- 重いリソースは非同期でロード
+- 不要になったイベントリスナーとオブジェクトは適切に破棄
+- 画面外のオブジェクトは更新・描画から除外`;
 
 module.exports = {
   designStyle,
   codingRules,
   gameDesignRules,
+  touchControlRules,
+  cameraSystemRules,
+  movementRules,
+  audioRules,
+  prohibitions,
 
   // Combined rules for system prompt
   getBaseRules() {
@@ -52,6 +165,16 @@ module.exports = {
 
 ${codingRules}
 
-${gameDesignRules}`;
+${gameDesignRules}
+
+${touchControlRules}
+
+${cameraSystemRules}
+
+${movementRules}
+
+${audioRules}
+
+${prohibitions}`;
   }
 };

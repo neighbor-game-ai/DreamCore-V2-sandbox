@@ -394,13 +394,25 @@ ${skillHints}
       const history = userManager.getConversationHistory(visitorId, projectId);
 
       // Get current code (null for new projects)
+      // Check if this is truly a new project (only has initial welcome page)
       const files = userManager.listProjectFiles(visitorId, projectId);
-      const currentCode = files.length > 0
-        ? files.map(f => {
+      let currentCode = null;
+
+      if (files.length > 0) {
+        // Check if it's just the initial welcome page
+        const indexContent = userManager.readProjectFile(visitorId, projectId, 'index.html');
+        const isInitialWelcomePage = indexContent &&
+          indexContent.length < 1000 &&
+          indexContent.includes('Welcome to Game Creator');
+
+        if (!isInitialWelcomePage) {
+          // Real project with actual code
+          currentCode = files.map(f => {
             const content = userManager.readProjectFile(visitorId, projectId, f);
             return `--- ${f} ---\n${content}`;
-          }).join('\n\n')
-        : null;
+          }).join('\n\n');
+        }
+      }
 
       jobManager.updateProgress(jobId, 20, 'Gemini APIでコード生成中...');
       console.log('Calling Gemini API for code generation...');
