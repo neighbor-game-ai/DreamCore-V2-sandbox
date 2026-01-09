@@ -98,6 +98,9 @@ class GameCreatorApp {
   }
 
   init() {
+    // Show list view immediately (don't wait for WebSocket)
+    this.projectListView.classList.remove('hidden');
+
     this.connectWebSocket();
     this.setupEventListeners();
     this.setupAssetListeners();
