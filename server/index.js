@@ -722,6 +722,13 @@ wss.on('connection', (ws) => {
               projectId: data.projectId,
               versionId: data.versionId
             });
+
+            // Regenerate SPEC.md after restore to reflect restored code
+            if (restoreResult.needsSpecRegeneration) {
+              claudeRunner.updateSpec(visitorId, data.projectId).catch(err => {
+                console.error('SPEC.md regeneration after restore failed:', err.message);
+              });
+            }
           } else {
             safeSend({
               type: 'error',

@@ -437,16 +437,23 @@ const restoreVersion = (visitorId, projectId, versionId) => {
     return { success: false, error: 'Git not initialized' };
   }
 
-  // First, commit current state as backup
-  commitToProject(projectDir, 'Before restore');
-
-  // Checkout the specific version's files
+  // Checkout the specific version's files (no new commit created)
+  // This just restores the files to that version's state
   const result = execGit(`git checkout ${versionId} -- .`, projectDir);
 
   if (result !== null) {
-    commitToProject(projectDir, `Restored to ${versionId}`);
-    commitToUsers(`Restored: ${versionId} (${visitorId}/${projectId})`);
-    return { success: true, versionId };
+    // Delete SPEC.md if it wasn't in the restored version
+    // (git checkout won't delete files that didn't exist in that commit)
+    const specPath = path.join(projectDir, 'SPEC.md');
+    const specInCommit = execGit(`git ls-tree ${versionId} --name-only SPEC.md`, projectDir);
+    if (!specInCommit && fs.existsSync(specPath)) {
+      fs.unlinkSync(specPath);
+      console.log('Deleted SPEC.md (not in restored version)');
+    }
+
+    // Don't create a new commit - just restore the files
+    // User's history remains clean with only their actual changes
+    return { success: true, versionId, needsSpecRegeneration: true };
   }
 
   return { success: false, error: 'Failed to restore version' };

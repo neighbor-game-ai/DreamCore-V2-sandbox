@@ -11,11 +11,36 @@ function getSystemPrompt() {
 
 ${getBaseRules()}
 
-[タスク]
-既存のゲームコードを修正してください。変更部分のみを差分形式で出力します。
+[最重要：ユーザー意図の判断]
+まずユーザーのメッセージを分析し、適切なモードを選択してください：
+
+■ chat モード（質問・確認・相談）
+- 「〜ですか？」「〜って何？」「どうなってる？」「確認したい」など
+- 現状の説明、仕様の確認、アドバイスを求めている
+- → コードは変更せず、会話で応答 + 改善アイデアを提案
+
+■ edit モード（修正依頼）
+- 「〜して」「〜に変えて」「〜を追加」「〜を直して」など
+- 明確にコード変更を求めている
+- → コードを修正
+
+■ restore モード（元に戻す）
+- 「元に戻して」「もとに戻して」「戻して」「取り消して」「前の状態に」「さっきのに戻して」「undo」「やっぱり戻して」「やめて戻して」など
+- ひらがな・漢字どちらでも認識する
+- 語尾に「よ」「ね」「ください」「ちょうだい」など何がついても認識する
+- 直前の変更を取り消したい、以前の状態に戻したい
+- → リストア確認を返す
 
 [出力形式]
-差分のみを出力してください。editsは変更箇所だけを含めます：
+
+● chatモードの場合：
+{
+  "mode": "chat",
+  "message": "質問への回答や現状の説明",
+  "suggestions": ["改善アイデア1", "改善アイデア2"]
+}
+
+● editモードの場合：
 {
   "mode": "edit",
   "edits": [
@@ -28,11 +53,25 @@ ${getBaseRules()}
   "summary": "変更内容の日本語説明（1-2文）"
 }
 
+● restoreモードの場合：
+{
+  "mode": "restore",
+  "message": "直前の変更を取り消して、前の状態に戻しますか？",
+  "confirmLabel": "戻す",
+  "cancelLabel": "キャンセル"
+}
+
+[最重要：既存仕様の維持]
+- 依頼された内容のみ変更する
+- 依頼されていない部分は絶対に変更しない
+- 色、デザイン、操作方法、ゲームルールなど既存の仕様を勝手に変えない
+- 「ついでに改善」「より良くするために」などの勝手な変更は禁止
+
 [重要な注意]
+- 迷ったらchatモードを選択（勝手にコードを変更しない）
 - old_string は既存コードに存在する文字列を正確にコピーすること
 - 変更箇所が複数ある場合は edits 配列に複数追加
-- 新規追加の場合は old_string に挿入位置の前後の文字列を指定
-- 不要な変更は行わない（依頼された内容のみ修正）`;
+- 新規追加の場合は old_string に挿入位置の前後の文字列を指定`;
 }
 
 /**
@@ -42,13 +81,17 @@ ${getBaseRules()}
  * @param {string} options.currentCode - Current game code
  * @param {Array} options.conversationHistory - Previous messages [{role, content}]
  * @param {Array} options.attachments - Attached assets (optional)
+ * @param {string} options.skillSummary - Skill summary from Claude CLI (optional)
+ * @param {string} options.gameSpec - Game specification from SPEC.md (optional)
  */
 function buildRequest(options) {
   const {
     userMessage,
     currentCode,
     conversationHistory = [],
-    attachments = []
+    attachments = [],
+    skillSummary = null,
+    gameSpec = null
   } = options;
 
   // Build conversation contents
@@ -63,11 +106,23 @@ function buildRequest(options) {
   }
 
   // Build current user message with code context
-  let currentMessage = `[現在のコード]
+  let currentMessage = '';
+
+  // Add game spec if available (CRITICAL - must preserve these specs)
+  if (gameSpec) {
+    currentMessage += `[現在のゲーム仕様 - これを維持すること]\n${gameSpec}\n\n`;
+  }
+
+  currentMessage += `[現在のコード]
 ${currentCode}
 
 [修正依頼]
 ${userMessage}`;
+
+  // Add skill summary (CRITICAL - must follow these guidelines)
+  if (skillSummary) {
+    currentMessage += `\n\n[必須ガイドライン - 以下を必ず適用すること]\n${skillSummary}`;
+  }
 
   if (attachments.length > 0) {
     const assetList = attachments.map(a => `- ${a.name}: ${a.url}`).join('\n');

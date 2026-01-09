@@ -41,6 +41,8 @@ class GeminiClient {
       title = '',
       gameType = '',
       attachments = [],
+      skillSummary = null,  // Skill summary from Claude CLI
+      gameSpec = null,  // Game specification from SPEC.md
       onStream = null
     } = options;
 
@@ -54,14 +56,17 @@ class GeminiClient {
         conversationHistory,
         title,
         gameType,
-        attachments
+        attachments,
+        skillSummary  // Pass to prompt builder
       });
     } else {
       requestBody = updatePrompt.buildRequest({
         userMessage,
         currentCode,
         conversationHistory,
-        attachments
+        attachments,
+        skillSummary,  // Pass to prompt builder
+        gameSpec  // Pass game spec to preserve existing specs
       });
     }
 
@@ -71,6 +76,22 @@ class GeminiClient {
     console.log('User Message:', userMessage);
     console.log('Streaming:', onStream ? 'YES' : 'NO');
     console.log('System Prompt Length:', requestBody.systemInstruction.parts[0].text.length, 'chars');
+
+    // Log skill summary content (CRITICAL - verify it's being passed)
+    if (skillSummary) {
+      console.log('--- Skill Summary (PASSED TO GEMINI) ---');
+      console.log(skillSummary);
+      console.log('--- End Skill Summary ---');
+    } else {
+      console.log('Skill Summary: NONE');
+    }
+
+    // Check if skill summary is in user content
+    const lastContent = requestBody.contents[requestBody.contents.length - 1];
+    const userContent = lastContent.parts[0].text;
+    const hasSkillSection = userContent.includes('[必須ガイドライン');
+    console.log('Skill in User Content:', hasSkillSection ? 'YES' : 'NO');
+    console.log('User Content Length:', userContent.length, 'chars');
     console.log('=====================================\n');
 
     // Use streaming endpoint

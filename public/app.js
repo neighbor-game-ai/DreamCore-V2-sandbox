@@ -49,6 +49,9 @@ class GameCreatorApp {
     // Error state
     this.currentErrors = [];
 
+    // Restore state
+    this.pendingRestore = false;
+
     // Streaming elements
     this.streamingContainer = document.getElementById('streamingContainer');
     this.streamingStatus = document.getElementById('streamingStatus');
@@ -552,7 +555,10 @@ class GameCreatorApp {
 
       case 'complete':
         this.completeStreaming();
-        this.addMessage(data.message, 'assistant');
+        // Skip message display for chat/restore mode (already handled by their own methods)
+        if (data.mode !== 'chat' && data.mode !== 'restore') {
+          this.addMessage(data.message, 'assistant');
+        }
         this.updateStatus('connected', 'Connected');
         this.isProcessing = false;
         this.currentJobId = null;
@@ -605,6 +611,14 @@ class GameCreatorApp {
         this.displayGeneratedCode(data);
         break;
 
+      case 'geminiChat':
+        this.displayChatResponse(data);
+        break;
+
+      case 'geminiRestore':
+        this.displayRestoreConfirm(data);
+        break;
+
       case 'jobStatus':
         if (data.job) {
           this.handleJobUpdate({ type: data.job.status, job: data.job });
@@ -612,7 +626,25 @@ class GameCreatorApp {
         break;
 
       case 'versionsList':
-        this.displayVersions(data.versions);
+        console.log('versionsList received, pendingRestore:', this.pendingRestore, 'versions:', data.versions?.length);
+        // Check if we have a pending restore request
+        if (this.pendingRestore && data.versions && data.versions.length >= 2) {
+          this.pendingRestore = false;
+          // Restore to the second version (index 1, since 0 is current)
+          const previousVersion = data.versions[1];
+          console.log('Auto-restoring to:', previousVersion);
+          this.ws.send(JSON.stringify({
+            type: 'restoreVersion',
+            projectId: this.currentProjectId,
+            versionId: previousVersion.id
+          }));
+          this.addMessage(`前のバージョン（${previousVersion.message}）に戻しています...`, 'system');
+        } else if (this.pendingRestore) {
+          this.pendingRestore = false;
+          this.addMessage('戻せるバージョンがありません', 'system');
+        } else {
+          this.displayVersions(data.versions);
+        }
         break;
 
       case 'versionRestored':
@@ -667,15 +699,17 @@ class GameCreatorApp {
 
       case 'completed':
         this.completeStreaming();
-        // Display the actual response message from Claude
-        const message = update.result?.message || update.message || 'ゲームを更新しました';
-        this.addMessage(message, 'assistant');
+        // Skip message display for chat/restore mode (already handled by their own methods)
+        if (update.result?.mode !== 'chat' && update.result?.mode !== 'restore') {
+          const message = update.result?.message || update.message || 'ゲームを更新しました';
+          this.addMessage(message, 'assistant');
+          this.refreshPreview();
+        }
         this.updateStatus('connected', 'Connected');
         this.isProcessing = false;
         this.currentJobId = null;
         this.sendButton.disabled = false;
         this.stopButton.classList.add('hidden');
-        this.refreshPreview();
         break;
 
       case 'failed':
@@ -794,8 +828,37 @@ class GameCreatorApp {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}`;
 
-    const formattedContent = this.formatContent(content);
-    messageDiv.innerHTML = formattedContent;
+    // Use markdown for assistant messages, basic formatting for others
+    if (role === 'assistant') {
+      messageDiv.classList.add('markdown-body');
+
+      // Check for suggestions in saved history (format: "提案: a、b、c")
+      const suggestionMatch = content.match(/\n\n提案: (.+)$/);
+      if (suggestionMatch) {
+        const mainMessage = content.replace(/\n\n提案: .+$/, '');
+        const suggestions = suggestionMatch[1].split('、');
+
+        let html = this.parseMarkdown(mainMessage);
+        html += '<div class="chat-suggestions">';
+        suggestions.forEach((suggestion, i) => {
+          html += `<button class="suggestion-btn" data-suggestion="${this.escapeHtml(suggestion.trim())}">${this.escapeHtml(suggestion.trim())}</button>`;
+        });
+        html += '</div>';
+        messageDiv.innerHTML = html;
+
+        // Attach click handlers
+        messageDiv.querySelectorAll('.suggestion-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.applySuggestion(btn.dataset.suggestion);
+          });
+        });
+      } else {
+        messageDiv.innerHTML = this.parseMarkdown(content);
+      }
+    } else {
+      const formattedContent = this.formatContent(content);
+      messageDiv.innerHTML = formattedContent;
+    }
 
     this.chatMessages.appendChild(messageDiv);
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
@@ -865,6 +928,142 @@ class GameCreatorApp {
     messageDiv.innerHTML = html;
     this.chatMessages.appendChild(messageDiv);
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+  }
+
+  // Simple markdown to HTML conversion
+  parseMarkdown(text) {
+    return text
+      // Escape HTML first
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      // Headers
+      .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+      .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+      // Bold and italic
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      // Inline code
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      // Lists
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+      // Line breaks (double newline = paragraph, single = br)
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n/g, '<br>')
+      // Wrap in paragraph
+      .replace(/^(.+)$/, '<p>$1</p>')
+      // Clean up empty paragraphs
+      .replace(/<p><\/p>/g, '')
+      .replace(/<p>(<h[234]>)/g, '$1')
+      .replace(/(<\/h[234]>)<\/p>/g, '$1')
+      .replace(/<p>(<ul>)/g, '$1')
+      .replace(/(<\/ul>)<\/p>/g, '$1');
+  }
+
+  // Display chat response (no code changes, just conversation)
+  displayChatResponse(data) {
+    // Hide streaming indicator
+    this.hideStreaming();
+    this.isProcessing = false;
+    this.sendButton.disabled = false;
+    this.stopButton.classList.add('hidden');
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message assistant chat-response';
+
+    let html = `<div class="message-content markdown-body">${this.parseMarkdown(data.message)}</div>`;
+
+    // Show suggestions as clickable buttons
+    if (data.suggestions && data.suggestions.length > 0) {
+      html += '<div class="chat-suggestions">';
+      data.suggestions.forEach((suggestion, i) => {
+        const btnId = `suggestion-${Date.now()}-${i}`;
+        html += `<button class="suggestion-btn" id="${btnId}" data-suggestion="${this.escapeHtml(suggestion)}">${this.escapeHtml(suggestion)}</button>`;
+      });
+      html += '</div>';
+    }
+
+    messageDiv.innerHTML = html;
+    this.chatMessages.appendChild(messageDiv);
+
+    // Attach click handlers after DOM insertion
+    messageDiv.querySelectorAll('.suggestion-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.applySuggestion(btn.dataset.suggestion);
+      });
+    });
+
+    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+  }
+
+  // Display restore confirmation dialog
+  displayRestoreConfirm(data) {
+    // Hide streaming indicator
+    this.hideStreaming();
+    this.isProcessing = false;
+    this.sendButton.disabled = false;
+    this.stopButton.classList.add('hidden');
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message assistant restore-confirm';
+
+    const confirmLabel = data.confirmLabel || '戻す';
+    const cancelLabel = data.cancelLabel || 'キャンセル';
+    const confirmId = `restore-confirm-${Date.now()}`;
+    const cancelId = `restore-cancel-${Date.now()}`;
+
+    messageDiv.innerHTML = `
+      <div class="message-content">${this.escapeHtml(data.message)}</div>
+      <div class="restore-buttons">
+        <button class="restore-btn confirm" id="${confirmId}">${this.escapeHtml(confirmLabel)}</button>
+        <button class="restore-btn cancel" id="${cancelId}">${this.escapeHtml(cancelLabel)}</button>
+      </div>
+    `;
+
+    this.chatMessages.appendChild(messageDiv);
+
+    // Attach click handlers
+    const confirmBtn = document.getElementById(confirmId);
+    console.log('Attaching click handler to confirm button:', confirmId, confirmBtn);
+    confirmBtn.addEventListener('click', () => {
+      console.log('Confirm button clicked!');
+      this.executeRestore();
+      messageDiv.querySelector('.restore-buttons').remove();
+    });
+
+    document.getElementById(cancelId).addEventListener('click', () => {
+      this.addMessage('キャンセルしました', 'system');
+      messageDiv.querySelector('.restore-buttons').remove();
+    });
+
+    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+  }
+
+  // Execute restore to previous version
+  executeRestore() {
+    console.log('executeRestore called, projectId:', this.currentProjectId);
+    // Request versions list first to get the previous version
+    this.ws.send(JSON.stringify({
+      type: 'getVersions',
+      projectId: this.currentProjectId
+    }));
+    // Set flag to auto-restore when versions are received
+    this.pendingRestore = true;
+    console.log('pendingRestore set to true');
+  }
+
+  // Apply a suggestion from chat response (append if already has content)
+  applySuggestion(suggestion) {
+    const current = this.chatInput.value.trim().replace(/して$/, ''); // Remove trailing して
+    if (current) {
+      // Append with 、and add して at end
+      this.chatInput.value = current + '、' + suggestion + 'して';
+    } else {
+      this.chatInput.value = suggestion + 'して';
+    }
+    this.chatInput.focus();
   }
 
   escapeHtml(text) {

@@ -30,6 +30,7 @@ ${getBaseRules()}
  * @param {string} options.title - Project title (optional)
  * @param {string} options.gameType - Game type hint (optional)
  * @param {Array} options.attachments - Attached assets (optional)
+ * @param {string} options.skillSummary - Skill summary from Claude CLI (optional)
  */
 function buildRequest(options) {
   const {
@@ -37,7 +38,8 @@ function buildRequest(options) {
     conversationHistory = [],
     title = '',
     gameType = '',
-    attachments = []
+    attachments = [],
+    skillSummary = null
   } = options;
 
   // Build conversation contents
@@ -60,6 +62,11 @@ function buildRequest(options) {
 
   if (gameType) {
     currentMessage = `[ゲームタイプ: ${gameType}]\n\n${currentMessage}`;
+  }
+
+  // Add skill summary (CRITICAL - must follow these guidelines)
+  if (skillSummary) {
+    currentMessage += `\n\n[必須ガイドライン - 以下を必ず適用すること]\n${skillSummary}`;
   }
 
   if (attachments.length > 0) {

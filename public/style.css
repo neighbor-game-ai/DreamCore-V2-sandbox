@@ -276,6 +276,118 @@ body {
   border-radius: 4px;
 }
 
+/* Markdown in chat */
+.markdown-body {
+  line-height: 1.6;
+}
+
+.markdown-body p {
+  margin: 0 0 0.8em 0;
+}
+
+.markdown-body p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body h2, .markdown-body h3, .markdown-body h4 {
+  margin: 1em 0 0.5em 0;
+  color: #fff;
+}
+
+.markdown-body h2 { font-size: 1.2rem; }
+.markdown-body h3 { font-size: 1.1rem; }
+.markdown-body h4 { font-size: 1rem; }
+
+.markdown-body strong {
+  color: #fff;
+}
+
+.markdown-body code {
+  background: #1a1a2e;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.9em;
+  color: #8af;
+}
+
+.markdown-body ul {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+
+.markdown-body li {
+  margin: 0.3em 0;
+}
+
+.message.chat-response {
+  max-width: 95%;
+}
+
+/* Chat Suggestions */
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #3a3a5a;
+}
+
+.suggestion-btn {
+  background: #2a3a5a;
+  color: #8af;
+  border: 1px solid #4a5a7a;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.suggestion-btn:hover {
+  background: #3a4a6a;
+  border-color: #6a7a9a;
+  transform: translateY(-1px);
+}
+
+/* Restore Confirmation */
+.restore-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.restore-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.restore-btn.confirm {
+  background: #e74c3c;
+  color: white;
+  border: none;
+}
+
+.restore-btn.confirm:hover {
+  background: #c0392b;
+}
+
+.restore-btn.cancel {
+  background: transparent;
+  color: #888;
+  border: 1px solid #444;
+}
+
+.restore-btn.cancel:hover {
+  background: #2a2a4a;
+  color: #aaa;
+}
+
 /* Streaming Output */
 .streaming-container {
   background: #0d0d1a;

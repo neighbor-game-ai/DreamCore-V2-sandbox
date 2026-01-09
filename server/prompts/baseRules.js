@@ -161,7 +161,9 @@ module.exports = {
 
   // Combined rules for system prompt
   getBaseRules() {
-    return `${designStyle}
+    // EXPERIMENT: Disable design style to test if skills work
+    // return `${designStyle}
+    return `[実験モード] デザインスタイルはスキルから読み込んでください。
 
 ${codingRules}
 
