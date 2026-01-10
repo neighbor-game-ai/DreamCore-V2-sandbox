@@ -137,9 +137,14 @@ class VirtualJoystick {
     this.stick.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
 
     // 正規化されたベクトル (-1 ~ 1)
+    // ★重要: Y軸を反転する（-clampedY）
+    // 理由: HTML/ブラウザの座標系では画面上方向がY=0（上が小さい）
+    //       ジョイスティックを上に倒すとdy < 0（負の値）になる
+    //       しかし3Dゲームでは「上=前進=正の値」にしたい
+    //       そのため符号を反転してプラスにする
     this.vector = {
       x: clampedX / maxDistance,
-      y: -clampedY / maxDistance  // Y軸は上が正
+      y: -clampedY / maxDistance  // ★Y軸反転: 上に倒す → プラス値 → 前進
     };
   }
 
