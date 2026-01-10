@@ -2,6 +2,8 @@
  * Prompt for creating new games
  */
 const { getBaseRules } = require('./baseRules');
+const { analyzeGameType, applyExplicitOverride } = require('../analyzer/gameTypeAnalyzer');
+const { generateSkillGuidelines } = require('../analyzer/skillSelector');
 
 /**
  * Build system prompt for new game creation
@@ -28,18 +30,28 @@ ${getBaseRules()}
   "summary": "作成内容の日本語説明（1-2文）"
 }
 
-[画像生成について]
-ゲームにキャラクター、敵、背景、アイテムなどの画像が必要な場合、imagesフィールドで指定してください。
+[画像生成について - 2Dゲームのみ]
+**重要: 3Dゲーム（Three.js、WebGL）では画像生成は行わないこと。3Dはジオメトリとマテリアルで表現する。**
+
+2Dゲームでキャラクター、敵、アイテムなどの画像が必要な場合のみ、imagesフィールドで指定:
 - 最大3枚まで
 - 画像は透過背景（PNG）で生成されます
 - コード内では "assets/[name]" で参照できます
 - style: pixel, anime, kawaii, realistic, watercolor, flat から選択
 
-画像生成が必要な例：
+**★向きの指定（SPEC.mdを参照）：**
+- SPEC.mdの「スプライトの向き」セクションに従って向きを指定
+- promptに "facing right" や "facing left" を明記すること
+- 例：横スクロール(右進行) → プレイヤー: "facing right, side view"、敵: "facing left, side view"
+- 例：縦スクロール(上進行) → プレイヤー: "facing up, top-down view"、敵: "facing down"
+
+画像生成が必要な例（2Dのみ）：
 - 「猫のシューティングゲーム」→ player.png, enemy.png を生成
 - 「アイテム収集ゲーム」→ player.png, item.png を生成
 
-画像が不要な場合（幾何学的な図形のみ等）はimagesフィールドを省略してください。`;
+画像が不要な場合：
+- 3Dゲーム全般 → imagesフィールドを省略
+- 幾何学的な図形のみ → imagesフィールドを省略`;
 }
 
 /**
@@ -51,6 +63,7 @@ ${getBaseRules()}
  * @param {string} options.gameType - Game type hint (optional)
  * @param {Array} options.attachments - Attached assets (optional)
  * @param {string} options.skillSummary - Skill summary from Claude CLI (optional)
+ * @param {string} options.gameSpec - Game specification from SPEC.md (optional)
  */
 function buildRequest(options) {
   const {
@@ -59,8 +72,14 @@ function buildRequest(options) {
     title = '',
     gameType = '',
     attachments = [],
-    skillSummary = null
+    skillSummary = null,
+    gameSpec = null
   } = options;
+
+  // ゲームタイプを自動判定
+  const analysis = analyzeGameType(userMessage);
+  const detectedGameType = applyExplicitOverride(userMessage, analysis).gameType;
+  const finalGameType = gameType || detectedGameType;
 
   // Build conversation contents
   const contents = [];
@@ -84,9 +103,24 @@ function buildRequest(options) {
     currentMessage = `[ゲームタイプ: ${gameType}]\n\n${currentMessage}`;
   }
 
+  // Add auto-detected game type hint
+  currentMessage += `\n\n[自動判定: ${finalGameType === 'game-3d' ? '3D' : '2D'}ゲーム (確信度: ${(analysis.confidence * 100).toFixed(0)}%)]`;
+  if (analysis.details.matched3d.length > 0 || analysis.details.matched2d.length > 0) {
+    currentMessage += `\n検出: ${[...analysis.details.matched3d, ...analysis.details.matched2d].join(', ')}`;
+  }
+
+  // Add game spec (CRITICAL - contains sprite directions for image generation)
+  if (gameSpec) {
+    currentMessage += `\n\n[ゲーム仕様書 - 画像の向きはこれに従うこと]\n${gameSpec}`;
+  }
+
   // Add skill summary (CRITICAL - must follow these guidelines)
   if (skillSummary) {
     currentMessage += `\n\n[必須ガイドライン - 以下を必ず適用すること]\n${skillSummary}`;
+  } else {
+    // Generate skill guidelines based on game type
+    const skillGuidelines = generateSkillGuidelines(finalGameType);
+    currentMessage += `\n\n[必須ガイドライン]\n${skillGuidelines}`;
   }
 
   if (attachments.length > 0) {
@@ -112,7 +146,23 @@ function buildRequest(options) {
   };
 }
 
+/**
+ * ユーザーメッセージからゲームタイプを分析
+ * @param {string} userMessage - User's instruction
+ * @returns {Object} { gameType, confidence, analysis }
+ */
+function analyzeAndReturnGameType(userMessage) {
+  const analysis = analyzeGameType(userMessage);
+  const result = applyExplicitOverride(userMessage, analysis);
+  return {
+    gameType: result.gameType,
+    confidence: result.confidence,
+    analysis: analysis
+  };
+}
+
 module.exports = {
   getSystemPrompt,
-  buildRequest
+  buildRequest,
+  analyzeAndReturnGameType
 };

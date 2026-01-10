@@ -1,8 +1,111 @@
 const https = require('https');
+const sharp = require('sharp');
 require('dotenv').config();
 
 const createPrompt = require('./prompts/createPrompt');
 const updatePrompt = require('./prompts/updatePrompt');
+
+/**
+ * Remove magenta background from image
+ * Based on nanobanana skill: R>180, G<100, B>100 → transparent
+ * Includes 1px erosion to remove edge artifacts
+ * @param {string} base64Image - Base64 encoded image (with or without data URI prefix)
+ * @returns {Promise<string>} - Base64 encoded PNG with transparent background
+ */
+async function removeMagentaBackground(base64Image) {
+  try {
+    // Extract base64 data
+    const base64Data = base64Image.includes(',')
+      ? base64Image.split(',')[1]
+      : base64Image;
+
+    const inputBuffer = Buffer.from(base64Data, 'base64');
+
+    // Get image info and raw pixel data
+    const image = sharp(inputBuffer);
+    const { width, height } = await image.metadata();
+
+    // Ensure we have RGBA
+    const rawBuffer = await image
+      .ensureAlpha()
+      .raw()
+      .toBuffer();
+
+    // Process pixels - make magenta pixels transparent
+    const pixels = new Uint8Array(rawBuffer);
+    for (let i = 0; i < pixels.length; i += 4) {
+      const r = pixels[i];
+      const g = pixels[i + 1];
+      const b = pixels[i + 2];
+
+      // Check if pixel is magenta (R>180, G<100, B>100)
+      if (r > 180 && g < 100 && b > 100) {
+        pixels[i + 3] = 0; // Set alpha to 0 (transparent)
+      }
+    }
+
+    // Create image with transparency
+    let outputBuffer = await sharp(Buffer.from(pixels), {
+      raw: { width, height, channels: 4 }
+    })
+      .png()
+      .toBuffer();
+
+    // Apply 1px erosion to remove edge artifacts
+    // Re-read the image and erode edges where alpha transitions
+    const erodedImage = sharp(outputBuffer);
+    const erodedRaw = await erodedImage.ensureAlpha().raw().toBuffer();
+    const erodedPixels = new Uint8Array(erodedRaw);
+
+    // Simple erosion: if any neighbor is transparent, check if this edge pixel should be removed
+    const originalAlpha = new Uint8Array(pixels.length / 4);
+    for (let i = 0; i < pixels.length; i += 4) {
+      originalAlpha[i / 4] = erodedPixels[i + 3];
+    }
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        if (erodedPixels[idx + 3] > 0) {
+          // Check if this pixel is on an edge (has transparent neighbor)
+          let hasTransparentNeighbor = false;
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dx === 0 && dy === 0) continue;
+              const nx = x + dx;
+              const ny = y + dy;
+              if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                const nIdx = ny * width + nx;
+                if (originalAlpha[nIdx] === 0) {
+                  hasTransparentNeighbor = true;
+                  break;
+                }
+              }
+            }
+            if (hasTransparentNeighbor) break;
+          }
+          if (hasTransparentNeighbor) {
+            erodedPixels[idx + 3] = 0; // Make edge pixel transparent
+          }
+        }
+      }
+    }
+
+    // Create final image
+    outputBuffer = await sharp(Buffer.from(erodedPixels), {
+      raw: { width, height, channels: 4 }
+    })
+      .png()
+      .toBuffer();
+
+    console.log('Magenta background removed with 1px erosion');
+    return `data:image/png;base64,${outputBuffer.toString('base64')}`;
+  } catch (error) {
+    console.error('Error removing background:', error);
+    // Return original image if processing fails
+    return base64Image.includes(',') ? base64Image : `data:image/png;base64,${base64Image}`;
+  }
+}
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-3-pro-preview';
@@ -57,7 +160,8 @@ class GeminiClient {
         title,
         gameType,
         attachments,
-        skillSummary  // Pass to prompt builder
+        skillSummary,  // Pass to prompt builder
+        gameSpec  // Pass game spec for sprite directions
       });
     } else {
       requestBody = updatePrompt.buildRequest({
@@ -239,9 +343,9 @@ class GeminiClient {
       }
     }
 
-    // Add transparent background instruction for game assets
+    // Add solid magenta background for transparent processing
     if (transparent) {
-      enhancedPrompt = `${enhancedPrompt}, transparent background, PNG format with alpha channel, isolated game asset, no background, clean edges`;
+      enhancedPrompt = `${enhancedPrompt}, on a solid magenta (#FF00FF) background, isolated game sprite, centered, clean edges, no shadows`;
     }
 
     // Parse size to determine aspect ratio
@@ -318,11 +422,34 @@ class GeminiClient {
                   const mimeType = part.inlineData.mimeType || 'image/png';
 
                   console.log('Image generated successfully');
-                  resolve({
-                    success: true,
-                    image: `data:${mimeType};base64,${imageData}`,
-                    prompt: enhancedPrompt
-                  });
+
+                  // Remove magenta background if transparent was requested
+                  if (transparent) {
+                    console.log('Removing magenta background...');
+                    removeMagentaBackground(`data:${mimeType};base64,${imageData}`)
+                      .then(processedImage => {
+                        console.log('Background removed successfully');
+                        resolve({
+                          success: true,
+                          image: processedImage,
+                          prompt: enhancedPrompt
+                        });
+                      })
+                      .catch(err => {
+                        console.error('Magenta background removal failed:', err);
+                        resolve({
+                          success: true,
+                          image: `data:${mimeType};base64,${imageData}`,
+                          prompt: enhancedPrompt
+                        });
+                      });
+                  } else {
+                    resolve({
+                      success: true,
+                      image: `data:${mimeType};base64,${imageData}`,
+                      prompt: enhancedPrompt
+                    });
+                  }
                   return;
                 }
               }

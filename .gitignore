@@ -37,3 +37,11 @@ temp/
 # Build output
 dist/
 build/
+
+# Google Cloud SDK (local install)
+google-cloud-sdk/
+google-cloud-cli-*.tar.gz
+
+# Analysis reports (generated)
+game_classification_report.*
+analyze_classification.js

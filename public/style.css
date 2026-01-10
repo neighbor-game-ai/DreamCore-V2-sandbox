@@ -1680,26 +1680,277 @@ body {
   cursor: not-allowed;
 }
 
-/* Responsive */
+/* ==================== Preset Buttons ==================== */
+.preset-buttons {
+  display: none;  /* Hidden by default on desktop */
+  padding: 8px 12px;
+  background: #12121f;
+  border-top: 1px solid #2a2a4a;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.preset-buttons::-webkit-scrollbar {
+  display: none;
+}
+
+.preset-btn {
+  display: inline-block;
+  padding: 10px 16px;
+  margin-right: 8px;
+  background: #2a3a5a;
+  border: 1px solid #4a5a7a;
+  border-radius: 20px;
+  color: #8af;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.preset-btn:last-child {
+  margin-right: 0;
+}
+
+.preset-btn:hover, .preset-btn:active {
+  background: #3a4a6a;
+  border-color: #6a7a9a;
+}
+
+/* ==================== Input Extras ==================== */
+.input-extras {
+  display: none;  /* Hidden by default on desktop */
+  padding: 8px 12px;
+  background: #16162a;
+  border-top: 1px solid #2a2a4a;
+  gap: 8px;
+}
+
+.input-extras button {
+  flex: 1;
+  padding: 12px;
+  background: #2a2a4a;
+  border: 1px solid #3a3a6a;
+  border-radius: 8px;
+  color: #ccc;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.input-extras button:hover, .input-extras button:active {
+  background: #3a3a6a;
+}
+
+/* ==================== Mobile Tab Bar ==================== */
+.mobile-tab-bar {
+  display: none;  /* Hidden by default on desktop */
+  background: #16162a;
+  border-bottom: 1px solid #2a2a4a;
+}
+
+.mobile-tab {
+  flex: 1;
+  padding: 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #888;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mobile-tab.active {
+  color: #5c6bc0;
+  border-bottom-color: #5c6bc0;
+  background: rgba(92, 107, 192, 0.1);
+}
+
+/* ==================== Responsive - Mobile ==================== */
 @media (max-width: 768px) {
   .container {
     flex-direction: column;
+    height: 100vh;
+    height: 100dvh;  /* Dynamic viewport height for mobile browsers */
   }
 
+  /* Show mobile tab bar */
+  .mobile-tab-bar {
+    display: flex;
+    flex-shrink: 0;
+  }
+
+  /* Show preset buttons */
+  .preset-buttons {
+    display: block;
+  }
+
+  /* Show input extras */
+  .input-extras {
+    display: flex;
+  }
+
+  /* Chat panel - full height when active */
   .chat-panel {
     width: 100%;
-    height: 50vh;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
 
+  .chat-panel.mobile-hidden {
+    display: none;
+  }
+
+  /* Preview panel - full height when active */
   .preview-panel {
-    height: 50vh;
+    flex: 1;
+    display: none;  /* Hidden by default on mobile */
+    flex-direction: column;
   }
 
-  .asset-modal {
-    width: 95vw;
+  .preview-panel.mobile-active {
+    display: flex;
+  }
+
+  /* Optimize chat header for mobile */
+  .chat-header {
+    padding: 12px;
+    flex-shrink: 0;
+  }
+
+  .chat-header h1 {
+    font-size: 1rem;
+  }
+
+  /* Hide project selector on mobile (use home button) */
+  .project-selector {
+    display: none;
+  }
+
+  /* Chat messages - flexible height */
+  .chat-messages {
+    flex: 1;
+    min-height: 0;
+    padding: 12px;
+  }
+
+  /* Hide debug options on mobile */
+  .debug-options {
+    display: none;
+  }
+
+  /* Optimize input container for mobile */
+  .chat-input-container {
+    padding: 12px;
+    flex-shrink: 0;
+  }
+
+  #chatInput {
+    font-size: 16px;  /* Prevent zoom on iOS */
+  }
+
+  /* Larger touch targets */
+  #sendButton, #stopButton {
+    min-width: 60px;
+    min-height: 48px;
+    padding: 12px 16px;
+    font-size: 0.9rem;
+  }
+
+  /* Keep asset/image buttons hidden in main input (moved to extras) */
+  .input-buttons #assetButton,
+  .input-buttons #imageGenButton {
+    display: none;
+  }
+
+  /* Streaming container optimization */
+  .streaming-container {
+    max-height: 120px;
+    flex-shrink: 0;
+  }
+
+  .streaming-output {
+    max-height: 80px;
+    font-size: 0.7rem;
+  }
+
+  /* Preview container full height */
+  .preview-container {
+    flex: 1;
+    padding: 8px;
+  }
+
+  /* Modal full screen on mobile */
+  .modal-content {
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-width: none !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+  }
+
+  .modal-close {
+    font-size: 2rem;
+    padding: 8px;
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  /* Asset modal optimization */
+  .asset-tab-content {
+    height: calc(100vh - 200px);
+    height: calc(100dvh - 200px);
   }
 
   .asset-grid {
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  }
+
+  /* Image gen modal optimization */
+  .image-gen-content {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .image-gen-preview {
+    min-height: 200px;
+  }
+
+  /* Error panel smaller on mobile */
+  .error-panel {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    max-height: 150px;
+  }
+
+  /* Game status smaller */
+  .game-status {
+    top: 12px;
+    right: 12px;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 380px) {
+  .preset-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .chat-header h1 {
+    font-size: 0.9rem;
+  }
+
+  #newProjectButton {
+    display: none;
   }
 }

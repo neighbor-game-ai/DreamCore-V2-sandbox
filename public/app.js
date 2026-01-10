@@ -454,6 +454,76 @@ class GameCreatorApp {
 
     // Create project button in list view
     this.createProjectButton.addEventListener('click', () => this.createNewProject());
+
+    // Mobile tab switching
+    this.setupMobileTabListeners();
+
+    // Preset buttons
+    this.setupPresetListeners();
+  }
+
+  // ==================== Mobile Tab Switching ====================
+
+  setupMobileTabListeners() {
+    const tabBar = document.getElementById('mobileTabBar');
+    const chatPanel = document.getElementById('chatPanel');
+    const previewPanel = document.getElementById('previewPanel');
+
+    if (!tabBar) return;
+
+    tabBar.addEventListener('click', (e) => {
+      const tab = e.target.closest('.mobile-tab');
+      if (!tab) return;
+
+      const tabName = tab.dataset.tab;
+      this.switchMobileTab(tabName);
+    });
+  }
+
+  switchMobileTab(tabName) {
+    const tabs = document.querySelectorAll('.mobile-tab');
+    const chatPanel = document.getElementById('chatPanel');
+    const previewPanel = document.getElementById('previewPanel');
+
+    // Update tab active state
+    tabs.forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.tab === tabName);
+    });
+
+    // Show/hide panels
+    if (tabName === 'chat') {
+      chatPanel.classList.remove('mobile-hidden');
+      previewPanel.classList.remove('mobile-active');
+    } else if (tabName === 'preview') {
+      chatPanel.classList.add('mobile-hidden');
+      previewPanel.classList.add('mobile-active');
+      // Refresh preview when switching to it
+      this.refreshPreview();
+    }
+  }
+
+  // ==================== Preset Buttons ====================
+
+  setupPresetListeners() {
+    const presetButtons = document.getElementById('presetButtons');
+    if (!presetButtons) return;
+
+    presetButtons.addEventListener('click', (e) => {
+      const btn = e.target.closest('.preset-btn');
+      if (!btn) return;
+
+      const prompt = btn.dataset.prompt;
+      if (prompt) {
+        // Set the prompt in the input
+        this.chatInput.value = prompt;
+        // Send the message
+        this.sendMessage();
+        // Switch to chat tab on mobile (if on preview)
+        if (window.innerWidth <= 768) {
+          this.switchMobileTab('chat');
+        }
+      }
+    });
   }
 
   handleMessage(data) {

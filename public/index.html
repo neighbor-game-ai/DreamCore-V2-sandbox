@@ -25,8 +25,14 @@
 
   <!-- Project Editor View (shown at /project/:id) -->
   <div class="container hidden" id="editorView">
+    <!-- Mobile Tab Bar (shown on mobile only) -->
+    <div class="mobile-tab-bar" id="mobileTabBar">
+      <button class="mobile-tab active" data-tab="chat">💬 チャット</button>
+      <button class="mobile-tab" data-tab="preview">🎮 プレビュー</button>
+    </div>
+
     <!-- Left: Chat Panel -->
-    <div class="chat-panel">
+    <div class="chat-panel" id="chatPanel">
       <div class="chat-header">
         <button id="homeButton" class="home-btn" title="Back to Projects">←</button>
         <h1>Game Creator</h1>
@@ -70,19 +76,31 @@
         </label>
       </div>
 
+      <!-- Preset Buttons (Mobile) -->
+      <div class="preset-buttons" id="presetButtons">
+        <button class="preset-btn" data-prompt="シンプルなシューティングゲームを作って">🚀 シューティング</button>
+        <button class="preset-btn" data-prompt="車のレースゲームを作って">🏎️ レース</button>
+        <button class="preset-btn" data-prompt="パズルゲームを作って">🧩 パズル</button>
+        <button class="preset-btn" data-prompt="アクションゲームを作って">⚔️ アクション</button>
+        <button class="preset-btn" data-prompt="ジャンプアクションゲームを作って">🦘 ジャンプ</button>
+        <button class="preset-btn" data-prompt="タップゲームを作って">👆 タップ</button>
+      </div>
+
       <div class="chat-input-container">
         <textarea
           id="chatInput"
           placeholder="ゲームの指示を入力してください..."
-          rows="3"
+          rows="2"
           disabled
         ></textarea>
         <div class="input-buttons">
-          <button id="assetButton" title="Assets">📁</button>
-          <button id="imageGenButton" title="AI Image Generation">🎨</button>
           <button id="sendButton" disabled>送信</button>
           <button id="stopButton" class="hidden">停止</button>
         </div>
+      </div>
+      <div class="input-extras">
+        <button id="assetButton" title="Assets">📁 アセット</button>
+        <button id="imageGenButton" title="AI Image Generation">🎨 画像生成</button>
       </div>
     </div>
 
@@ -187,7 +205,7 @@
     </div>
 
     <!-- Right: Game Preview -->
-    <div class="preview-panel">
+    <div class="preview-panel" id="previewPanel">
       <div class="preview-header">
         <h2 id="previewTitle">Preview</h2>
         <div class="preview-actions">

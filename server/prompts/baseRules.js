@@ -124,6 +124,85 @@ BGM（ストリーミング必須）:
 - 同時再生: cloneNode(true).play()
 - 短い効果音のみAudioContextでデコードOK`;
 
+const resultScreenRules = `[リザルト画面 - GSAP必須]
+
+GSAPを使ったリッチなリザルト画面を必ず実装すること:
+
+CDN読み込み:
+\`\`\`html
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+\`\`\`
+
+リザルト画面の必須要素:
+- 半透明オーバーレイ（背景をぼかす）
+- スコア表示（カウントアップアニメーション）
+- 「GAME OVER」または「CLEAR」のタイトル
+- リトライボタン
+
+アニメーション実装例:
+\`\`\`javascript
+function showResult(score, isGameOver = true) {
+  const overlay = document.getElementById('result-overlay');
+  overlay.style.display = 'flex';
+
+  // タイムラインでシーケンス
+  const tl = gsap.timeline();
+
+  // オーバーレイフェードイン
+  tl.fromTo(overlay,
+    { opacity: 0 },
+    { opacity: 1, duration: 0.3 }
+  );
+
+  // タイトル（バウンス登場）
+  tl.fromTo('#result-title',
+    { scale: 0, rotation: -10 },
+    { scale: 1, rotation: 0, duration: 0.5, ease: 'back.out(1.7)' }
+  );
+
+  // スコアカウントアップ
+  const scoreObj = { value: 0 };
+  tl.to(scoreObj, {
+    value: score,
+    duration: 1.5,
+    ease: 'power2.out',
+    onUpdate: () => {
+      document.getElementById('result-score').textContent = Math.floor(scoreObj.value);
+    }
+  }, '-=0.2');
+
+  // ボタン登場（下からスライド）
+  tl.fromTo('#retry-btn',
+    { y: 50, opacity: 0 },
+    { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out' }
+  );
+}
+\`\`\`
+
+リザルト画面HTML例:
+\`\`\`html
+<div id="result-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(5px); justify-content:center; align-items:center; flex-direction:column; z-index:1000;">
+  <div id="result-title" style="font-size:3rem; color:#FF69B4; text-shadow:0 0 20px #FF69B4; margin-bottom:20px;">GAME OVER</div>
+  <div style="font-size:1.5rem; color:#fff; margin-bottom:10px;">SCORE</div>
+  <div id="result-score" style="font-size:4rem; color:#FFD700; font-weight:bold;">0</div>
+  <button id="retry-btn" style="margin-top:30px; padding:15px 40px; font-size:1.2rem; background:linear-gradient(135deg,#FF69B4,#9370DB); border:none; border-radius:50px; color:#fff; cursor:pointer; box-shadow:0 5px 20px rgba(255,105,180,0.5);">RETRY</button>
+</div>
+\`\`\`
+
+リトライボタン処理:
+\`\`\`javascript
+document.getElementById('retry-btn').addEventListener('click', () => {
+  gsap.to('#result-overlay', {
+    opacity: 0,
+    duration: 0.3,
+    onComplete: () => {
+      document.getElementById('result-overlay').style.display = 'none';
+      resetGame();
+    }
+  });
+});
+\`\`\``;
+
 const prohibitions = `[禁止事項 - CRITICAL]
 
 絶対禁止:
@@ -133,16 +212,38 @@ const prohibitions = `[禁止事項 - CRITICAL]
 - 疑似ローディング画面の実装
 - フォッグの使用（scene.fog, THREE.Fog, THREE.FogExp2）
 
-リスタート実装:
-\`\`\`javascript
-function resetGame() {
-  score = 0;
-  playerX = startX;
-  playerY = startY;
-  gameOver = false;
-  // 全ての関連変数を初期値に戻す
-}
-\`\`\`
+[よくあるバグ - 必ず避けること]
+
+1. pointer-eventsとイベントリスナーの矛盾:
+   - 要素に pointer-events: none; を設定しているのに、その要素にクリック/タップイベントリスナーを追加するのは矛盾
+   - クリック可能にしたい要素は必ず pointer-events: auto; にする
+   - 正しい実装:
+   \`\`\`css
+   #overlay-container { pointer-events: none; }  /* コンテナは透過 */
+   #start-button { pointer-events: auto; }       /* ボタンはクリック可能 */
+   \`\`\`
+
+2. resetGame()でのgameState設定ミス:
+   - resetGame()内で gameState = 'PLAYING' に設定すると、スタート画面が機能しない
+   - resetGame()は変数の初期化のみ行い、gameStateは 'READY' や 'WAITING' に戻す
+   - ゲーム開始は startGame() 等の別関数で行う
+   - 正しい実装:
+   \`\`\`javascript
+   function resetGame() {
+     score = 0;
+     playerX = startX;
+     gameState = 'READY';  // PLAYINGではなくREADYに戻す
+   }
+   function startGame() {
+     resetGame();
+     gameState = 'PLAYING';  // ここでPLAYINGに変更
+   }
+   \`\`\`
+
+3. オーバーレイの表示/非表示:
+   - ゲーム開始時: スタートオーバーレイを非表示、ゲームループ開始
+   - ゲームオーバー時: リザルトオーバーレイを表示、ゲームループ停止または一時停止
+   - リトライ時: リザルトオーバーレイを非表示、resetGame()→startGame()
 
 パフォーマンス注意:
 - 重いリソースは非同期でロード
@@ -157,6 +258,7 @@ module.exports = {
   cameraSystemRules,
   movementRules,
   audioRules,
+  resultScreenRules,
   prohibitions,
 
   // Combined rules for system prompt
@@ -176,6 +278,8 @@ ${cameraSystemRules}
 ${movementRules}
 
 ${audioRules}
+
+${resultScreenRules}
 
 ${prohibitions}`;
   }

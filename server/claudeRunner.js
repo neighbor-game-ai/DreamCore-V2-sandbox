@@ -151,27 +151,15 @@ class ClaudeRunner {
     console.log('Asking Claude CLI for dimension detection...');
 
     return new Promise((resolve) => {
-      const prompt = `ゲームリクエストを2D/3Dに分類してください。
+      const prompt = `ユーザーのゲームリクエストを分析し、2Dゲームか3Dゲームかを判断してください。
 
-## 例
-"シューティングゲーム" → 2d
-"パズルゲーム" → 2d
-"ブロック崩し" → 2d
-"3Dレースゲーム" → 3d
-"ボールが跳ねるシミュレーション" → 3d
-"アクションゲーム" → unclear
-"レースゲーム" → unclear
-"ゲームを作って" → unclear
+リクエスト: "${userMessage}"
 
-## 分類基準
-- 明らかに2D（横スクロール、シューティング、パズル、テトリス系）→ 2d
-- 明らかに3D（球、物理シミュレーション、3D明記）→ 3d
-- どちらでも作れる（レース、アクション、RPG等）→ unclear
+判断基準:
+- ユーザーが明確に「2D」または「3D」と指定している場合のみ確定
+- 指定がない場合は「unclear」と回答
 
-## 今回のリクエスト
-"${userMessage}"
-
-回答(2d/3d/unclearのみ):`;
+回答は「2d」「3d」「unclear」のいずれか1単語のみ:`;
 
       const claude = spawn('claude', [
         '--print',

@@ -5,7 +5,12 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "dev": "node --watch server/index.js"
+    "dev": "node --watch server/index.js",
+    "classify:html": "node server/tools/classifyGames.js --format html --output game_classification_report.html",
+    "classify:json": "node server/tools/classifyGames.js --format json --output game_classification_report.json",
+    "classify:csv": "node server/tools/classifyGames.js --format csv --output game_classification_report.csv",
+    "classify:all": "npm run classify:html && npm run classify:json && npm run classify:csv && npm run analyze",
+    "analyze": "node server/tools/analyzeClassification.js game_classification_report.json"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
@@ -13,6 +18,7 @@
     "dotenv": "^17.2.3",
     "express": "^4.18.2",
     "multer": "^2.0.2",
+    "sharp": "^0.34.5",
     "uuid": "^9.0.1",
     "ws": "^8.14.2"
   }

@@ -118,19 +118,6 @@ mesh.receiveShadow = true;
 ground.receiveShadow = true;
 ```
 
-## フォグ（霧）
-
-```javascript
-// 線形フォグ
-scene.fog = new THREE.Fog(0x000000, 10, 50);
-
-// 指数フォグ（より自然）
-scene.fog = new THREE.FogExp2(0x000000, 0.02);
-
-// 背景色をフォグ色に合わせる
-scene.background = new THREE.Color(0x000000);
-```
-
 ## スカイボックス/グラデーション背景
 
 ```javascript
@@ -234,7 +221,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 // シーン・カメラ・レンダラー
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111122);
-scene.fog = new THREE.FogExp2(0x111122, 0.02);
+// 注意: scene.fog は使用しない（KAWAIIスタイルでは禁止）
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
 camera.position.set(0, 5, 10);

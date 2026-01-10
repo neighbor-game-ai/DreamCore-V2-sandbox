@@ -60,19 +60,28 @@ ${getBaseRules()}
   "summary": "変更内容の日本語説明（1-2文）"
 }
 
-[画像生成について]
-ゲームにキャラクター、敵、背景、アイテムなどの画像が必要な場合、imagesフィールドで指定してください。
+[画像生成について - 2Dゲームのみ]
+**重要: 3Dゲーム（Three.js、WebGL使用中）では画像生成は行わないこと。**
+
+2Dゲームでのみ、キャラクター等の画像が必要な場合にimagesフィールドで指定:
 - 最大3枚まで
 - 画像は透過背景（PNG）で生成されます
 - コード内では "assets/[name]" で参照できます
 - style: pixel, anime, kawaii, realistic, watercolor, flat から選択
 
-画像生成が必要な例：
+**★向きの指定（SPEC.mdを参照）：**
+- 現在のゲーム仕様の「スプライトの向き」セクションに従う
+- promptに "facing right" や "facing left" を必ず明記
+- 例：横スクロール → プレイヤー: "facing right, side view"、敵: "facing left, side view"
+- 例：縦スクロール → プレイヤー: "facing up"、敵: "facing down"
+
+画像生成が必要な例（2Dのみ）：
 - 「猫のキャラクターで」→ player.png を生成
 - 「敵を追加して」→ enemy.png を生成
-- 「アイテムを表示」→ item.png を生成
 
-画像が不要な場合はimagesフィールドを省略してください。
+画像が不要な場合（imagesフィールドを省略）：
+- 現在のコードがThree.jsや3Dを使用している場合
+- 幾何学的な図形のみの場合
 
 ● restoreモードの場合：
 {
