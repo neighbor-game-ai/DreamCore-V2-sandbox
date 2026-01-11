@@ -1145,8 +1145,19 @@ class GameCreatorApp {
     console.log('pendingRestore set to true');
   }
 
-  // Apply a suggestion from chat response (append if already has content)
+  // Apply a suggestion from chat response
+  // For dimension selection (2Dで作成/3Dで作成), send immediately
+  // For other suggestions, append to input
   applySuggestion(suggestion) {
+    // Check if this is a dimension selection (should send immediately)
+    if (suggestion === '2Dで作成' || suggestion === '3Dで作成') {
+      // Send immediately without adding して
+      this.chatInput.value = suggestion;
+      this.sendMessage();
+      return;
+    }
+
+    // For other suggestions, append to existing input
     const current = this.chatInput.value.trim().replace(/して$/, ''); // Remove trailing して
     if (current) {
       // Append with 、and add して at end
