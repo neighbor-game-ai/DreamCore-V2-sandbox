@@ -122,6 +122,35 @@ renderer.setAnimationLoop(() => renderer.render(scene, camera));
 </script>
 ```
 
+## z-indexレイヤー管理（重要）
+
+UI要素のタッチイベント競合を防ぐため、z-indexを明確に定義する。
+
+```css
+/* Canvas: 最背面 */
+#gameCanvas { z-index: 1; }
+
+/* 背景操作エリア（カメラドラッグ等） */
+#camera-zone { z-index: 5; touch-action: none; }
+
+/* ジョイスティック */
+#joystick-zone { z-index: 50; touch-action: none; }
+
+/* アクションボタン（常に最前面） */
+#jump-btn, #fire-btn, .action-btn { z-index: 100; }
+
+/* HUD（タッチ透過） */
+.hud, #score { z-index: 150; pointer-events: none; }
+```
+
+| z-index | 用途 | 例 |
+|---------|------|-----|
+| 1 | Canvas | ゲーム描画 |
+| 5 | 背景操作 | カメラドラッグ |
+| 50 | ジョイスティック | 移動操作 |
+| 100 | ボタン | ジャンプ、攻撃 |
+| 150 | HUD | スコア表示 |
+
 ## 非推奨API（エラーになる）
 
 ```javascript
