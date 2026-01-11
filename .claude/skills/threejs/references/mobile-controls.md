@@ -239,6 +239,9 @@ const lookJoystick = new VirtualJoystick(
   { color: 'rgba(255,100,100,0.6)' }
 );
 
+// ★カメラピッチ用の状態変数
+let cameraPitch = 0;  // 上下角度
+
 function animate() {
   const move = moveJoystick.getVector();
   const look = lookJoystick.getVector();
@@ -247,9 +250,17 @@ function animate() {
   player.position.x += move.x * 0.1;
   player.position.z -= move.y * 0.1;
 
-  // 視点回転
+  // 視点回転（ヨー: 左右）
   camera.rotation.y -= look.x * 0.02;
-  camera.rotation.x = Math.max(-Math.PI/4, Math.min(Math.PI/4, camera.rotation.x + look.y * 0.02));
+
+  // 視点回転（ピッチ: 上下）
+  // ★重要: += を使用（上スワイプ=上を見る）
+  // 解説: look.yはジョイスティックで反転済み（上=正）
+  //       Three.js右手系ではX軸正回転=下を向く
+  //       したがって上スワイプ(正)で下を向かないよう -= に変更
+  cameraPitch -= look.y * 0.02;
+  cameraPitch = Math.max(-Math.PI/4, Math.min(Math.PI/4, cameraPitch));
+  camera.rotation.x = cameraPitch;
 
   renderer.render(scene, camera);
 }
@@ -517,4 +528,86 @@ function detectTouchPurpose(touch) {
   // 画面左半分は移動、右半分はアクション
   return touch.clientX < window.innerWidth / 2 ? 'move' : 'action';
 }
+```
+
+---
+
+## カメラピッチ方向（上下回転）の正しい実装
+
+**Three.js右手座標系でのカメラ回転方向を正しく理解する。**
+
+### 座標系の理解
+
+```
+Three.js右手座標系:
+- X軸正回転 → カメラが下を向く
+- X軸負回転 → カメラが上を向く
+
+タッチ入力:
+- 上スワイプ → deltaY < 0（画面上方向はY値が小さい）
+- 下スワイプ → deltaY > 0
+```
+
+### ドラッグでカメラ操作（推奨パターン）
+
+```javascript
+let cameraPitch = 0;  // 上下角度（ラジアン）
+let cameraYaw = 0;    // 左右角度（ラジアン）
+
+const sensitivity = 0.005;
+
+document.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (!touchState.active) return;
+
+  const touch = e.touches[0];
+  const deltaX = touch.clientX - touchState.lastX;
+  const deltaY = touch.clientY - touchState.lastY;
+
+  // ヨー（左右回転）: 右スワイプ=右を向く
+  cameraYaw -= deltaX * sensitivity;
+
+  // ピッチ（上下回転）: 上スワイプ=上を向く
+  // ★重要: += を使用
+  // 上スワイプ(deltaY < 0) → pitch減少 → X軸負回転 → 上を向く
+  cameraPitch += deltaY * sensitivity;
+  cameraPitch = Math.max(-Math.PI/3, Math.min(Math.PI/3, cameraPitch));
+
+  // カメラに適用
+  camera.rotation.order = 'YXZ';  // ジンバルロック防止
+  camera.rotation.y = cameraYaw;
+  camera.rotation.x = cameraPitch;
+
+  touchState.lastX = touch.clientX;
+  touchState.lastY = touch.clientY;
+}, { passive: false });
+```
+
+### 方向の検証方法
+
+| 操作 | deltaY | pitch変化 | X軸回転 | 結果 |
+|------|--------|-----------|---------|------|
+| 上スワイプ | < 0 | 減少 | 負 | 上を向く ✓ |
+| 下スワイプ | > 0 | 増加 | 正 | 下を向く ✓ |
+
+### よくある間違い
+
+```javascript
+// ❌ 間違い: 上スワイプで下を向いてしまう
+cameraPitch -= deltaY * sensitivity;
+
+// ✓ 正解: 上スワイプで上を向く
+cameraPitch += deltaY * sensitivity;
+```
+
+### ジョイスティック使用時の注意
+
+ジョイスティックでY軸を反転している場合（`y: -clampedY`）、
+カメラピッチには `-=` を使用する:
+
+```javascript
+// ジョイスティックのlook.yは反転済み（上=正の値）
+// Three.jsでX軸正回転=下を向く
+// したがって -= で反転させる
+cameraPitch -= look.y * sensitivity;
 ```
