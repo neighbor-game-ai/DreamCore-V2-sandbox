@@ -116,6 +116,7 @@ ${getBaseRules()}
  * @param {Array} options.attachments - Attached assets (optional)
  * @param {string} options.skillSummary - Skill summary from Claude CLI (optional)
  * @param {string} options.gameSpec - Game specification from SPEC.md (optional)
+ * @param {string} options.visualStyle - Visual style from STYLE.md (optional)
  */
 function buildRequest(options) {
   const {
@@ -124,7 +125,8 @@ function buildRequest(options) {
     conversationHistory = [],
     attachments = [],
     skillSummary = null,
-    gameSpec = null
+    gameSpec = null,
+    visualStyle = null
   } = options;
 
   // Build conversation contents
@@ -140,6 +142,11 @@ function buildRequest(options) {
 
   // Build current user message with code context
   let currentMessage = '';
+
+  // Add visual style if available (CRITICAL - must maintain this style)
+  if (visualStyle) {
+    currentMessage += `[ビジュアルスタイル - このスタイルを維持すること]\n${visualStyle}\n\n`;
+  }
 
   // Add game spec if available (CRITICAL - must preserve these specs)
   if (gameSpec) {

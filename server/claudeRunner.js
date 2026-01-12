@@ -854,6 +854,15 @@ ${skillInstructions}
         }
       }
 
+      // Read STYLE.md for visual consistency across updates
+      let visualStyle = null;
+      if (!isNewProject) {
+        visualStyle = this.readStyle(visitorId, projectId);
+        if (visualStyle) {
+          console.log('Including existing STYLE.md in code generation');
+        }
+      }
+
       // AI-driven skill detection (async) - now with game spec and dimension for better context
       jobManager.updateProgress(jobId, 5, 'スキルを分析中...');
       let detectedSkills = await this.detectSkillsWithAI(effectiveUserMessage, currentCode, isNewProject, gameSpec, detectedDimension);
@@ -880,13 +889,14 @@ ${skillInstructions}
 
       let streamedChars = 0;
 
-      // Call Gemini with streaming (include skill summary and game spec if available)
+      // Call Gemini with streaming (include skill summary, game spec, and visual style if available)
       const result = await geminiClient.generateCode({
         userMessage: effectiveUserMessage,
         currentCode,
         conversationHistory: history || [],
         skillSummary,
         gameSpec,  // Pass game spec to Gemini
+        visualStyle,  // Pass visual style for consistency
         onStream: (chunk) => {
           if (chunk.type === 'text') {
             streamedChars += chunk.content.length;
@@ -1997,6 +2007,17 @@ ${dimension === '3d' ? '3D' : dimension === '2d' ? '2D' : '未指定'}
     // Fall back to legacy single file
     if (fs.existsSync(legacySpecPath)) {
       return fs.readFileSync(legacySpecPath, 'utf-8');
+    }
+    return null;
+  }
+
+  // Read STYLE.md for a project (visual style guideline)
+  readStyle(visitorId, projectId) {
+    const projectDir = userManager.getProjectDir(visitorId, projectId);
+    const stylePath = path.join(projectDir, 'STYLE.md');
+
+    if (fs.existsSync(stylePath)) {
+      return fs.readFileSync(stylePath, 'utf-8');
     }
     return null;
   }

@@ -146,6 +146,7 @@ class GeminiClient {
       attachments = [],
       skillSummary = null,  // Skill summary from Claude CLI
       gameSpec = null,  // Game specification from SPEC.md
+      visualStyle = null,  // Visual style from STYLE.md
       onStream = null
     } = options;
 
@@ -170,7 +171,8 @@ class GeminiClient {
         conversationHistory,
         attachments,
         skillSummary,  // Pass to prompt builder
-        gameSpec  // Pass game spec to preserve existing specs
+        gameSpec,  // Pass game spec to preserve existing specs
+        visualStyle  // Pass visual style to maintain design consistency
       });
     }
 

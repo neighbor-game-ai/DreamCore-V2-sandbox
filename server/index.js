@@ -675,6 +675,15 @@ wss.on('connection', (ws) => {
             console.log(`[Style Selection] Received: dimension=${dimension}, styleId=${styleId}, style=${style?.name}`);
 
             if (style) {
+              // Save STYLE.md to project for persistence across updates
+              try {
+                const styleContent = `# ビジュアルスタイル: ${style.name}\n\nID: ${styleId}\nDimension: ${dimension}\n\n${style.guideline || ''}`;
+                userManager.writeProjectFile(visitorId, currentProjectId, 'STYLE.md', styleContent);
+                console.log(`[Style Selection] Saved STYLE.md for ${style.name}`);
+              } catch (err) {
+                console.error(`[Style Selection] Failed to save STYLE.md:`, err.message);
+              }
+
               try {
                 // Generate AI-powered visual guide
                 const guide = await generateVisualGuide(userMessage, dimension, styleId);
