@@ -1,7 +1,6 @@
 ---
 name: kawaii-colors
-description: KAWAIIデザインスタイル。パステルカラーとポップで可愛い世界観。2D/3D共通。
-alwaysInclude: true
+description: KAWAIIデザインスタイル。パステルカラーとポップで可愛い世界観。2D/3D共通。ユーザーがKAWAIIスタイルを選択した場合に使用。
 priority: 0
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: p5js-setup
-description: P5.js基本セットアップ。CDN、setup/draw構造、インスタンスモード、canvas配置。2Dゲーム作成時に必須。
+description: P5.js基本セットアップ。CDN、setup/draw構造、インスタンスモード、canvas配置、仮想ジョイスティック。2Dゲーム作成時に必須。
 ---
 
 # P5.js 基本セットアップ
@@ -362,6 +362,233 @@ document.getElementById('left-btn').addEventListener('pointerup', () => {
 
 ---
 
+## 仮想ジョイスティック（モバイル対応）
+
+**外部ライブラリ不要** - 軽量カスタム実装。
+
+### HTML
+
+```html
+<div id="joystick-zone" style="
+  position: fixed;
+  bottom: calc(30px + env(safe-area-inset-bottom));
+  left: 20px;
+  width: 120px;
+  height: 120px;
+  z-index: 50;
+  touch-action: none;
+"></div>
+```
+
+### VirtualJoystick クラス
+
+```javascript
+class VirtualJoystick {
+  constructor(container, options = {}) {
+    this.container = container;
+    this.radius = options.radius || 50;
+    this.innerRadius = options.innerRadius || 25;
+    this.color = options.color || 'rgba(255,255,255,0.5)';
+    this.active = false;
+    this.vector = { x: 0, y: 0 };
+    this.startPos = { x: 0, y: 0 };
+    this.createElements();
+    this.bindEvents();
+  }
+
+  createElements() {
+    this.base = document.createElement('div');
+    this.base.style.cssText = `
+      position: absolute;
+      width: ${this.radius * 2}px;
+      height: ${this.radius * 2}px;
+      background: rgba(255,255,255,0.2);
+      border: 3px solid ${this.color};
+      border-radius: 50%;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    `;
+
+    this.stick = document.createElement('div');
+    this.stick.style.cssText = `
+      position: absolute;
+      width: ${this.innerRadius * 2}px;
+      height: ${this.innerRadius * 2}px;
+      background: ${this.color};
+      border-radius: 50%;
+      left: 50%;
+      top: 50%;
+      margin-left: -${this.innerRadius}px;
+      margin-top: -${this.innerRadius}px;
+    `;
+
+    this.base.appendChild(this.stick);
+    this.container.appendChild(this.base);
+  }
+
+  bindEvents() {
+    this.container.addEventListener('touchstart', (e) => this.onStart(e), { passive: false });
+    this.container.addEventListener('touchmove', (e) => this.onMove(e), { passive: false });
+    this.container.addEventListener('touchend', () => this.onEnd());
+    this.container.addEventListener('touchcancel', () => this.onEnd());
+
+    // PC デバッグ用
+    this.container.addEventListener('mousedown', (e) => this.onMouseStart(e));
+    document.addEventListener('mousemove', (e) => this.onMouseMove(e));
+    document.addEventListener('mouseup', () => this.onMouseEnd());
+  }
+
+  onStart(e) {
+    e.preventDefault();
+    this.active = true;
+    const rect = this.base.getBoundingClientRect();
+    this.startPos = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  }
+
+  onMove(e) {
+    if (!this.active) return;
+    e.preventDefault();
+    this.updatePosition(e.touches[0].clientX, e.touches[0].clientY);
+  }
+
+  onEnd() {
+    this.active = false;
+    this.stick.style.transform = 'translate(0px, 0px)';
+    this.vector = { x: 0, y: 0 };
+  }
+
+  onMouseStart(e) {
+    this.active = true;
+    const rect = this.base.getBoundingClientRect();
+    this.startPos = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  }
+
+  onMouseMove(e) {
+    if (!this.active) return;
+    this.updatePosition(e.clientX, e.clientY);
+  }
+
+  onMouseEnd() {
+    if (!this.active) return;
+    this.onEnd();
+  }
+
+  updatePosition(clientX, clientY) {
+    const dx = clientX - this.startPos.x;
+    const dy = clientY - this.startPos.y;
+    const maxDistance = this.radius - this.innerRadius;
+    const distance = Math.min(Math.sqrt(dx * dx + dy * dy), maxDistance);
+    const angle = Math.atan2(dy, dx);
+
+    const clampedX = Math.cos(angle) * distance;
+    const clampedY = Math.sin(angle) * distance;
+
+    this.stick.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
+
+    // ★Y軸: 上に倒す → マイナス値（P5.jsのY座標系に合わせる）
+    this.vector = {
+      x: clampedX / maxDistance,
+      y: clampedY / maxDistance  // P5.jsはY軸が下向き正なので反転しない
+    };
+  }
+
+  getVector() {
+    return this.vector;
+  }
+}
+```
+
+### P5.js での使用例
+
+```javascript
+let joystick;
+let player;
+
+const game = (p) => {
+  p.setup = () => {
+    const canvas = p.createCanvas(p.windowWidth, p.windowHeight);
+    canvas.parent('game-container');
+    player = { x: p.width / 2, y: p.height / 2 };
+
+    // ジョイスティック初期化
+    joystick = new VirtualJoystick(document.getElementById('joystick-zone'));
+  };
+
+  p.draw = () => {
+    p.background(30);
+
+    // ★ジョイスティックの入力を取得
+    const input = joystick.getVector();
+    const speed = 5;
+
+    player.x += input.x * speed;
+    player.y += input.y * speed;
+
+    // 画面内に制限
+    player.x = p.constrain(player.x, 25, p.width - 25);
+    player.y = p.constrain(player.y, 25, p.height - 25);
+
+    // プレイヤー描画
+    p.fill(0, 255, 255);
+    p.noStroke();
+    p.ellipse(player.x, player.y, 50, 50);
+  };
+};
+
+new p5(game);
+```
+
+### ジョイスティック + 発射ボタン
+
+```html
+<div id="joystick-zone" style="position:fixed; bottom:30px; left:20px; width:120px; height:120px; z-index:50; touch-action:none;"></div>
+<button id="fire-btn" style="position:fixed; bottom:50px; right:30px; width:80px; height:80px; border-radius:50%; z-index:100; font-size:20px;">🔥</button>
+```
+
+```javascript
+let joystick;
+const input = { fire: false };
+
+// 発射ボタン
+document.getElementById('fire-btn').addEventListener('pointerdown', () => input.fire = true);
+document.getElementById('fire-btn').addEventListener('pointerup', () => input.fire = false);
+
+p.draw = () => {
+  const move = joystick.getVector();
+  player.x += move.x * 5;
+  player.y += move.y * 5;
+
+  if (input.fire) {
+    shoot();
+    input.fire = false;  // 連射防止
+  }
+};
+```
+
+### CSS（ジョイスティック用）
+
+```css
+#joystick-zone {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* モバイル判定で表示切替 */
+@media (hover: hover) and (pointer: fine) {
+  /* PC: ジョイスティック非表示（キーボード操作） */
+  #joystick-zone { display: none; }
+}
+
+@media (hover: none) or (pointer: coarse) {
+  /* モバイル: ジョイスティック表示 */
+  #joystick-zone { display: block; }
+}
+```
+
+---
+
 ## チェックリスト
 
 - [ ] `createCanvas().parent('game-container')` を使用
@@ -370,6 +597,7 @@ document.getElementById('left-btn').addEventListener('pointerup', () => {
 - [ ] `pointer-events: auto` をボタンに設定
 - [ ] 画像読み込み失敗時のフォールバック描画
 - [ ] `pointerdown`/`pointerup` でモバイル対応
+- [ ] 仮想ジョイスティック使用時は `z-index: 50` で配置
 
 ---
 
@@ -381,3 +609,4 @@ document.getElementById('left-btn').addEventListener('pointerup', () => {
 - `pointer-events`を設定しない → クリックが透過しない
 - `click` イベントのみ使用 → モバイルで反応悪い
 - 画像読み込み失敗を無視 → 透明になって見えない
+- ジョイスティックに `{ passive: false }` を忘れる → スクロールされてしまう

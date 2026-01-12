@@ -53,12 +53,15 @@ ${getBaseRules()}
   "images": [
     {
       "name": "player.png",
-      "prompt": "cute cat character, game sprite, front view",
-      "style": "kawaii"
+      "prompt": "ビジュアルスタイルに合わせた画像の説明"
     }
   ],
   "summary": "変更内容の日本語説明（1-2文）"
 }
+
+[ビジュアルスタイルについて]
+既存のゲームにビジュアルスタイルが適用されている場合は、そのスタイルを維持してください。
+新規要素を追加する場合も、既存のスタイルと統一してください。
 
 [画像生成について - 2Dゲームのみ]
 **重要: 3Dゲーム（Three.js、WebGL使用中）では画像生成は行わないこと。**
@@ -67,7 +70,7 @@ ${getBaseRules()}
 - 最大3枚まで
 - 画像は透過背景（PNG）で生成されます
 - コード内では "assets/[name]" で参照できます
-- style: pixel, anime, kawaii, realistic, watercolor, flat から選択
+- promptにはビジュアルスタイルを反映した説明を書く
 
 **★向きの指定（SPEC.mdを参照）：**
 - 現在のゲーム仕様の「スプライトの向き」セクションに従う

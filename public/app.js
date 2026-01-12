@@ -122,6 +122,7 @@ class GameCreatorApp {
     this.setupEventListeners();
     this.setupAssetListeners();
     this.setupImageGenListeners();
+    this.setupStyleSelectListeners();
     this.setupRouting();
     this.setupErrorListeners();
   }
@@ -527,6 +528,7 @@ class GameCreatorApp {
   }
 
   handleMessage(data) {
+    console.log('[WS Received]', data.type, data);
     switch (data.type) {
       case 'init':
         this.visitorId = data.visitorId;
@@ -743,6 +745,10 @@ class GameCreatorApp {
         this.hideVersionPanel();
         this.refreshPreview();
         break;
+
+      case 'styleOptions':
+        this.displayStyleSelection(data.dimension, data.styles, data.originalMessage);
+        break;
     }
   }
 
@@ -882,7 +888,11 @@ class GameCreatorApp {
 
   sendMessage() {
     const content = this.chatInput.value.trim();
-    if (!content || this.isProcessing || !this.currentProjectId) return;
+    console.log('[sendMessage]', { content, isProcessing: this.isProcessing, currentProjectId: this.currentProjectId });
+    if (!content || this.isProcessing || !this.currentProjectId) {
+      console.log('[sendMessage] BLOCKED', { content: !!content, isProcessing: this.isProcessing, hasProjectId: !!this.currentProjectId });
+      return;
+    }
 
     this.addMessage(content, 'user');
     this.chatInput.value = '';
@@ -1055,11 +1065,13 @@ class GameCreatorApp {
 
   // Display chat response (no code changes, just conversation)
   displayChatResponse(data) {
+    console.log('[displayChatResponse]', data);
     // Hide streaming indicator
     this.hideStreaming();
     this.isProcessing = false;
     this.sendButton.disabled = false;
     this.stopButton.classList.add('hidden');
+    console.log('[displayChatResponse] isProcessing set to false');
 
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message assistant chat-response';
@@ -1149,9 +1161,14 @@ class GameCreatorApp {
   // For dimension selection (2Dで作成/3Dで作成), send immediately
   // For other suggestions, append to input
   applySuggestion(suggestion) {
+    console.log('[applySuggestion]', suggestion, 'isProcessing:', this.isProcessing);
     // Check if this is a dimension selection (should send immediately)
     if (suggestion === '2Dで作成' || suggestion === '3Dで作成') {
       // Send immediately without adding して
+      console.log('[applySuggestion] Dimension selection, sending immediately');
+      // Force reset processing state for dimension selection
+      this.isProcessing = false;
+      this.sendButton.disabled = false;
       this.chatInput.value = suggestion;
       this.sendMessage();
       return;
@@ -1759,6 +1776,135 @@ class GameCreatorApp {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+
+  // ==================== Style Selection (Chat-based) ====================
+
+  setupStyleSelectListeners() {
+    // No modal listeners needed - everything happens in chat
+  }
+
+  // Display style selection as a chat message
+  displayStyleSelection(dimension, styles, originalMessage) {
+    // Hide any processing state
+    this.isProcessing = false;
+    this.sendButton.disabled = false;
+    this.stopButton.classList.add('hidden');
+    this.hideStreaming();
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message assistant style-selection-message';
+
+    const messageId = `style-select-${Date.now()}`;
+    const initialCount = 10;
+    const hasMore = styles.length > initialCount;
+
+    let html = `
+      <div class="message-content">ビジュアルスタイルを選んでください</div>
+      <div class="style-scroll-container">
+        <div class="style-scroll-track" id="${messageId}">
+    `;
+
+    styles.forEach((style, index) => {
+      const hiddenClass = index >= initialCount ? 'style-card-hidden' : '';
+
+      html += `
+        <div class="style-card-chat ${hiddenClass}" data-style-id="${style.id}" data-dimension="${dimension}" data-original-message="${this.escapeHtml(originalMessage)}">
+          <div class="style-card-image-chat" style="background:#2d2d44">
+            ${style.imageUrl
+              ? `<img src="${style.imageUrl}" alt="${style.name}" loading="lazy" onerror="this.style.display='none'">`
+              : ''
+            }
+          </div>
+          <div class="style-card-info-chat">
+            <div class="style-card-name-chat">${this.escapeHtml(style.name)}</div>
+          </div>
+        </div>
+      `;
+    });
+
+    // "もっと見る" button (inside scroll track, at the end)
+    if (hasMore) {
+      html += `
+        <div class="style-card-more" id="${messageId}-more">
+          <button class="style-more-btn">+${styles.length - initialCount}<br><span>もっと見る</span></button>
+        </div>
+      `;
+    }
+
+    html += `
+        </div>
+      </div>
+      <div class="style-custom-chat">
+        <button class="style-custom-btn-chat" data-original-message="${this.escapeHtml(originalMessage)}">スキップ</button>
+      </div>
+    `;
+
+    messageDiv.innerHTML = html;
+    this.chatMessages.appendChild(messageDiv);
+
+    // "もっと見る" button handler
+    if (hasMore) {
+      const moreBtn = messageDiv.querySelector('.style-more-btn');
+      moreBtn.addEventListener('click', () => {
+        // Show all hidden cards
+        messageDiv.querySelectorAll('.style-card-hidden').forEach(card => {
+          card.classList.remove('style-card-hidden');
+        });
+        // Hide the "more" button
+        messageDiv.querySelector('.style-card-more').style.display = 'none';
+      });
+    }
+
+    // Add click handlers for style cards
+    messageDiv.querySelectorAll('.style-card-chat').forEach(card => {
+      card.addEventListener('click', () => {
+        const styleId = card.dataset.styleId;
+        const dim = card.dataset.dimension;
+        const origMsg = card.dataset.originalMessage;
+        const styleName = card.querySelector('.style-card-name-chat')?.textContent || styleId;
+
+        // Disable further clicks
+        messageDiv.querySelectorAll('.style-card-chat').forEach(c => c.style.pointerEvents = 'none');
+        messageDiv.querySelector('.style-custom-btn-chat').disabled = true;
+        const moreBtn = messageDiv.querySelector('.style-more-btn');
+        if (moreBtn) moreBtn.disabled = true;
+
+        // Highlight selected card
+        card.classList.add('selected');
+
+        // Add user message showing selection
+        this.addMessage(`スタイル: ${styleName}`, 'user');
+
+        // Send message with selected style
+        this.ws.send(JSON.stringify({
+          type: 'message',
+          content: origMsg,
+          selectedStyle: {
+            dimension: dim,
+            styleId: styleId
+          }
+        }));
+      });
+    });
+
+    // Add click handler for custom button
+    messageDiv.querySelector('.style-custom-btn-chat').addEventListener('click', (e) => {
+      const origMsg = e.target.dataset.originalMessage;
+
+      // Disable further clicks
+      messageDiv.querySelectorAll('.style-card-chat').forEach(c => c.style.pointerEvents = 'none');
+      e.target.disabled = true;
+
+      // Send with skip flag
+      this.ws.send(JSON.stringify({
+        type: 'message',
+        content: origMsg,
+        skipStyleSelection: true
+      }));
+    });
+
+    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
   }
 }
 

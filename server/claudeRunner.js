@@ -346,29 +346,28 @@ ${movementContext ? `## コードパターン\n${movementContext}\n` : ''}
     });
   }
 
-  // Get fallback skills based on framework, dimension, and message
+  // Get fallback skills based on framework and dimension
   // Used when Claude CLI fails
+  // Note: Visual style is now determined by user selection, not hardcoded skills
   getFallbackSkills(framework, dimension, isNewProject) {
-    const commonSkills = isNewProject ? ['kawaii-colors'] : [];
-
     // Priority 1: detected framework from existing code
     if (framework === 'threejs') {
-      return ['threejs-setup', 'kawaii-3d', ...commonSkills];
+      return ['threejs-setup'];
     }
     if (framework === 'p5js') {
-      return ['p5js-setup', ...commonSkills];
+      return ['p5js-setup'];
     }
 
     // Priority 2: detected dimension for new projects
     if (dimension === '3d') {
-      return ['threejs-setup', 'kawaii-3d', ...commonSkills];
+      return ['threejs-setup'];
     }
     if (dimension === '2d') {
-      return ['p5js-setup', ...commonSkills];
+      return ['p5js-setup'];
     }
 
-    // Unknown - return minimal
-    return isNewProject ? ['kawaii-colors'] : [];
+    // Unknown - return empty
+    return [];
   }
 
   // Detect framework from code (Three.js, P5.js, or unknown)
@@ -524,14 +523,12 @@ ${specSummary ? `現在のゲーム仕様:\n${specSummary}` : ''}
 
     const skills = [];
 
-    // Add default style for new projects
-    if (isNewProject && !/(色を|色は|ダーク|dark|シンプル|simple|クール|cool)/i.test(messageLower)) {
-      skills.push('kawaii-colors');
-    }
+    // Note: Visual style is now determined by user selection via visual guideline
+    // No default style skills are added here
 
     // Core framework
     if (is3D) {
-      skills.push('threejs-setup', 'kawaii-3d');
+      skills.push('threejs-setup');
     } else {
       skills.push('p5js-setup');
       // Image generation only for 2D
@@ -597,18 +594,16 @@ ${skillPaths}
       return null;
     }
 
-    // Prioritize: kawaii-colors first, then setup skills, then others
+    // Prioritize: setup skills first, then feature skills
+    // Note: Visual style is now determined by user selection, not skills
     const priorityOrder = [
-      'kawaii-colors',      // Always first
       'threejs-setup',      // 3D setup
       'p5js-setup',         // 2D setup
-      'kawaii-3d',          // 3D style
       'threejs-lighting',   // 3D lighting
       'p5js-input',         // 2D input
       'p5js-collision',     // 2D collision
       'audio-synth',        // Sound
-      'audio-mobile',       // Mobile audio
-      'kawaii-ui'           // UI
+      'audio-mobile'        // Mobile audio
     ];
 
     const sortedSkills = [...detectedSkills].sort((a, b) => {
@@ -680,49 +675,6 @@ ${skillInstructions}
     return prompt;
   }
 
-  // Determine the best style for image generation based on game content
-  determineImageStyle(userMessage, currentCode, detectedSkills) {
-    const lowerMessage = userMessage.toLowerCase();
-    const lowerCode = (currentCode || '').toLowerCase();
-    const combined = lowerMessage + ' ' + lowerCode;
-
-    // Check for explicit style hints in user message
-    if (/ピクセル|pixel|ドット|8bit|8ビット|レトロ|retro/i.test(lowerMessage)) {
-      return 'pixel';
-    }
-    if (/アニメ|anime|漫画|manga/i.test(lowerMessage)) {
-      return 'anime';
-    }
-    if (/かわいい|kawaii|キュート|cute|ポップ|pop/i.test(lowerMessage)) {
-      return 'kawaii';
-    }
-    if (/リアル|real|写実|photo/i.test(lowerMessage)) {
-      return 'realistic';
-    }
-    if (/水彩|watercolor|柔らか/i.test(lowerMessage)) {
-      return 'watercolor';
-    }
-    if (/フラット|flat|シンプル|simple|ミニマル/i.test(lowerMessage)) {
-      return 'flat';
-    }
-
-    // Infer from detected skills
-    if (detectedSkills.includes('kawaii-colors') || detectedSkills.includes('kawaii-3d')) {
-      return 'kawaii';
-    }
-
-    // Infer from game type in code
-    if (/シューティング|shooting|shooter/i.test(combined)) {
-      return 'pixel';  // Classic shooting games are often pixel art
-    }
-    if (/rpg|冒険|adventure/i.test(combined)) {
-      return 'anime';
-    }
-
-    // Default to kawaii for GameCreator's aesthetic
-    return 'kawaii';
-  }
-
   // Generate images for the project and save them
   // gameCode and gameSpec are used by Haiku to determine image direction
   async generateProjectImages(visitorId, projectId, images, jobId, gameCode = null, gameSpec = null) {
@@ -758,10 +710,10 @@ ${skillInstructions}
           `画像生成中: ${img.name} (${i + 1}/${totalImages})`
         );
 
-        // Generate image with AI-determined direction
+        // Generate image - style is determined by user's visual guideline in the prompt
+        // AI will interpret the prompt based on the selected visual style
         const result = await geminiClient.generateImage({
           prompt: enhancedPrompt,
-          style: img.style || 'kawaii',
           transparent: true
         });
 
@@ -837,6 +789,15 @@ ${skillInstructions}
           detectedDimension = is2DSelection ? '2d' : '3d';
           console.log(`User selected ${detectedDimension.toUpperCase()} from suggestion`);
 
+          // Preserve visual guide from current message before combining
+          // Match both old format (ビジュアルスタイル指定:) and new format (=== ビジュアルスタイルガイド)
+          const visualGuideMatch = userMessage.match(/\n\n(===\s*ビジュアルスタイルガイド[\s\S]+)$/) ||
+                                   userMessage.match(/\n\n(\[ビジュアルスタイル:[\s\S]+)$/);
+          const visualGuide = visualGuideMatch ? visualGuideMatch[1] : '';
+          if (visualGuide) {
+            console.log('Preserving visual guide during dimension selection');
+          }
+
           // Get original request from conversation history
           if (history && history.length > 0) {
             // Find the last user message that's not a dimension selection
@@ -845,8 +806,12 @@ ${skillInstructions}
               if (msg.role === 'user') {
                 const msgLower = msg.content.toLowerCase();
                 if (!msgLower.includes('2dで') && !msgLower.includes('3dで')) {
+                  // Combine dimension + original request + visual guide
                   effectiveUserMessage = `${detectedDimension.toUpperCase()}で${msg.content}`;
-                  console.log('Combined message:', effectiveUserMessage);
+                  if (visualGuide) {
+                    effectiveUserMessage += `\n\n${visualGuide}`;
+                  }
+                  console.log('Combined message:', effectiveUserMessage.substring(0, 200) + '...');
                   break;
                 }
               }
@@ -1127,6 +1092,14 @@ ${skillInstructions}
   // Process job (runs in background)
   async processJob(jobId, visitorId, projectId, userMessage, debugOptions = {}) {
     const projectDir = userManager.getProjectDir(visitorId, projectId);
+
+    // Debug: Log the full user message to verify visual guideline is included
+    console.log(`[ProcessJob] User message length: ${userMessage.length}`);
+    console.log(`[ProcessJob] Has visual guideline: ${userMessage.includes('ビジュアルスタイル指定')}`);
+    if (userMessage.includes('ビジュアルスタイル指定')) {
+      const styleMatch = userMessage.match(/ビジュアルスタイル指定: (.+)/);
+      console.log(`[ProcessJob] Style: ${styleMatch ? styleMatch[1] : 'unknown'}`);
+    }
 
     // Use Claude CLI to detect user intent
     jobManager.startJob(jobId);

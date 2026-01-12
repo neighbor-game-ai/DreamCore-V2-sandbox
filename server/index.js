@@ -8,6 +8,9 @@ const userManager = require('./userManager');
 const { claudeRunner, jobManager } = require('./claudeRunner');
 const db = require('./database');
 const geminiClient = require('./geminiClient');
+const { getStyleById } = require('./stylePresets');
+const { getStyleOptionsWithImages } = require('./styleImageCache');
+const { generateVisualGuide, formatGuideForCodeGeneration } = require('./visualGuideGenerator');
 
 const app = express();
 const server = http.createServer(app);
@@ -623,9 +626,77 @@ wss.on('connection', (ws) => {
             return;
           }
 
-          const userMessage = data.content;
+          let userMessage = data.content;
           const debugOptions = data.debugOptions || {};
-          userManager.addToHistory(visitorId, currentProjectId, 'user', userMessage);
+
+          // Check if style selection is needed for new game creation
+          const shouldCheckStyleSelection = !data.skipStyleSelection && !data.selectedStyle;
+          if (shouldCheckStyleSelection) {
+            // Check if this is a new project
+            const files = userManager.listProjectFiles(visitorId, currentProjectId);
+            let isNewProject = true;
+            if (files.length > 0) {
+              const indexContent = userManager.readProjectFile(visitorId, currentProjectId, 'index.html');
+              const isInitialWelcomePage = indexContent &&
+                indexContent.length < 1000 &&
+                indexContent.includes('Welcome to Game Creator');
+              if (!isInitialWelcomePage) {
+                isNewProject = false;
+              }
+            }
+
+            // Check if user is requesting game creation (and dimension is specified)
+            const isGameCreationRequest = /作って|作成|create|ゲーム/i.test(userMessage);
+            const has2DSpecified = /2d|２d|2D|２D/i.test(userMessage);
+            const has3DSpecified = /3d|３d|3D|３D/i.test(userMessage);
+            const hasDimensionSpecified = has2DSpecified || has3DSpecified;
+
+            if (isNewProject && isGameCreationRequest && hasDimensionSpecified) {
+              // Show style selection
+              const dimension = has3DSpecified ? '3d' : '2d';
+
+              // Get styles with images
+              const styles = getStyleOptionsWithImages(dimension);
+
+              safeSend({
+                type: 'styleOptions',
+                dimension,
+                styles,
+                originalMessage: userMessage
+              });
+              return; // Wait for user to select style
+            }
+          }
+
+          // If style was selected, generate visual guide with AI
+          if (data.selectedStyle) {
+            const { dimension, styleId } = data.selectedStyle;
+            const style = getStyleById(dimension, styleId);
+            console.log(`[Style Selection] Received: dimension=${dimension}, styleId=${styleId}, style=${style?.name}`);
+
+            if (style) {
+              try {
+                // Generate AI-powered visual guide
+                const guide = await generateVisualGuide(userMessage, dimension, styleId);
+                if (guide) {
+                  const formattedGuide = formatGuideForCodeGeneration(guide);
+                  userMessage = `${userMessage}\n\n${formattedGuide}`;
+                  console.log(`[Style Selection] AI-generated guide for: ${guide.styleName}`);
+                  console.log(`[Style Selection] Full message length: ${userMessage.length}`);
+                }
+              } catch (error) {
+                console.error(`[Style Selection] Guide generation failed:`, error.message);
+                // Fallback: use guideline directly if available
+                if (style.guideline) {
+                  userMessage = `${userMessage}\n\n${style.guideline}`;
+                }
+              }
+            }
+          } else {
+            console.log(`[Style Selection] No selectedStyle in data`);
+          }
+
+          userManager.addToHistory(visitorId, currentProjectId, 'user', data.content); // Store original message
 
           // Log debug options if enabled
           if (debugOptions.disableSkills || debugOptions.useClaude) {

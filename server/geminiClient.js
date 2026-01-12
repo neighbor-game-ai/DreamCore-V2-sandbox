@@ -311,8 +311,7 @@ class GeminiClient {
    * Generate image using Gemini Native Image Generation (Nano Banana)
    * Uses gemini-2.5-flash-image model with generateContent endpoint
    * @param {Object} options
-   * @param {string} options.prompt - Image description
-   * @param {string} options.style - Optional style hint (pixel, anime, kawaii, etc.)
+   * @param {string} options.prompt - Image description (should include style from visual guideline)
    * @param {string} options.size - Image size (default: 512x512)
    */
   async generateImage(options) {
@@ -322,26 +321,13 @@ class GeminiClient {
 
     const {
       prompt,
-      style = '',
       size = '512x512',
       transparent = true  // Default to transparent background for game assets
     } = options;
 
-    // Build enhanced prompt with style
+    // Use the prompt directly - style should already be incorporated
+    // via AI interpreting the visual guideline
     let enhancedPrompt = prompt;
-    if (style) {
-      const styleHints = {
-        pixel: 'ピクセルアート風、8ビットスタイル、ドット絵',
-        anime: 'アニメ風、日本のアニメスタイル',
-        kawaii: 'かわいい、キュート、丸みのあるデザイン',
-        realistic: '写実的、リアル、高品質',
-        watercolor: '水彩画風、柔らかいタッチ',
-        flat: 'フラットデザイン、シンプル、ミニマル'
-      };
-      if (styleHints[style]) {
-        enhancedPrompt = `${prompt}, ${styleHints[style]}`;
-      }
-    }
 
     // Add solid magenta background for transparent processing
     if (transparent) {
