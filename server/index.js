@@ -167,6 +167,41 @@ app.post('/api/assets/upload', upload.single('file'), (req, res) => {
   }
 });
 
+// Search assets (must be before /:id to avoid route collision)
+app.get('/api/assets/search', (req, res) => {
+  const { q, visitorId } = req.query;
+
+  if (!visitorId) {
+    return res.status(400).json({ error: 'visitorId required' });
+  }
+
+  const user = db.getUserByVisitorId(visitorId);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  let assets;
+  if (q) {
+    assets = db.searchAssets(user.id, q);
+  } else {
+    assets = db.getAccessibleAssets(user.id);
+  }
+
+  res.json({
+    assets: assets.map(a => ({
+      id: a.id,
+      filename: a.original_name,
+      mimeType: a.mime_type,
+      size: a.size,
+      isPublic: !!a.is_public,
+      isOwner: a.owner_id === user.id,
+      tags: a.tags,
+      description: a.description,
+      url: `/api/assets/${a.id}`
+    }))
+  });
+});
+
 // Get asset file
 app.get('/api/assets/:id', (req, res) => {
   const asset = db.getAssetById(req.params.id);
@@ -200,41 +235,6 @@ app.get('/api/assets/:id/meta', (req, res) => {
     description: asset.description,
     createdAt: asset.created_at,
     url: `/api/assets/${asset.id}`
-  });
-});
-
-// Search assets
-app.get('/api/assets/search', (req, res) => {
-  const { q, visitorId } = req.query;
-
-  if (!visitorId) {
-    return res.status(400).json({ error: 'visitorId required' });
-  }
-
-  const user = db.getUserByVisitorId(visitorId);
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-
-  let assets;
-  if (q) {
-    assets = db.searchAssets(user.id, q);
-  } else {
-    assets = db.getAccessibleAssets(user.id);
-  }
-
-  res.json({
-    assets: assets.map(a => ({
-      id: a.id,
-      filename: a.original_name,
-      mimeType: a.mime_type,
-      size: a.size,
-      isPublic: !!a.is_public,
-      isOwner: a.owner_id === user.id,
-      tags: a.tags,
-      description: a.description,
-      url: `/api/assets/${a.id}`
-    }))
   });
 });
 
