@@ -1910,7 +1910,7 @@ body {
 
 /* ==================== Input Extras ==================== */
 .input-extras {
-  display: none;  /* Hidden by default on desktop */
+  display: flex;  /* Visible on desktop */
   padding: 8px 12px;
   background: #16162a;
   border-top: 1px solid #2a2a4a;
