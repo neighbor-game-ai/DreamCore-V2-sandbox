@@ -17,6 +17,9 @@ class GameCreatorApp {
     // Current view state
     this.currentView = 'list'; // 'list' or 'editor'
 
+    // Current version state (null = latest)
+    this.currentVersionId = null;
+
     // Login elements
     this.loginView = document.getElementById('loginView');
     this.loginForm = document.getElementById('loginForm');
@@ -83,6 +86,10 @@ class GameCreatorApp {
 
     // Error state
     this.currentErrors = [];
+
+    // Notification permission
+    this.notificationPermission = Notification.permission;
+    this.requestNotificationPermission();
 
     // Restore state
     this.pendingRestore = false;
@@ -848,6 +855,7 @@ class GameCreatorApp {
         break;
 
       case 'gameUpdated':
+        this.currentVersionId = null; // Reset to latest version
         this.refreshPreview();
         // On mobile, switch to preview panel
         if (window.innerWidth <= 768) {
@@ -929,7 +937,8 @@ class GameCreatorApp {
         break;
 
       case 'versionRestored':
-        this.addMessage(`前のバージョンに戻しました`, 'system');
+        this.currentVersionId = data.versionId;
+        this.addMessage(`バージョン ${data.versionId} に戻しました`, 'system');
         this.hideVersionPanel();
         this.refreshPreview();
         break;
@@ -947,6 +956,9 @@ class GameCreatorApp {
     this.sendButton.disabled = true;
     this.stopButton.classList.remove('hidden');
     this.showStreaming();
+
+    // Ask for notification permission on first job
+    this.askNotificationPermission();
 
     if (isExisting) {
       this.updateStreamingStatus(`Resuming job... ${job.progress || 0}%`);
@@ -986,6 +998,7 @@ class GameCreatorApp {
         this.completeStreaming();
         // Skip message display for chat/restore mode (already handled by their own methods)
         if (update.result?.mode !== 'chat' && update.result?.mode !== 'restore') {
+          this.currentVersionId = null; // Reset to latest version
           const message = update.result?.message || update.message || 'ゲームを更新しました';
           this.addMessage(message, 'assistant', { showPlayButton: true });
           this.refreshPreview();
@@ -995,6 +1008,10 @@ class GameCreatorApp {
         this.currentJobId = null;
         this.sendButton.disabled = false;
         this.stopButton.classList.add('hidden');
+        // Browser notification
+        this.showNotification('🎮 ゲーム完成！', {
+          body: this.currentProjectName || 'ゲームが更新されました',
+        });
         break;
 
       case 'failed':
@@ -1005,6 +1022,10 @@ class GameCreatorApp {
         this.currentJobId = null;
         this.sendButton.disabled = false;
         this.stopButton.classList.add('hidden');
+        // Browser notification
+        this.showNotification('⚠️ エラーが発生', {
+          body: update.error || 'ゲーム生成に失敗しました',
+        });
         break;
 
       case 'cancelled':
@@ -1025,6 +1046,9 @@ class GameCreatorApp {
 
   selectProject(projectId, updateUrl = true) {
     if (!projectId) return;
+
+    // Reset version state when switching projects
+    this.currentVersionId = null;
 
     // Update URL if needed
     if (updateUrl && window.location.pathname !== `/project/${projectId}`) {
@@ -1120,6 +1144,9 @@ class GameCreatorApp {
   }
 
   addMessage(content, role, options = {}) {
+    // Remove welcome message if present
+    this.hideWelcomeMessage();
+
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}`;
 
@@ -1225,7 +1252,7 @@ class GameCreatorApp {
         this.chatInput.value = chip.dataset.prompt;
         this.chatInput.focus();
         // Remove welcome message
-        welcomeDiv.remove();
+        this.hideWelcomeMessage();
       });
     });
 
@@ -1245,7 +1272,85 @@ class GameCreatorApp {
     return escaped;
   }
 
+  hideWelcomeMessage() {
+    const welcome = this.chatMessages.querySelector('.welcome-message');
+    if (welcome) {
+      welcome.remove();
+    }
+  }
+
+  // ==================== Notifications ====================
+
+  async requestNotificationPermission() {
+    if (!('Notification' in window)) {
+      console.log('This browser does not support notifications');
+      return;
+    }
+
+    if (Notification.permission === 'default') {
+      // Don't ask immediately - wait for user interaction
+      // We'll ask when they start their first job
+      return;
+    }
+
+    this.notificationPermission = Notification.permission;
+  }
+
+  async askNotificationPermission() {
+    if (!('Notification' in window)) return false;
+
+    if (Notification.permission === 'granted') {
+      this.notificationPermission = 'granted';
+      return true;
+    }
+
+    if (Notification.permission !== 'denied') {
+      const permission = await Notification.requestPermission();
+      this.notificationPermission = permission;
+      return permission === 'granted';
+    }
+
+    return false;
+  }
+
+  showNotification(title, options = {}) {
+    console.log('[Notification] Attempting to show:', title);
+    console.log('[Notification] visibilityState:', document.visibilityState);
+    console.log('[Notification] permission:', this.notificationPermission);
+
+    // Only show if page is not visible and permission granted
+    if (document.visibilityState === 'visible') {
+      console.log('[Notification] Skipped: page is visible');
+      return;
+    }
+    if (this.notificationPermission !== 'granted') {
+      console.log('[Notification] Skipped: permission not granted');
+      return;
+    }
+
+    console.log('[Notification] Showing notification!');
+
+    const notification = new Notification(title, {
+      icon: '/favicon.ico',
+      badge: '/favicon.ico',
+      tag: 'game-creator',
+      renotify: true,
+      ...options
+    });
+
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+    };
+
+    // Auto close after 5 seconds
+    setTimeout(() => notification.close(), 5000);
+  }
+
   displayGeneratedCode(data) {
+    // Remove welcome message if present
+    this.hideWelcomeMessage();
+
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message gemini-code';
 
@@ -1333,6 +1438,8 @@ class GameCreatorApp {
   // Display chat response (no code changes, just conversation)
   displayChatResponse(data) {
     console.log('[displayChatResponse]', data);
+    // Remove welcome message if present
+    this.hideWelcomeMessage();
     // Hide streaming indicator
     this.hideStreaming();
     this.isProcessing = false;
@@ -1372,6 +1479,8 @@ class GameCreatorApp {
   displayRestoreConfirm(data) {
     // Hide streaming indicator
     this.hideStreaming();
+    // Remove welcome message if present
+    this.hideWelcomeMessage();
     this.isProcessing = false;
     this.sendButton.disabled = false;
     this.stopButton.classList.add('hidden');
@@ -1579,7 +1688,10 @@ class GameCreatorApp {
     versions.forEach((v, index) => {
       const item = document.createElement('div');
       item.className = 'version-item';
-      if (index === 0) item.classList.add('current');
+
+      // Determine if this version is currently displayed
+      const isCurrent = this.currentVersionId ? (v.id === this.currentVersionId) : (index === 0);
+      if (isCurrent) item.classList.add('current');
 
       const time = new Date(v.timestamp).toLocaleString('ja-JP', {
         month: 'short',
@@ -1594,7 +1706,7 @@ class GameCreatorApp {
           <span class="version-time">${time}</span>
         </div>
         <div class="version-message">${this.escapeHtml(v.message)}</div>
-        ${index === 0 ? '<span class="version-current-badge">現在</span>' : `<button class="version-restore" data-version="${v.id}">復元</button>`}
+        ${isCurrent ? '<span class="version-current-badge">現在</span>' : `<button class="version-restore" data-version="${v.id}">復元</button>`}
       `;
 
       const restoreBtn = item.querySelector('.version-restore');
@@ -2139,6 +2251,8 @@ class GameCreatorApp {
 
   // Display style selection as a chat message
   displayStyleSelection(dimension, styles, originalMessage) {
+    // Remove welcome message if present
+    this.hideWelcomeMessage();
     // Hide any processing state
     this.isProcessing = false;
     this.sendButton.disabled = false;
