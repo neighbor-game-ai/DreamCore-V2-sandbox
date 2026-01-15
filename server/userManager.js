@@ -80,19 +80,23 @@ const ensureProjectDir = (visitorId, projectId) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Game</title>
   <style>
-    body {
+    html, body {
       margin: 0;
-      padding: 20px;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
       font-family: sans-serif;
       background: #1a1a2e;
       color: white;
-      min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
     }
     .welcome {
       text-align: center;
+      padding: 20px;
     }
   </style>
 </head>

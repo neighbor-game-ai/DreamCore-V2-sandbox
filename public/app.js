@@ -3,13 +3,26 @@ class GameCreatorApp {
     this.ws = null;
     this.visitorId = null;
     this.currentProjectId = null;
+    this.currentProjectName = null;
     this.projects = [];
     this.isProcessing = false;
     this.currentJobId = null;
     this.jobPollInterval = null;
 
+    // Authentication state
+    this.sessionId = null;
+    this.currentUser = null;
+    this.isAuthenticated = false;
+
     // Current view state
     this.currentView = 'list'; // 'list' or 'editor'
+
+    // Login elements
+    this.loginView = document.getElementById('loginView');
+    this.loginForm = document.getElementById('loginForm');
+    this.loginUsername = document.getElementById('loginUsername');
+    this.loginError = document.getElementById('loginError');
+    this.loginButton = document.getElementById('loginButton');
 
     // View elements
     this.projectListView = document.getElementById('projectListView');
@@ -18,6 +31,8 @@ class GameCreatorApp {
     this.createProjectButton = document.getElementById('createProjectButton');
     this.listStatusIndicator = document.getElementById('listStatusIndicator');
     this.homeButton = document.getElementById('homeButton');
+    this.userDisplayName = document.getElementById('userDisplayName');
+    this.logoutButton = document.getElementById('logoutButton');
 
     // DOM elements (editor view)
     this.chatMessages = document.getElementById('chatMessages');
@@ -26,15 +41,22 @@ class GameCreatorApp {
     this.stopButton = document.getElementById('stopButton');
     this.refreshButton = document.getElementById('refreshButton');
     this.newProjectButton = document.getElementById('newProjectButton');
-    this.projectSelect = document.getElementById('projectSelect');
     this.gamePreview = document.getElementById('gamePreview');
     this.statusIndicator = document.getElementById('statusIndicator');
-    this.previewTitle = document.getElementById('previewTitle');
+    // this.previewTitle removed - no longer in UI
     this.noProjectMessage = document.getElementById('noProjectMessage');
     this.versionsButton = document.getElementById('versionsButton');
     this.versionPanel = document.getElementById('versionPanel');
     this.versionList = document.getElementById('versionList');
     this.closeVersionsButton = document.getElementById('closeVersionsButton');
+
+    // Code viewer elements
+    this.viewCodeButton = document.getElementById('viewCodeButton');
+    this.downloadButton = document.getElementById('downloadButton');
+    this.codeViewerModal = document.getElementById('codeViewerModal');
+    this.codeViewerCode = document.getElementById('codeViewerCode');
+    this.copyCodeButton = document.getElementById('copyCodeButton');
+    this.closeCodeViewer = document.getElementById('closeCodeViewer');
 
     // Error panel elements
     this.errorPanel = document.getElementById('errorPanel');
@@ -45,6 +67,12 @@ class GameCreatorApp {
     this.gameStatus = document.getElementById('gameStatus');
     this.gameStatusIcon = document.getElementById('gameStatusIcon');
     this.gameStatusText = document.getElementById('gameStatusText');
+
+    // New game modal elements
+    this.newGameModal = document.getElementById('newGameModal');
+    this.newGameName = document.getElementById('newGameName');
+    this.cancelNewGame = document.getElementById('cancelNewGame');
+    this.confirmNewGame = document.getElementById('confirmNewGame');
 
     // Error state
     this.currentErrors = [];
@@ -108,16 +136,152 @@ class GameCreatorApp {
     // IME composition state
     this.isComposing = false;
 
-    // Try to restore visitorId from localStorage
-    this.visitorId = localStorage.getItem('gameCreatorVisitorId');
+    // Try to restore session from localStorage
+    this.sessionId = localStorage.getItem('gameCreatorSessionId');
 
     this.init();
   }
 
   init() {
-    // Show list view immediately (don't wait for WebSocket)
+    // Setup login form listeners first
+    this.setupLoginListeners();
+
+    // Check if we have a valid session
+    this.checkSession();
+  }
+
+  // ==================== Authentication ====================
+
+  setupLoginListeners() {
+    this.loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.login();
+    });
+
+    this.logoutButton.addEventListener('click', () => {
+      this.logout();
+    });
+  }
+
+  async checkSession() {
+    if (!this.sessionId) {
+      this.showLoginView();
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/auth/me?sessionId=${this.sessionId}`);
+      if (response.ok) {
+        const data = await response.json();
+        this.currentUser = data.user;
+        this.visitorId = data.user.visitorId;
+        this.isAuthenticated = true;
+        this.onAuthSuccess();
+      } else {
+        // Session invalid or expired
+        localStorage.removeItem('gameCreatorSessionId');
+        this.sessionId = null;
+        this.showLoginView();
+      }
+    } catch (error) {
+      console.error('Session check failed:', error);
+      this.showLoginView();
+    }
+  }
+
+  async login() {
+    const username = this.loginUsername.value.trim();
+
+    if (!username) {
+      this.showLoginError('ユーザーIDを入力してください');
+      return;
+    }
+
+    this.loginButton.disabled = true;
+    this.loginButton.textContent = 'ログイン中...';
+    this.loginError.classList.add('hidden');
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Save session
+        this.sessionId = data.sessionId;
+        this.currentUser = data.user;
+        this.visitorId = data.user.visitorId;
+        this.isAuthenticated = true;
+        localStorage.setItem('gameCreatorSessionId', this.sessionId);
+
+        this.onAuthSuccess();
+      } else {
+        this.showLoginError(data.error || 'ログインに失敗しました');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      this.showLoginError('サーバーに接続できませんでした');
+    } finally {
+      this.loginButton.disabled = false;
+      this.loginButton.textContent = 'ログイン';
+    }
+  }
+
+  async logout() {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: this.sessionId })
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+
+    // Clear local state
+    localStorage.removeItem('gameCreatorSessionId');
+    this.sessionId = null;
+    this.currentUser = null;
+    this.visitorId = null;
+    this.isAuthenticated = false;
+
+    // Close WebSocket
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+
+    // Show login view
+    this.showLoginView();
+  }
+
+  showLoginView() {
+    this.loginView.classList.remove('hidden');
+    this.projectListView.classList.add('hidden');
+    this.editorView.classList.add('hidden');
+    this.loginUsername.focus();
+  }
+
+  showLoginError(message) {
+    this.loginError.textContent = message;
+    this.loginError.classList.remove('hidden');
+  }
+
+  onAuthSuccess() {
+    // Hide login, show app
+    this.loginView.classList.add('hidden');
     this.projectListView.classList.remove('hidden');
 
+    // Show user display name
+    if (this.currentUser && this.userDisplayName) {
+      this.userDisplayName.textContent = this.currentUser.displayName || this.currentUser.username;
+    }
+
+    // Initialize the rest of the app
     this.connectWebSocket();
     this.setupEventListeners();
     this.setupAssetListeners();
@@ -154,12 +318,12 @@ class GameCreatorApp {
 
     this.currentErrors = errors;
     this.showErrorPanel(errors);
-    this.updateGameStatus('error', `${errors.length} error(s)`);
+    this.updateGameStatus('error', `${errors.length}件のエラー`);
   }
 
   handleGameLoaded(data) {
     if (data.success) {
-      this.updateGameStatus('success', 'Running');
+      this.updateGameStatus('success', '実行中');
       this.hideErrorPanel();
       // Hide status after 2 seconds
       setTimeout(() => {
@@ -304,9 +468,7 @@ class GameCreatorApp {
     if (this.projects.length === 0) {
       this.projectGrid.innerHTML = `
         <div class="project-empty">
-          <div class="project-empty-icon">🎮</div>
-          <p>No projects yet</p>
-          <button class="create-project-btn" onclick="app.createNewProject()">+ Create Your First Game</button>
+          <p>まだゲームがありません</p>
         </div>
       `;
       return;
@@ -317,14 +479,22 @@ class GameCreatorApp {
         <div class="project-card-header">
           <h3 class="project-card-title">${this.escapeHtml(project.name)}</h3>
           <div class="project-card-actions">
-            <button onclick="event.stopPropagation(); app.renameProjectFromList('${project.id}')">✏️</button>
-            <button class="delete-btn" onclick="event.stopPropagation(); app.deleteProjectFromList('${project.id}')">🗑️</button>
+            <button onclick="event.stopPropagation(); app.renameProjectFromList('${project.id}')" title="名前を変更">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+            <button class="delete-btn" onclick="event.stopPropagation(); app.deleteProjectFromList('${project.id}')" title="削除">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
           </div>
         </div>
         <div class="project-card-meta">
-          <div class="project-card-date">
-            📅 ${this.formatDate(project.createdAt)}
-          </div>
+          <div class="project-card-date">${this.formatDate(project.createdAt)}</div>
         </div>
       </div>
     `).join('');
@@ -391,9 +561,9 @@ class GameCreatorApp {
 
     this.ws.onopen = () => {
       console.log(`[${this.sessionId}] WebSocket connected`);
-      this.updateStatus('connected', 'Connected');
+      this.updateStatus('connected', '接続中');
       this.listStatusIndicator.className = 'status-indicator connected';
-      this.listStatusIndicator.textContent = 'Connected';
+      this.listStatusIndicator.textContent = '接続中';
       this.ws.send(JSON.stringify({
         type: 'init',
         visitorId: this.visitorId,
@@ -408,9 +578,9 @@ class GameCreatorApp {
 
     this.ws.onclose = (event) => {
       console.log(`[${this.sessionId}] WebSocket closed: code=${event.code}, reason=${event.reason}`);
-      this.updateStatus('', 'Disconnected');
+      this.updateStatus('', '切断されました');
       this.listStatusIndicator.className = 'status-indicator';
-      this.listStatusIndicator.textContent = 'Disconnected';
+      this.listStatusIndicator.textContent = '切断されました';
       this.sendButton.disabled = true;
       this.chatInput.disabled = true;
       setTimeout(() => this.connectWebSocket(), 3000);
@@ -418,7 +588,7 @@ class GameCreatorApp {
 
     this.ws.onerror = (error) => {
       console.error(`[${this.sessionId}] WebSocket error:`, error);
-      this.updateStatus('', 'Error');
+      this.updateStatus('', 'エラー');
     };
   }
 
@@ -443,10 +613,18 @@ class GameCreatorApp {
 
     this.refreshButton.addEventListener('click', () => this.refreshPreview());
     this.newProjectButton.addEventListener('click', () => this.createNewProject());
-    this.projectSelect.addEventListener('change', (e) => this.selectProject(e.target.value, true));
     this.stopButton.addEventListener('click', () => this.stopGeneration());
     this.versionsButton.addEventListener('click', () => this.toggleVersionPanel());
     this.closeVersionsButton.addEventListener('click', () => this.hideVersionPanel());
+
+    // Code viewer buttons
+    this.viewCodeButton.addEventListener('click', () => this.showCodeViewer());
+    this.downloadButton.addEventListener('click', () => this.downloadProject());
+    this.copyCodeButton.addEventListener('click', () => this.copyCode());
+    this.closeCodeViewer.addEventListener('click', () => this.hideCodeViewer());
+    this.codeViewerModal.addEventListener('click', (e) => {
+      if (e.target === this.codeViewerModal) this.hideCodeViewer();
+    });
 
     // Home button - go back to project list
     this.homeButton.addEventListener('click', () => {
@@ -456,75 +634,52 @@ class GameCreatorApp {
     // Create project button in list view
     this.createProjectButton.addEventListener('click', () => this.createNewProject());
 
+    // New game modal
+    this.cancelNewGame.addEventListener('click', () => this.hideNewGameModal());
+    this.confirmNewGame.addEventListener('click', () => this.confirmCreateProject());
+    this.newGameModal.addEventListener('click', (e) => {
+      if (e.target === this.newGameModal) this.hideNewGameModal();
+    });
+    this.newGameName.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.confirmCreateProject();
+      } else if (e.key === 'Escape') {
+        this.hideNewGameModal();
+      }
+    });
+
     // Mobile tab switching
     this.setupMobileTabListeners();
-
-    // Preset buttons
-    this.setupPresetListeners();
   }
 
-  // ==================== Mobile Tab Switching ====================
+  // ==================== Mobile View Switching ====================
 
   setupMobileTabListeners() {
-    const tabBar = document.getElementById('mobileTabBar');
-    const chatPanel = document.getElementById('chatPanel');
-    const previewPanel = document.getElementById('previewPanel');
+    const backToChatButton = document.getElementById('backToChatButton');
 
-    if (!tabBar) return;
-
-    tabBar.addEventListener('click', (e) => {
-      const tab = e.target.closest('.mobile-tab');
-      if (!tab) return;
-
-      const tabName = tab.dataset.tab;
-      this.switchMobileTab(tabName);
-    });
-  }
-
-  switchMobileTab(tabName) {
-    const tabs = document.querySelectorAll('.mobile-tab');
-    const chatPanel = document.getElementById('chatPanel');
-    const previewPanel = document.getElementById('previewPanel');
-
-    // Update tab active state
-    tabs.forEach(tab => {
-      tab.classList.toggle('active', tab.dataset.tab === tabName);
-    });
-
-    // Show/hide panels
-    if (tabName === 'chat') {
-      chatPanel.classList.remove('mobile-hidden');
-      previewPanel.classList.remove('mobile-active');
-    } else if (tabName === 'preview') {
-      chatPanel.classList.add('mobile-hidden');
-      previewPanel.classList.add('mobile-active');
-      // Refresh preview when switching to it
-      this.refreshPreview();
+    if (backToChatButton) {
+      backToChatButton.addEventListener('click', () => {
+        this.showChatPanel();
+      });
     }
   }
 
-  // ==================== Preset Buttons ====================
+  showChatPanel() {
+    const chatPanel = document.getElementById('chatPanel');
+    const previewPanel = document.getElementById('previewPanel');
 
-  setupPresetListeners() {
-    const presetButtons = document.getElementById('presetButtons');
-    if (!presetButtons) return;
+    chatPanel.classList.remove('mobile-hidden');
+    previewPanel.classList.remove('mobile-active');
+  }
 
-    presetButtons.addEventListener('click', (e) => {
-      const btn = e.target.closest('.preset-btn');
-      if (!btn) return;
+  showPreviewPanel() {
+    const chatPanel = document.getElementById('chatPanel');
+    const previewPanel = document.getElementById('previewPanel');
 
-      const prompt = btn.dataset.prompt;
-      if (prompt) {
-        // Set the prompt in the input
-        this.chatInput.value = prompt;
-        // Send the message
-        this.sendMessage();
-        // Switch to chat tab on mobile (if on preview)
-        if (window.innerWidth <= 768) {
-          this.switchMobileTab('chat');
-        }
-      }
-    });
+    chatPanel.classList.add('mobile-hidden');
+    previewPanel.classList.add('mobile-active');
+    this.refreshPreview();
   }
 
   handleMessage(data) {
@@ -538,7 +693,7 @@ class GameCreatorApp {
 
         // Update status indicators
         this.listStatusIndicator.className = 'status-indicator connected';
-        this.listStatusIndicator.textContent = 'Connected';
+        this.listStatusIndicator.textContent = '接続中';
 
         // Handle initial route
         const route = this.parseRoute();
@@ -567,7 +722,7 @@ class GameCreatorApp {
         // Navigate to the new project with URL update
         this.navigateTo(`/project/${data.project.id}`, { view: 'editor', projectId: data.project.id });
         this.selectProject(data.project.id, false);
-        this.addMessage(`Project "${data.project.name}" created!`, 'system');
+        this.addMessage(`「${data.project.name}」を作成しました！`, 'system');
         break;
 
       case 'projectSelected':
@@ -579,9 +734,22 @@ class GameCreatorApp {
         // Clear and reload history
         this.chatMessages.innerHTML = '';
         if (data.history && data.history.length > 0) {
-          data.history.forEach(h => {
-            this.addMessage(h.content, h.role);
+          // Find the last assistant message index for play button
+          let lastAssistantIndex = -1;
+          for (let i = data.history.length - 1; i >= 0; i--) {
+            if (data.history[i].role === 'assistant') {
+              lastAssistantIndex = i;
+              break;
+            }
+          }
+
+          data.history.forEach((h, index) => {
+            const showPlayButton = (h.role === 'assistant' && index === lastAssistantIndex);
+            this.addMessage(h.content, h.role, { showPlayButton });
           });
+        } else {
+          // Show welcome message for new/empty projects
+          this.showWelcomeMessage();
         }
 
         this.refreshPreview();
@@ -590,12 +758,14 @@ class GameCreatorApp {
         // Update preview title and page title
         const selectedProject = this.projects.find(p => p.id === this.currentProjectId);
         if (selectedProject) {
-          this.previewTitle.textContent = selectedProject.name;
-          document.title = `${selectedProject.name} - Game Creator`;
+          document.title = `${selectedProject.name} - ゲームクリエイター`;
+          this.currentProjectName = selectedProject.name;
         }
 
-        // Show versions button
+        // Show versions button and code/download buttons
         this.versionsButton.classList.remove('hidden');
+        this.viewCodeButton.classList.remove('hidden');
+        this.downloadButton.classList.remove('hidden');
 
         // Check for active job (recovering from disconnect)
         if (data.activeJob && ['pending', 'processing'].includes(data.activeJob.status)) {
@@ -625,8 +795,8 @@ class GameCreatorApp {
         this.updateProjectList();
         this.renderProjectGrid();
         if (this.currentProjectId === data.project.id) {
-          this.previewTitle.textContent = data.project.name;
-          document.title = `${data.project.name} - Game Creator`;
+          document.title = `${data.project.name} - ゲームクリエイター`;
+          this.currentProjectName = data.project.name;
         }
         break;
 
@@ -650,9 +820,9 @@ class GameCreatorApp {
         this.completeStreaming();
         // Skip message display for chat/restore mode (already handled by their own methods)
         if (data.mode !== 'chat' && data.mode !== 'restore') {
-          this.addMessage(data.message, 'assistant');
+          this.addMessage(data.message, 'assistant', { showPlayButton: true });
         }
-        this.updateStatus('connected', 'Connected');
+        this.updateStatus('connected', '接続中');
         this.isProcessing = false;
         this.currentJobId = null;
         this.sendButton.disabled = false;
@@ -665,12 +835,16 @@ class GameCreatorApp {
 
       case 'gameUpdated':
         this.refreshPreview();
+        // On mobile, switch to preview panel
+        if (window.innerWidth <= 768) {
+          this.showPreviewPanel();
+        }
         break;
 
       case 'error':
         this.hideStreaming();
         this.addMessage(data.message, 'error');
-        this.updateStatus('connected', 'Connected');
+        this.updateStatus('connected', '接続中');
         this.isProcessing = false;
         this.currentJobId = null;
         this.sendButton.disabled = false;
@@ -679,8 +853,8 @@ class GameCreatorApp {
 
       case 'cancelled':
         this.hideStreaming();
-        this.addMessage('Stopped', 'system');
-        this.updateStatus('connected', 'Connected');
+        this.addMessage('停止しました', 'system');
+        this.updateStatus('connected', '接続中');
         this.isProcessing = false;
         this.currentJobId = null;
         this.sendButton.disabled = false;
@@ -741,7 +915,7 @@ class GameCreatorApp {
         break;
 
       case 'versionRestored':
-        this.addMessage(`Restored to ${data.versionId}`, 'system');
+        this.addMessage(`前のバージョンに戻しました`, 'system');
         this.hideVersionPanel();
         this.refreshPreview();
         break;
@@ -774,7 +948,7 @@ class GameCreatorApp {
     this.sendButton.disabled = true;
     this.stopButton.classList.remove('hidden');
     this.showStreaming();
-    this.updateStreamingStatus(`Processing... ${job.progress || 0}%`);
+    this.updateStreamingStatus(`処理中... ${job.progress || 0}%`);
 
     if (job.progress_message) {
       this.appendToStream(`\n[${job.progress_message}]\n`);
@@ -784,11 +958,11 @@ class GameCreatorApp {
   handleJobUpdate(update) {
     switch (update.type) {
       case 'started':
-        this.updateStreamingStatus('Processing...');
+        this.updateStreamingStatus('処理中...');
         break;
 
       case 'progress':
-        this.updateStreamingStatus(`Processing... ${update.progress}%`);
+        this.updateStreamingStatus(`処理中... ${update.progress}%`);
         if (update.message) {
           this.appendToStream(`\n[${update.message}]\n`);
         }
@@ -799,10 +973,10 @@ class GameCreatorApp {
         // Skip message display for chat/restore mode (already handled by their own methods)
         if (update.result?.mode !== 'chat' && update.result?.mode !== 'restore') {
           const message = update.result?.message || update.message || 'ゲームを更新しました';
-          this.addMessage(message, 'assistant');
+          this.addMessage(message, 'assistant', { showPlayButton: true });
           this.refreshPreview();
         }
-        this.updateStatus('connected', 'Connected');
+        this.updateStatus('connected', '接続中');
         this.isProcessing = false;
         this.currentJobId = null;
         this.sendButton.disabled = false;
@@ -811,8 +985,8 @@ class GameCreatorApp {
 
       case 'failed':
         this.hideStreaming();
-        this.addMessage(`Error: ${update.error}`, 'error');
-        this.updateStatus('connected', 'Connected');
+        this.addMessage(`エラー: ${update.error}`, 'error');
+        this.updateStatus('connected', '接続中');
         this.isProcessing = false;
         this.currentJobId = null;
         this.sendButton.disabled = false;
@@ -821,8 +995,8 @@ class GameCreatorApp {
 
       case 'cancelled':
         this.hideStreaming();
-        this.addMessage('Job cancelled', 'system');
-        this.updateStatus('connected', 'Connected');
+        this.addMessage('キャンセルしました', 'system');
+        this.updateStatus('connected', '接続中');
         this.isProcessing = false;
         this.currentJobId = null;
         this.sendButton.disabled = false;
@@ -832,22 +1006,11 @@ class GameCreatorApp {
   }
 
   updateProjectList() {
-    this.projectSelect.innerHTML = '<option value="">-- Select Project --</option>';
-    this.projects.forEach(project => {
-      const option = document.createElement('option');
-      option.value = project.id;
-      option.textContent = project.name;
-      if (project.id === this.currentProjectId) {
-        option.selected = true;
-      }
-      this.projectSelect.appendChild(option);
-    });
+    // Project selector removed from UI
   }
 
   selectProject(projectId, updateUrl = true) {
     if (!projectId) return;
-
-    this.projectSelect.value = projectId;
 
     // Update URL if needed
     if (updateUrl && window.location.pathname !== `/project/${projectId}`) {
@@ -864,12 +1027,27 @@ class GameCreatorApp {
   }
 
   createNewProject() {
-    const name = prompt('Enter project name:', 'New Game');
-    if (name === null) return;
+    this.showNewGameModal();
+  }
+
+  showNewGameModal() {
+    this.newGameName.value = '';
+    this.newGameModal.classList.remove('hidden');
+    // Focus input after animation
+    setTimeout(() => this.newGameName.focus(), 100);
+  }
+
+  hideNewGameModal() {
+    this.newGameModal.classList.add('hidden');
+  }
+
+  confirmCreateProject() {
+    const name = this.newGameName.value.trim() || '新しいゲーム';
+    this.hideNewGameModal();
 
     this.ws.send(JSON.stringify({
       type: 'createProject',
-      name: name || 'New Game'
+      name: name
     }));
   }
 
@@ -880,8 +1058,10 @@ class GameCreatorApp {
     } else {
       this.gamePreview.style.display = 'none';
       this.noProjectMessage.classList.remove('hidden');
-      this.previewTitle.textContent = 'Preview';
+      this.currentProjectName = null;
       this.versionsButton.classList.add('hidden');
+      this.viewCodeButton.classList.add('hidden');
+      this.downloadButton.classList.add('hidden');
       this.hideVersionPanel();
     }
   }
@@ -925,7 +1105,7 @@ class GameCreatorApp {
     }
   }
 
-  addMessage(content, role) {
+  addMessage(content, role, options = {}) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}`;
 
@@ -956,6 +1136,22 @@ class GameCreatorApp {
       } else {
         messageDiv.innerHTML = this.parseMarkdown(content);
       }
+
+      // Add "Play Game" button if we have an active project and showPlayButton is true
+      if (options.showPlayButton && this.currentProjectId) {
+        const playBtn = document.createElement('button');
+        playBtn.className = 'play-game-btn';
+        playBtn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          ゲームを遊ぶ
+        `;
+        playBtn.addEventListener('click', () => {
+          this.showPreviewPanel();
+        });
+        messageDiv.appendChild(playBtn);
+      }
     } else {
       const formattedContent = this.formatContent(content);
       messageDiv.innerHTML = formattedContent;
@@ -963,6 +1159,63 @@ class GameCreatorApp {
 
     this.chatMessages.appendChild(messageDiv);
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+  }
+
+  showWelcomeMessage() {
+    // All possible game suggestions
+    const allSuggestions = [
+      { label: '宇宙シューティング', prompt: '宇宙を飛ぶシューティングゲームを作って' },
+      { label: '動物集め', prompt: 'かわいい動物を集めるゲームを作って' },
+      { label: 'ブロックパズル', prompt: 'ブロックを消すパズルゲームを作って' },
+      { label: 'カーレース', prompt: '車のレースゲームを作って' },
+      { label: 'ジャンプアクション', prompt: '障害物を飛び越えるジャンプゲームを作って' },
+      { label: 'タップゲーム', prompt: '画面をタップして遊ぶゲームを作って' },
+      { label: 'ボール転がし', prompt: 'ボールを転がして遊ぶ3Dゲームを作って' },
+      { label: '迷路脱出', prompt: '迷路から脱出するゲームを作って' },
+      { label: 'フルーツキャッチ', prompt: '落ちてくるフルーツをキャッチするゲームを作って' },
+      { label: 'リズムゲーム', prompt: 'タイミングよくタップするリズムゲームを作って' },
+      { label: '釣りゲーム', prompt: '魚を釣るシンプルなゲームを作って' },
+      { label: 'モグラたたき', prompt: 'モグラたたきゲームを作って' },
+      { label: '玉転がし', prompt: '玉を転がしてゴールを目指すゲームを作って' },
+      { label: 'バブルシューター', prompt: '泡を飛ばして消すパズルゲームを作って' },
+      { label: 'エンドレスラン', prompt: '走り続けるエンドレスランゲームを作って' },
+    ];
+
+    // Randomly select 3 suggestions
+    const shuffled = allSuggestions.sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, 3);
+
+    const welcomeDiv = document.createElement('div');
+    welcomeDiv.className = 'welcome-message';
+    welcomeDiv.innerHTML = `
+      <div class="welcome-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+      </div>
+      <h3>ようこそ！</h3>
+      <p>どんなゲームを作りたいですか？<br>自由に話しかけてください。</p>
+      <div class="welcome-examples">
+        <span class="example-label">例えば...</span>
+        <div class="example-chips">
+          ${selected.map(s => `<button class="example-chip" data-prompt="${s.prompt}">${s.label}</button>`).join('')}
+        </div>
+      </div>
+    `;
+
+    // Add click handlers for example chips
+    welcomeDiv.querySelectorAll('.example-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        this.chatInput.value = chip.dataset.prompt;
+        this.chatInput.focus();
+        // Remove welcome message
+        welcomeDiv.remove();
+      });
+    });
+
+    this.chatMessages.appendChild(welcomeDiv);
   }
 
   formatContent(content) {
@@ -1197,7 +1450,7 @@ class GameCreatorApp {
   refreshPreview() {
     if (this.visitorId && this.currentProjectId) {
       // Show loading status
-      this.updateGameStatus('loading', 'Loading...');
+      this.updateGameStatus('loading', '読み込み中...');
       this.currentErrors = [];
       this.hideErrorPanel();
 
@@ -1233,6 +1486,72 @@ class GameCreatorApp {
 
   hideVersionPanel() {
     this.versionPanel.classList.add('hidden');
+  }
+
+  // Code viewer methods
+  async showCodeViewer() {
+    if (!this.currentProjectId || !this.visitorId) return;
+
+    try {
+      const response = await fetch(`/api/projects/${this.currentProjectId}/code?visitorId=${this.visitorId}`);
+      const data = await response.json();
+
+      if (data.code) {
+        this.codeViewerCode.textContent = data.code;
+        this.codeViewerModal.classList.remove('hidden');
+      }
+    } catch (error) {
+      console.error('Failed to fetch code:', error);
+    }
+  }
+
+  hideCodeViewer() {
+    this.codeViewerModal.classList.add('hidden');
+  }
+
+  async copyCode() {
+    const code = this.codeViewerCode.textContent;
+    try {
+      await navigator.clipboard.writeText(code);
+      this.copyCodeButton.classList.add('copied');
+      this.copyCodeButton.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        コピー完了
+      `;
+      setTimeout(() => {
+        this.copyCodeButton.classList.remove('copied');
+        this.copyCodeButton.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          コピー
+        `;
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  }
+
+  async downloadProject() {
+    if (!this.currentProjectId || !this.visitorId) return;
+
+    try {
+      const response = await fetch(`/api/projects/${this.currentProjectId}/download?visitorId=${this.visitorId}`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${this.currentProjectName || 'game'}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download:', error);
+    }
   }
 
   displayVersions(versions) {
@@ -1289,7 +1608,7 @@ class GameCreatorApp {
   showStreaming() {
     this.streamingText = '';
     this.streamingOutput.innerHTML = '<span class="cursor"></span>';
-    this.streamingStatus.textContent = 'Generating...';
+    this.streamingStatus.textContent = '生成中...';
     this.streamingStatus.className = 'streaming-status';
     this.streamingFile.textContent = 'index.html';
     this.streamingContainer.classList.remove('hidden');
@@ -1304,7 +1623,7 @@ class GameCreatorApp {
   }
 
   completeStreaming() {
-    this.streamingStatus.textContent = 'Complete';
+    this.streamingStatus.textContent = '完了';
     this.streamingStatus.className = 'streaming-status completed';
 
     // Remove cursor
@@ -1810,7 +2129,7 @@ class GameCreatorApp {
 
       html += `
         <div class="style-card-chat ${hiddenClass}" data-style-id="${style.id}" data-dimension="${dimension}" data-original-message="${this.escapeHtml(originalMessage)}">
-          <div class="style-card-image-chat" style="background:#2d2d44">
+          <div class="style-card-image-chat">
             ${style.imageUrl
               ? `<img src="${style.imageUrl}" alt="${style.name}" loading="lazy" onerror="this.style.display='none'">`
               : ''

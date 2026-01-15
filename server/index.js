@@ -57,6 +57,87 @@ app.use(express.json());
 // Serve static files
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// ==================== Authentication API Endpoints ====================
+
+// Login with username only (invite-only)
+app.post('/api/auth/login', (req, res) => {
+  const { username } = req.body;
+
+  if (!username) {
+    return res.status(400).json({ error: 'Username required' });
+  }
+
+  // Find user by username
+  const loginUser = db.getLoginUserByUsername(username.trim().toLowerCase());
+  if (!loginUser) {
+    return res.status(401).json({ error: 'このIDは登録されていません' });
+  }
+
+  // Create session
+  const session = db.createSession(loginUser.id);
+
+  // Update last login
+  db.updateLoginUserLastLogin(loginUser.id);
+
+  // Get linked user's visitor_id
+  const user = db.getUserById(loginUser.user_id);
+
+  res.json({
+    success: true,
+    sessionId: session.id,
+    user: {
+      id: loginUser.id,
+      username: loginUser.username,
+      displayName: loginUser.display_name,
+      visitorId: user ? user.visitor_id : null
+    }
+  });
+});
+
+// Logout
+app.post('/api/auth/logout', (req, res) => {
+  const sessionId = req.headers['x-session-id'] || req.body.sessionId;
+
+  if (sessionId) {
+    db.deleteSession(sessionId);
+  }
+
+  res.json({ success: true });
+});
+
+// Get current user from session
+app.get('/api/auth/me', (req, res) => {
+  const sessionId = req.headers['x-session-id'] || req.query.sessionId;
+
+  if (!sessionId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  // Validate session
+  const session = db.getSessionById(sessionId);
+  if (!session) {
+    return res.status(401).json({ error: 'Session expired or invalid' });
+  }
+
+  // Get login user
+  const loginUser = db.getLoginUserById(session.login_user_id);
+  if (!loginUser) {
+    return res.status(401).json({ error: 'User not found' });
+  }
+
+  // Get linked user's visitor_id
+  const user = db.getUserById(loginUser.user_id);
+
+  res.json({
+    user: {
+      id: loginUser.id,
+      username: loginUser.username,
+      displayName: loginUser.display_name,
+      visitorId: user ? user.visitor_id : null
+    }
+  });
+});
+
 // ==================== REST API Endpoints ====================
 
 // Get job status
@@ -85,6 +166,58 @@ app.get('/api/projects/:projectId/jobs', (req, res) => {
 app.post('/api/jobs/:jobId/cancel', (req, res) => {
   const job = claudeRunner.cancelJob(req.params.jobId);
   res.json({ success: true, job });
+});
+
+// Get project HTML code
+app.get('/api/projects/:projectId/code', (req, res) => {
+  const visitorId = req.query.visitorId;
+  if (!visitorId) {
+    return res.status(401).json({ error: 'No visitor ID' });
+  }
+
+  const projectDir = userManager.getProjectDir(visitorId, req.params.projectId);
+  const indexPath = path.join(projectDir, 'index.html');
+
+  if (!fs.existsSync(indexPath)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+
+  const code = fs.readFileSync(indexPath, 'utf-8');
+  res.json({ code });
+});
+
+// Download project as ZIP
+app.get('/api/projects/:projectId/download', async (req, res) => {
+  const visitorId = req.query.visitorId;
+  if (!visitorId) {
+    return res.status(401).json({ error: 'No visitor ID' });
+  }
+
+  const projectDir = userManager.getProjectDir(visitorId, req.params.projectId);
+
+  if (!fs.existsSync(projectDir)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+
+  const archiver = require('archiver');
+  const archive = archiver('zip', { zlib: { level: 9 } });
+
+  res.attachment('game.zip');
+  archive.pipe(res);
+
+  // Add index.html
+  const indexPath = path.join(projectDir, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    archive.file(indexPath, { name: 'index.html' });
+  }
+
+  // Add assets folder if exists
+  const assetsDir = path.join(projectDir, 'assets');
+  if (fs.existsSync(assetsDir)) {
+    archive.directory(assetsDir, 'assets');
+  }
+
+  await archive.finalize();
 });
 
 // ==================== Image Generation API ====================

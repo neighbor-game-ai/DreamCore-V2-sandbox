@@ -27,6 +27,27 @@ const initSchema = () => {
       created_at TEXT DEFAULT (datetime('now'))
     );
 
+    -- Login users table (invite-only authentication)
+    CREATE TABLE IF NOT EXISTS login_users (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      display_name TEXT,
+      user_id TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      last_login TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+
+    -- Sessions table
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      login_user_id TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      expires_at TEXT NOT NULL,
+      FOREIGN KEY (login_user_id) REFERENCES login_users(id) ON DELETE CASCADE
+    );
+
     -- Projects table
     CREATE TABLE IF NOT EXISTS projects (
       id TEXT PRIMARY KEY,
@@ -90,6 +111,9 @@ const initSchema = () => {
     CREATE INDEX IF NOT EXISTS idx_jobs_user_id ON jobs(user_id);
     CREATE INDEX IF NOT EXISTS idx_jobs_project_id ON jobs(project_id);
     CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
+    CREATE INDEX IF NOT EXISTS idx_login_users_username ON login_users(username);
+    CREATE INDEX IF NOT EXISTS idx_sessions_login_user_id ON sessions(login_user_id);
+    CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
   `);
 
   console.log('Database schema initialized');
@@ -325,6 +349,82 @@ const cancelJob = (jobId) => {
   return jobQueries.findById.get(jobId);
 };
 
+// ==================== Login User Operations ====================
+
+const loginUserQueries = {
+  findByUsername: db.prepare('SELECT * FROM login_users WHERE username = ?'),
+  findById: db.prepare('SELECT * FROM login_users WHERE id = ?'),
+  findByUserId: db.prepare('SELECT * FROM login_users WHERE user_id = ?'),
+  create: db.prepare('INSERT INTO login_users (id, username, password, display_name, user_id) VALUES (?, ?, ?, ?, ?)'),
+  updateLastLogin: db.prepare("UPDATE login_users SET last_login = datetime('now') WHERE id = ?"),
+  getAll: db.prepare('SELECT id, username, display_name, user_id, created_at, last_login FROM login_users'),
+};
+
+const getLoginUserByUsername = (username) => {
+  return loginUserQueries.findByUsername.get(username);
+};
+
+const getLoginUserById = (loginUserId) => {
+  return loginUserQueries.findById.get(loginUserId);
+};
+
+const getLoginUserByUserId = (userId) => {
+  return loginUserQueries.findByUserId.get(userId);
+};
+
+const createLoginUser = (username, password, displayName = null) => {
+  const id = uuidv4();
+
+  // Create a linked user record with a unique visitor_id
+  const visitorId = `login-${username}-${uuidv4().substring(0, 8)}`;
+  const user = getOrCreateUser(visitorId);
+
+  loginUserQueries.create.run(id, username, password, displayName || username, user.id);
+  return loginUserQueries.findById.get(id);
+};
+
+const updateLoginUserLastLogin = (loginUserId) => {
+  loginUserQueries.updateLastLogin.run(loginUserId);
+};
+
+const getAllLoginUsers = () => {
+  return loginUserQueries.getAll.all();
+};
+
+// ==================== Session Operations ====================
+
+const sessionQueries = {
+  findById: db.prepare('SELECT * FROM sessions WHERE id = ?'),
+  findValidById: db.prepare("SELECT * FROM sessions WHERE id = ? AND expires_at > datetime('now')"),
+  create: db.prepare('INSERT INTO sessions (id, login_user_id, expires_at) VALUES (?, ?, ?)'),
+  delete: db.prepare('DELETE FROM sessions WHERE id = ?'),
+  deleteByLoginUserId: db.prepare('DELETE FROM sessions WHERE login_user_id = ?'),
+  deleteExpired: db.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')"),
+};
+
+const createSession = (loginUserId, expiresInDays = 7) => {
+  const id = uuidv4();
+  const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString();
+  sessionQueries.create.run(id, loginUserId, expiresAt);
+  return { id, login_user_id: loginUserId, expires_at: expiresAt };
+};
+
+const getSessionById = (sessionId) => {
+  return sessionQueries.findValidById.get(sessionId);
+};
+
+const deleteSession = (sessionId) => {
+  sessionQueries.delete.run(sessionId);
+};
+
+const deleteSessionsByLoginUserId = (loginUserId) => {
+  sessionQueries.deleteByLoginUserId.run(loginUserId);
+};
+
+const cleanupExpiredSessions = () => {
+  sessionQueries.deleteExpired.run();
+};
+
 // ==================== Migration from JSON files ====================
 
 const migrateFromJsonFiles = (usersDir) => {
@@ -439,6 +539,21 @@ module.exports = {
   completeJob,
   failJob,
   cancelJob,
+
+  // Login user operations
+  getLoginUserByUsername,
+  getLoginUserById,
+  getLoginUserByUserId,
+  createLoginUser,
+  updateLoginUserLastLogin,
+  getAllLoginUsers,
+
+  // Session operations
+  createSession,
+  getSessionById,
+  deleteSession,
+  deleteSessionsByLoginUserId,
+  cleanupExpiredSessions,
 
   // Migration
   migrateFromJsonFiles,
