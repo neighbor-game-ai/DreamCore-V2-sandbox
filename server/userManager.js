@@ -72,36 +72,71 @@ const ensureProjectDir = (visitorId, projectId) => {
     execGit('git config user.email "gamecreator@local"', projectDir);
     execGit('git config user.name "Game Creator"', projectDir);
 
-    // Create initial index.html
+    // Create initial index.html - Nintendo × Kashiwa Sato style
     const initialHtml = `<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
-      margin: 0;
-      padding: 0;
       height: 100%;
       overflow: hidden;
     }
     body {
-      font-family: sans-serif;
-      background: #1a1a2e;
-      color: white;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #FAFAFA;
       display: flex;
       align-items: center;
       justify-content: center;
+      -webkit-font-smoothing: antialiased;
     }
     .welcome {
       text-align: center;
-      padding: 20px;
+      padding: 40px;
+    }
+    .icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #FF3B30 0%, #FF6B6B 100%);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 32px;
+      box-shadow: 0 8px 32px rgba(255, 59, 48, 0.3);
+    }
+    .icon svg {
+      width: 40px;
+      height: 40px;
+      color: white;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #171717;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+    }
+    p {
+      font-size: 1rem;
+      color: #525252;
+      line-height: 1.6;
     }
   </style>
 </head>
 <body>
   <div class="welcome">
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+        <line x1="8" y1="21" x2="16" y2="21"></line>
+        <line x1="12" y1="17" x2="12" y2="21"></line>
+      </svg>
+    </div>
     <h1>Welcome to Game Creator!</h1>
     <p>Send a message to start creating your game.</p>
   </div>

@@ -74,6 +74,13 @@ class GameCreatorApp {
     this.cancelNewGame = document.getElementById('cancelNewGame');
     this.confirmNewGame = document.getElementById('confirmNewGame');
 
+    // Restore modal elements
+    this.restoreModal = document.getElementById('restoreModal');
+    this.restoreModalMessage = document.getElementById('restoreModalMessage');
+    this.cancelRestore = document.getElementById('cancelRestore');
+    this.confirmRestoreBtn = document.getElementById('confirmRestore');
+    this.pendingRestoreVersionId = null;
+
     // Error state
     this.currentErrors = [];
 
@@ -647,6 +654,13 @@ class GameCreatorApp {
       } else if (e.key === 'Escape') {
         this.hideNewGameModal();
       }
+    });
+
+    // Restore modal
+    this.cancelRestore.addEventListener('click', () => this.hideRestoreModal());
+    this.confirmRestoreBtn.addEventListener('click', () => this.confirmRestore());
+    this.restoreModal.addEventListener('click', (e) => {
+      if (e.target === this.restoreModal) this.hideRestoreModal();
     });
 
     // Mobile tab switching
@@ -1562,9 +1576,10 @@ class GameCreatorApp {
       return;
     }
 
-    versions.forEach(v => {
+    versions.forEach((v, index) => {
       const item = document.createElement('div');
       item.className = 'version-item';
+      if (index === 0) item.classList.add('current');
 
       const time = new Date(v.timestamp).toLocaleString('ja-JP', {
         month: 'short',
@@ -1574,17 +1589,21 @@ class GameCreatorApp {
       });
 
       item.innerHTML = `
-        <div class="version-info">
-          <span class="version-id">${v.id}</span>
-          <span class="version-message">${v.message}</span>
+        <div class="version-item-header">
+          <span class="version-id">${v.id.substring(0, 7)}</span>
           <span class="version-time">${time}</span>
         </div>
-        <button class="version-restore" data-version="${v.id}">Restore</button>
+        <div class="version-message">${this.escapeHtml(v.message)}</div>
+        ${index === 0 ? '<span class="version-current-badge">現在</span>' : `<button class="version-restore" data-version="${v.id}">復元</button>`}
       `;
 
-      item.querySelector('.version-restore').addEventListener('click', () => {
-        this.restoreVersion(v.id);
-      });
+      const restoreBtn = item.querySelector('.version-restore');
+      if (restoreBtn) {
+        restoreBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.restoreVersion(v.id);
+        });
+      }
 
       this.versionList.appendChild(item);
     });
@@ -1593,15 +1612,30 @@ class GameCreatorApp {
   restoreVersion(versionId) {
     if (!this.currentProjectId) return;
 
-    if (!confirm(`Restore to ${versionId}? Current state will be saved as a new version.`)) {
+    // Show custom restore modal
+    this.pendingRestoreVersionId = versionId;
+    this.restoreModalMessage.textContent = `バージョン ${versionId} に戻しますか？`;
+    this.restoreModal.classList.remove('hidden');
+  }
+
+  hideRestoreModal() {
+    this.restoreModal.classList.add('hidden');
+    this.pendingRestoreVersionId = null;
+  }
+
+  confirmRestore() {
+    if (!this.pendingRestoreVersionId || !this.currentProjectId) {
+      this.hideRestoreModal();
       return;
     }
 
     this.ws.send(JSON.stringify({
       type: 'restoreVersion',
       projectId: this.currentProjectId,
-      versionId
+      versionId: this.pendingRestoreVersionId
     }));
+
+    this.hideRestoreModal();
   }
 
   // Streaming methods

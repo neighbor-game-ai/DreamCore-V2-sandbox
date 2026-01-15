@@ -450,6 +450,29 @@
     </div>
   </div>
 
+  <!-- Version Restore Modal -->
+  <div class="restore-modal hidden" id="restoreModal">
+    <div class="restore-modal-content">
+      <div class="restore-modal-header">
+        <div class="restore-modal-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </div>
+        <h2>バージョンを復元</h2>
+      </div>
+      <div class="restore-modal-body">
+        <p id="restoreModalMessage">このバージョンに戻しますか？</p>
+        <p class="restore-modal-hint">現在のバージョンにもいつでも戻れます</p>
+      </div>
+      <div class="restore-modal-actions">
+        <button id="cancelRestore" class="restore-modal-cancel">キャンセル</button>
+        <button id="confirmRestore" class="restore-modal-confirm">復元する</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/app.js"></script>
 </body>
 </html>

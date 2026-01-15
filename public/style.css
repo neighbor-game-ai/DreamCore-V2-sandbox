@@ -1085,29 +1085,43 @@ body::before {
 .version-item {
   padding: var(--s-16);
   border-radius: var(--r-12);
-  cursor: pointer;
   transition: all 0.2s ease;
   margin-bottom: var(--s-8);
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  position: relative;
 }
 
 .version-item:hover {
-  background: var(--gray-100);
+  border-color: var(--gray-300);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.version-item.active {
+.version-item.current {
+  border-color: var(--red);
   background: var(--red-light);
-  border: 1px solid rgba(255, 59, 48, 0.2);
 }
 
 .version-item-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: var(--s-4);
+  align-items: center;
+  margin-bottom: var(--s-8);
 }
 
-.version-number {
+.version-id {
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 0.75rem;
   font-weight: 600;
-  font-size: 0.875rem;
+  color: var(--gray-400);
+  background: var(--gray-100);
+  padding: 2px 8px;
+  border-radius: var(--r-8);
+}
+
+.version-item.current .version-id {
+  background: rgba(255, 59, 48, 0.15);
+  color: var(--red);
 }
 
 .version-time {
@@ -1115,17 +1129,28 @@ body::before {
   color: var(--gray-400);
 }
 
-.version-changes {
-  font-size: 0.8125rem;
-  color: var(--gray-600);
+.version-message {
+  font-size: 0.875rem;
+  color: var(--gray-900);
+  line-height: 1.5;
+  margin-bottom: var(--s-12);
+}
+
+.version-current-badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--red);
 }
 
 .version-restore {
   padding: var(--s-8) var(--s-16);
-  background: var(--red);
+  background: var(--gray-100);
   border: none;
   border-radius: var(--r-8);
-  color: var(--white);
+  color: var(--gray-600);
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
@@ -1133,7 +1158,8 @@ body::before {
 }
 
 .version-restore:hover {
-  background: #E5352B;
+  background: var(--red);
+  color: var(--white);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px var(--red-glow);
 }
@@ -3006,4 +3032,123 @@ body::before {
 .code-viewer-pre code {
   color: #d4d4d4;
   white-space: pre;
+}
+
+/* ===== Version Restore Modal - Nintendo × Kashiwa Sato ===== */
+.restore-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  animation: modalFadeIn 0.3s var(--ease-out);
+}
+
+.restore-modal.hidden {
+  display: none;
+}
+
+.restore-modal-content {
+  background: var(--white);
+  border-radius: var(--r-24);
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.2);
+  animation: modalSlideUp 0.4s var(--ease-out);
+  overflow: hidden;
+}
+
+.restore-modal-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-16);
+  padding: var(--s-32) var(--s-32) var(--s-24);
+}
+
+.restore-modal-icon {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, var(--red) 0%, #FF6B6B 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  box-shadow: 0 8px 24px var(--red-glow);
+}
+
+.restore-modal-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  letter-spacing: -0.02em;
+}
+
+.restore-modal-body {
+  padding: 0 var(--s-32) var(--s-24);
+  text-align: center;
+}
+
+.restore-modal-body p {
+  font-size: 1rem;
+  color: var(--gray-600);
+  line-height: 1.6;
+}
+
+.restore-modal-hint {
+  font-size: 0.875rem !important;
+  color: var(--gray-400) !important;
+  margin-top: var(--s-8);
+}
+
+.restore-modal-actions {
+  display: flex;
+  gap: var(--s-12);
+  padding: var(--s-24) var(--s-32) var(--s-32);
+  background: var(--gray-50);
+  border-top: 1px solid var(--gray-100);
+}
+
+.restore-modal-cancel,
+.restore-modal-confirm {
+  flex: 1;
+  padding: var(--s-16);
+  border-radius: var(--r-12);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.restore-modal-cancel {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  color: var(--gray-600);
+}
+
+.restore-modal-cancel:hover {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+.restore-modal-confirm {
+  background: var(--red);
+  border: none;
+  color: var(--white);
+  box-shadow: 0 4px 12px var(--red-glow);
+}
+
+.restore-modal-confirm:hover {
+  background: #E5352B;
+  transform: scale(1.02);
+  box-shadow: 0 6px 16px var(--red-glow);
+}
+
+.restore-modal-confirm:active {
+  transform: scale(0.98);
 }
