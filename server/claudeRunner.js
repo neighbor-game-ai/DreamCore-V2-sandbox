@@ -1048,6 +1048,28 @@ ${skillInstructions}
         }
       }
 
+      // Helper function to replace asset references in content
+      // Replaces "assets/[name]" with the actual API path "/api/assets/{assetId}"
+      const replaceAssetReferences = (content) => {
+        if (Object.keys(generatedAssets).length === 0) return content;
+
+        let result = content;
+        for (const [name, apiPath] of Object.entries(generatedAssets)) {
+          // Escape special regex characters in filename
+          const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          // Match assets/filename pattern
+          const pattern = new RegExp(`assets/${escapedName}`, 'g');
+
+          const beforeLength = result.length;
+          result = result.replace(pattern, apiPath);
+
+          if (result.length !== beforeLength || result.includes(apiPath)) {
+            console.log(`Replaced asset reference: assets/${name} -> ${apiPath}`);
+          }
+        }
+        return result;
+      };
+
       if (geminiResult.mode === 'edit' && geminiResult.edits) {
         // Edit mode - apply diffs
         const totalEdits = geminiResult.edits.length;
@@ -1076,7 +1098,9 @@ ${skillInstructions}
             continue;
           }
 
-          content = content.replace(edit.old_string, edit.new_string);
+          // Replace asset references in new_string before applying
+          const newString = replaceAssetReferences(edit.new_string);
+          content = content.replace(edit.old_string, newString);
           fs.writeFileSync(filePath, content, 'utf-8');
           console.log(`Edited: ${edit.path}`);
         }
@@ -1097,7 +1121,9 @@ ${skillInstructions}
             fs.mkdirSync(dir, { recursive: true });
           }
 
-          fs.writeFileSync(filePath, file.content, 'utf-8');
+          // Replace asset references before writing file
+          const content = replaceAssetReferences(file.content);
+          fs.writeFileSync(filePath, content, 'utf-8');
           console.log('Written:', file.path);
         }
       }
