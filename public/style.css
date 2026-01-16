@@ -4166,9 +4166,10 @@ body::before {
   }
 }
 
-/* ============================================
-   My Page
-   ============================================ */
+/* ===========================================
+   My Page - Nintendo × Kashiwa Sato Style
+   =========================================== */
+
 .mypage-view {
   min-height: 100vh;
   min-height: 100dvh;
@@ -4177,307 +4178,160 @@ body::before {
   flex-direction: column;
 }
 
+/* Header - Minimal */
 .mypage-header {
-  position: sticky;
-  top: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   padding: var(--s-16) var(--s-24);
   padding-top: calc(var(--s-16) + env(safe-area-inset-top));
-  background: var(--glass-white-strong);
-  backdrop-filter: blur(var(--blur));
-  -webkit-backdrop-filter: blur(var(--blur));
-  border-bottom: 1px solid var(--glass-border);
-  z-index: 10;
-}
-
-.mypage-header h1 {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--gray-900);
-  letter-spacing: -0.02em;
 }
 
 .mypage-back-btn {
   width: 40px;
   height: 40px;
   border-radius: var(--r-full);
-  background: var(--gray-100);
+  background: var(--white);
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mypage-back-btn:active {
+  transform: scale(0.95);
+  background: var(--gray-100);
+}
+
+/* Profile Section - Centered */
+.mypage-profile {
+  text-align: center;
+  padding: var(--s-24) var(--s-24) var(--s-48);
+}
+
+.mypage-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--r-full);
+  background: var(--red-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--red);
+  margin: 0 auto var(--s-16);
+}
+
+.mypage-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--s-16);
+}
+
+.mypage-count {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--gray-900);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.mypage-count-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gray-400);
+  letter-spacing: 0.05em;
+  margin-top: var(--s-4);
+  margin-bottom: var(--s-16);
+}
+
+.mypage-bio {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--gray-500);
+  max-width: 280px;
+  margin: 0 auto var(--s-24);
+  line-height: 1.5;
+}
+
+.mypage-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-12) var(--s-24);
+  background: transparent;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--r-full);
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--gray-600);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.mypage-back-btn:hover {
-  background: var(--gray-200);
-  color: var(--gray-900);
+.mypage-edit-btn:active {
+  transform: scale(0.98);
+  background: var(--gray-100);
 }
 
-.mypage-header-spacer {
-  width: 40px;
-}
-
-.mypage-content {
+/* Games Section */
+.mypage-games-section {
   flex: 1;
-  padding: var(--s-24);
-  max-width: 600px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.mypage-profile-card {
-  display: flex;
-  align-items: center;
-  gap: var(--s-16);
-  padding: var(--s-24);
-  background: var(--white);
-  border-radius: var(--r-16);
-  box-shadow: var(--glass-shadow);
-  margin-bottom: var(--s-24);
-}
-
-.mypage-avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: var(--r-full);
-  background: var(--red-light);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--red);
-  flex-shrink: 0;
-}
-
-.mypage-profile-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.mypage-display-name {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--gray-900);
-  letter-spacing: -0.02em;
-}
-
-.mypage-username {
-  font-size: 0.875rem;
-  color: var(--gray-400);
-  font-weight: 500;
-}
-
-.mypage-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--s-12);
-  margin-bottom: var(--s-32);
-}
-
-.mypage-stat-item {
-  background: var(--white);
-  border-radius: var(--r-12);
-  padding: var(--s-16);
-  text-align: center;
-  box-shadow: var(--glass-shadow);
-}
-
-.mypage-stat-value {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--gray-900);
-  letter-spacing: -0.02em;
-}
-
-.mypage-stat-label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--gray-400);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  margin-top: var(--s-4);
-}
-
-.mypage-section {
-  margin-bottom: var(--s-32);
-}
-
-.mypage-section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--s-12);
   padding: 0 var(--s-4);
 }
 
-.mypage-section-label {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  color: var(--gray-400);
+.mypage-games-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-4);
 }
 
-.mypage-view-all-btn {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--red);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: var(--s-4) var(--s-8);
+.mypage-game-card {
+  aspect-ratio: 1;
   border-radius: var(--r-8);
-  transition: background 0.2s ease;
-}
-
-.mypage-view-all-btn:hover {
-  background: var(--red-light);
-}
-
-.mypage-games-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-12);
-}
-
-.mypage-game-item {
-  display: flex;
-  align-items: center;
-  gap: var(--s-12);
-  padding: var(--s-12) var(--s-16);
-  background: var(--white);
-  border-radius: var(--r-12);
-  box-shadow: var(--glass-shadow);
-  cursor: pointer;
-  transition: transform 0.2s var(--ease-out), box-shadow 0.2s ease;
-}
-
-.mypage-game-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-}
-
-.mypage-game-item:active {
-  transform: scale(0.98);
-}
-
-.mypage-game-thumbnail {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--r-8);
-  background: linear-gradient(135deg, var(--red-light), rgba(59, 130, 246, 0.1));
+  background: var(--gray-100);
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   color: var(--gray-400);
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.mypage-game-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.mypage-game-name {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--gray-900);
-}
-
-.mypage-game-date {
-  font-size: 0.75rem;
-  color: var(--gray-400);
-  font-weight: 500;
-}
-
-.mypage-game-status {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  padding: var(--s-4) var(--s-8);
-  border-radius: var(--r-full);
-  flex-shrink: 0;
-}
-
-.mypage-game-status.public {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10B981;
-}
-
-.mypage-game-status.private {
-  background: var(--gray-100);
-  color: var(--gray-400);
+.mypage-game-card:active {
+  transform: scale(0.96);
+  background: var(--gray-200);
 }
 
 .mypage-games-empty {
+  grid-column: 1 / -1;
   text-align: center;
   padding: var(--s-48);
   color: var(--gray-400);
-}
-
-.mypage-games-empty svg {
-  margin-bottom: var(--s-12);
-  opacity: 0.5;
 }
 
 .mypage-games-empty p {
   font-size: 0.875rem;
 }
 
-.mypage-actions {
-  margin-top: var(--s-32);
-  padding-top: var(--s-24);
-  border-top: 1px solid var(--gray-200);
+/* Footer */
+.mypage-footer {
+  padding: var(--s-24);
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  text-align: center;
 }
 
 .mypage-logout-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--s-8);
-  width: 100%;
-  padding: var(--s-16);
-  background: var(--white);
-  border: 1px solid var(--gray-200);
-  border-radius: var(--r-12);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--gray-600);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--gray-400);
+  background: none;
+  border: none;
   cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.mypage-logout-btn:hover {
-  background: var(--red-light);
-  border-color: var(--red);
-  color: var(--red);
+  padding: var(--s-8) var(--s-16);
 }
 
 .mypage-logout-btn:active {
-  transform: scale(0.98);
-}
-
-@media (max-width: 480px) {
-  .mypage-content {
-    padding: var(--s-16);
-  }
-
-  .mypage-profile-card {
-    padding: var(--s-16);
-  }
-
-  .mypage-avatar {
-    width: 56px;
-    height: 56px;
-  }
-
-  .mypage-display-name {
-    font-size: 1.125rem;
-  }
-
-  .mypage-stat-value {
-    font-size: 1.25rem;
-  }
+  color: var(--red);
 }
