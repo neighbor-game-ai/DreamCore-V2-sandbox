@@ -18,7 +18,7 @@ Instance: dreamcorecode
 Zone: asia-northeast1-b
 App Dir: /opt/gamecreator
 Process: PM2 (gamecreator) - runs as user dreamcorecode
-URL: http://34.84.28.42 または https://dreamcorecode.asia
+URL: http://34.84.28.42
 SSH User: admin (プロジェクトメタデータで設定)
 SSH Key: ~/.ssh/google_compute_engine
 ```
