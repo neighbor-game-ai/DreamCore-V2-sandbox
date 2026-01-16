@@ -8,10 +8,66 @@ const { generateSkillGuidelines } = require('../analyzer/skillSelector');
 /**
  * Build system prompt for new game creation
  */
+// 2Dゲーム用の仮想画面システムテンプレート（必須）
+const virtualScreenTemplate = `[★2Dゲーム必須: 仮想画面サイズシステム]
+
+2Dゲーム（P5.js）では、以下の仮想画面システムを**必ず**使用すること：
+
+\`\`\`javascript
+// ★仮想画面サイズ（全デバイスで同じゲーム体験を提供）
+const VIRTUAL_WIDTH = 390;
+const VIRTUAL_HEIGHT = 844;
+
+const game = (p) => {
+  let scale = 1, offsetX = 0, offsetY = 0;
+
+  p.setup = () => {
+    const canvas = p.createCanvas(p.windowWidth, p.windowHeight);
+    canvas.parent('game-container');
+    calculateScale();
+  };
+
+  function calculateScale() {
+    const scaleX = p.windowWidth / VIRTUAL_WIDTH;
+    const scaleY = p.windowHeight / VIRTUAL_HEIGHT;
+    scale = Math.min(scaleX, scaleY);
+    offsetX = (p.windowWidth - VIRTUAL_WIDTH * scale) / 2;
+    offsetY = (p.windowHeight - VIRTUAL_HEIGHT * scale) / 2;
+  }
+
+  p.draw = () => {
+    p.background(0);  // レターボックス
+    p.push();
+    p.translate(offsetX, offsetY);
+    p.scale(scale);
+
+    // ★ここから仮想座標（390x844）で描画
+    drawGame();
+
+    p.pop();
+  };
+
+  function drawGame() {
+    // 全ての座標・サイズは仮想画面基準
+    // プレイヤー: 40-60px, 敵: 30-40px, 弾: 8-16px
+  }
+
+  p.windowResized = () => {
+    p.resizeCanvas(p.windowWidth, p.windowHeight);
+    calculateScale();
+  };
+};
+\`\`\`
+
+**禁止**: windowWidthやwindowHeightを直接使ったサイズ指定（例: p.width/2）
+**必須**: 全てVIRTUAL_WIDTH/VIRTUAL_HEIGHTを基準にする`;
+
 function getSystemPrompt() {
   return `あなたはスマートフォン向けブラウザゲーム開発の専門家です。
 
 ${getBaseRules()}
+
+${virtualScreenTemplate}
 
 [出力形式]
 必ず以下のJSON形式で出力してください：
