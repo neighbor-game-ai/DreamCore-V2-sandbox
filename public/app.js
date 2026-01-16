@@ -620,6 +620,7 @@ class GameCreatorApp {
 
     this.ws.onopen = () => {
       console.log(`[${this.sessionId}] WebSocket connected`);
+      this.reconnectAttempts = 0; // Reset on successful connection
       this.updateStatus('connected', '接続中');
       this.listStatusIndicator.className = 'status-indicator connected';
       this.listStatusIndicator.textContent = '接続中';
@@ -637,12 +638,16 @@ class GameCreatorApp {
 
     this.ws.onclose = (event) => {
       console.log(`[${this.sessionId}] WebSocket closed: code=${event.code}, reason=${event.reason}`);
-      this.updateStatus('', '切断されました');
+      this.updateStatus('', '再接続中...');
       this.listStatusIndicator.className = 'status-indicator';
-      this.listStatusIndicator.textContent = '切断されました';
+      this.listStatusIndicator.textContent = '再接続中...';
       this.sendButton.disabled = true;
       this.chatInput.disabled = true;
-      setTimeout(() => this.connectWebSocket(), 3000);
+      // Exponential backoff: 1s, 1.5s, 2.25s, ... max 10s
+      const delay = Math.min(1000 * Math.pow(1.5, this.reconnectAttempts || 0), 10000);
+      this.reconnectAttempts = (this.reconnectAttempts || 0) + 1;
+      console.log(`[Reconnect] Attempting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+      setTimeout(() => this.connectWebSocket(), delay);
     };
 
     this.ws.onerror = (error) => {
@@ -676,19 +681,46 @@ class GameCreatorApp {
   }
 
   checkAndReconnect() {
+    // Clear any existing ping timeout
+    if (this.pingTimeout) {
+      clearTimeout(this.pingTimeout);
+      this.pingTimeout = null;
+    }
+
     if (!this.ws || this.ws.readyState === WebSocket.CLOSED || this.ws.readyState === WebSocket.CLOSING) {
-      console.log('[Reconnect] WebSocket is closed, reconnecting...');
+      console.log('[Reconnect] WebSocket is closed, reconnecting immediately...');
+      this.reconnectAttempts = 0; // Reset for fresh start
       this.connectWebSocket();
     } else if (this.ws.readyState === WebSocket.OPEN) {
-      console.log('[Reconnect] WebSocket is already connected');
-      // Send a ping to verify connection is alive
+      console.log('[Reconnect] WebSocket appears connected, verifying with ping...');
+      this.updateStatus('', '接続確認中...');
+
+      // Set a timeout - if no pong within 2 seconds, force reconnect
+      this.pingTimeout = setTimeout(() => {
+        console.log('[Reconnect] Ping timeout, forcing reconnect...');
+        this.forceReconnect();
+      }, 2000);
+
       try {
         this.ws.send(JSON.stringify({ type: 'ping' }));
       } catch (e) {
         console.log('[Reconnect] Ping failed, reconnecting...');
-        this.connectWebSocket();
+        clearTimeout(this.pingTimeout);
+        this.forceReconnect();
       }
+    } else if (this.ws.readyState === WebSocket.CONNECTING) {
+      console.log('[Reconnect] WebSocket is already connecting...');
     }
+  }
+
+  forceReconnect() {
+    // Close existing connection and reconnect
+    if (this.ws) {
+      this.ws.onclose = null; // Prevent double reconnect
+      this.ws.close();
+    }
+    this.reconnectAttempts = 0;
+    this.connectWebSocket();
   }
 
   setupEventListeners() {
@@ -1090,6 +1122,18 @@ class GameCreatorApp {
   handleMessage(data) {
     console.log('[WS Received]', data.type, data);
     switch (data.type) {
+      case 'pong':
+        // Connection verified - clear timeout and restore status
+        if (this.pingTimeout) {
+          clearTimeout(this.pingTimeout);
+          this.pingTimeout = null;
+        }
+        console.log('[Reconnect] Pong received, connection verified');
+        this.updateStatus('connected', '接続中');
+        this.listStatusIndicator.className = 'status-indicator connected';
+        this.listStatusIndicator.textContent = '接続中';
+        break;
+
       case 'init':
         this.visitorId = data.visitorId;
         localStorage.setItem('gameCreatorVisitorId', this.visitorId);
