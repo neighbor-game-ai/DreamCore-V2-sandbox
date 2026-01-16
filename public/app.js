@@ -733,6 +733,16 @@ class GameCreatorApp {
     // Create project button in list view
     this.createProjectButton.addEventListener('click', () => this.createNewProject());
 
+    // Scroll detection for create button animation
+    this.projectListView.addEventListener('scroll', () => {
+      const scrollTop = this.projectListView.scrollTop;
+      if (scrollTop > 50) {
+        this.createProjectButton.classList.add('scrolled');
+      } else {
+        this.createProjectButton.classList.remove('scrolled');
+      }
+    });
+
     // New game modal
     this.cancelNewGame.addEventListener('click', () => this.hideNewGameModal());
     this.confirmNewGame.addEventListener('click', () => this.confirmCreateProject());
