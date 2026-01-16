@@ -61,7 +61,7 @@ const initSchema = () => {
       FOREIGN KEY (remixed_from) REFERENCES projects(id) ON DELETE SET NULL
     );
 
-    -- Assets table
+    -- Assets table (reference-based asset management)
     CREATE TABLE IF NOT EXISTS assets (
       id TEXT PRIMARY KEY,
       owner_id TEXT NOT NULL,
@@ -71,10 +71,26 @@ const initSchema = () => {
       mime_type TEXT,
       size INTEGER,
       is_public INTEGER DEFAULT 0,
+      is_deleted INTEGER DEFAULT 0,
+      available_from TEXT,
+      available_until TEXT,
       tags TEXT,
       description TEXT,
       created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    -- Project-Asset relationship table
+    CREATE TABLE IF NOT EXISTS project_assets (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      asset_id TEXT NOT NULL,
+      usage_type TEXT DEFAULT 'image',
+      added_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(project_id, asset_id),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE
     );
 
     -- Chat history table
@@ -119,6 +135,10 @@ const initSchema = () => {
     CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
     CREATE INDEX IF NOT EXISTS idx_projects_is_public ON projects(is_public);
     CREATE INDEX IF NOT EXISTS idx_assets_owner_id ON assets(owner_id);
+    CREATE INDEX IF NOT EXISTS idx_assets_is_public ON assets(is_public);
+    CREATE INDEX IF NOT EXISTS idx_assets_is_deleted ON assets(is_deleted);
+    CREATE INDEX IF NOT EXISTS idx_project_assets_project_id ON project_assets(project_id);
+    CREATE INDEX IF NOT EXISTS idx_project_assets_asset_id ON project_assets(asset_id);
     CREATE INDEX IF NOT EXISTS idx_chat_history_project_id ON chat_history(project_id);
     CREATE INDEX IF NOT EXISTS idx_jobs_user_id ON jobs(user_id);
     CREATE INDEX IF NOT EXISTS idx_jobs_project_id ON jobs(project_id);
@@ -134,8 +154,37 @@ const initSchema = () => {
   console.log('Database schema initialized');
 };
 
+// Migration: Add new columns to existing assets table
+const migrateAssetsTable = () => {
+  try {
+    // Check if columns exist, add if not
+    const tableInfo = db.prepare("PRAGMA table_info(assets)").all();
+    const columns = tableInfo.map(col => col.name);
+
+    if (!columns.includes('is_deleted')) {
+      db.exec("ALTER TABLE assets ADD COLUMN is_deleted INTEGER DEFAULT 0");
+      console.log('Migration: Added is_deleted column to assets');
+    }
+    if (!columns.includes('available_from')) {
+      db.exec("ALTER TABLE assets ADD COLUMN available_from TEXT");
+      console.log('Migration: Added available_from column to assets');
+    }
+    if (!columns.includes('available_until')) {
+      db.exec("ALTER TABLE assets ADD COLUMN available_until TEXT");
+      console.log('Migration: Added available_until column to assets');
+    }
+    if (!columns.includes('updated_at')) {
+      db.exec("ALTER TABLE assets ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))");
+      console.log('Migration: Added updated_at column to assets');
+    }
+  } catch (err) {
+    console.error('Migration error:', err.message);
+  }
+};
+
 // Initialize schema on module load
 initSchema();
+migrateAssetsTable();
 
 // ==================== User Operations ====================
 
@@ -238,14 +287,27 @@ const clearChatHistory = (projectId) => {
 // ==================== Asset Operations ====================
 
 const assetQueries = {
-  findByOwnerId: db.prepare('SELECT * FROM assets WHERE owner_id = ? ORDER BY created_at DESC'),
+  findByOwnerId: db.prepare('SELECT * FROM assets WHERE owner_id = ? AND is_deleted = 0 ORDER BY created_at DESC'),
   findById: db.prepare('SELECT * FROM assets WHERE id = ?'),
+  findByIdActive: db.prepare('SELECT * FROM assets WHERE id = ? AND is_deleted = 0'),
   create: db.prepare('INSERT INTO assets (id, owner_id, filename, original_name, storage_path, mime_type, size, is_public, tags, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
-  delete: db.prepare('DELETE FROM assets WHERE id = ?'),
-  setPublic: db.prepare('UPDATE assets SET is_public = ? WHERE id = ?'),
-  updateMeta: db.prepare('UPDATE assets SET tags = ?, description = ? WHERE id = ?'),
-  findPublic: db.prepare('SELECT * FROM assets WHERE is_public = 1 ORDER BY created_at DESC LIMIT ?'),
-  findAccessible: db.prepare('SELECT * FROM assets WHERE owner_id = ? OR is_public = 1 ORDER BY created_at DESC'),
+  softDelete: db.prepare("UPDATE assets SET is_deleted = 1, updated_at = datetime('now') WHERE id = ?"),
+  hardDelete: db.prepare('DELETE FROM assets WHERE id = ?'),
+  setPublic: db.prepare("UPDATE assets SET is_public = ?, updated_at = datetime('now') WHERE id = ?"),
+  updateMeta: db.prepare("UPDATE assets SET tags = ?, description = ?, updated_at = datetime('now') WHERE id = ?"),
+  setAvailability: db.prepare("UPDATE assets SET available_from = ?, available_until = ?, updated_at = datetime('now') WHERE id = ?"),
+  findPublic: db.prepare('SELECT * FROM assets WHERE is_public = 1 AND is_deleted = 0 ORDER BY created_at DESC LIMIT ?'),
+  findAccessible: db.prepare('SELECT * FROM assets WHERE (owner_id = ? OR is_public = 1) AND is_deleted = 0 ORDER BY created_at DESC'),
+};
+
+// Project-Asset relationship queries
+const projectAssetQueries = {
+  findByProjectId: db.prepare('SELECT pa.*, a.filename, a.original_name, a.storage_path, a.mime_type, a.is_public, a.is_deleted, a.available_from, a.available_until FROM project_assets pa JOIN assets a ON pa.asset_id = a.id WHERE pa.project_id = ?'),
+  findByAssetId: db.prepare('SELECT pa.*, p.name as project_name FROM project_assets pa JOIN projects p ON pa.project_id = p.id WHERE pa.asset_id = ?'),
+  create: db.prepare('INSERT OR IGNORE INTO project_assets (id, project_id, asset_id, usage_type) VALUES (?, ?, ?, ?)'),
+  delete: db.prepare('DELETE FROM project_assets WHERE project_id = ? AND asset_id = ?'),
+  deleteByProjectId: db.prepare('DELETE FROM project_assets WHERE project_id = ?'),
+  countByAssetId: db.prepare('SELECT COUNT(*) as count FROM project_assets WHERE asset_id = ?'),
 };
 
 const getAssetsByOwnerId = (ownerId) => {
@@ -254,6 +316,19 @@ const getAssetsByOwnerId = (ownerId) => {
 
 const getAssetById = (assetId) => {
   return assetQueries.findById.get(assetId);
+};
+
+// Get asset only if active (not deleted, within availability period)
+const getActiveAsset = (assetId) => {
+  const asset = assetQueries.findByIdActive.get(assetId);
+  if (!asset) return null;
+
+  // Check availability period
+  const now = new Date().toISOString();
+  if (asset.available_from && now < asset.available_from) return null;
+  if (asset.available_until && now > asset.available_until) return null;
+
+  return asset;
 };
 
 const getAccessibleAssets = (userId) => {
@@ -265,6 +340,7 @@ const searchAssets = (userId, query) => {
   const stmt = db.prepare(`
     SELECT * FROM assets
     WHERE (owner_id = ? OR is_public = 1)
+    AND is_deleted = 0
     AND (LOWER(filename) LIKE ? OR LOWER(original_name) LIKE ? OR LOWER(tags) LIKE ? OR LOWER(description) LIKE ?)
     ORDER BY created_at DESC
     LIMIT 50
@@ -282,8 +358,14 @@ const createAsset = (ownerId, filename, originalName, storagePath, mimeType = nu
   return assetQueries.findById.get(id);
 };
 
+// Soft delete (logical deletion - asset becomes inaccessible but data remains)
 const deleteAsset = (assetId) => {
-  assetQueries.delete.run(assetId);
+  assetQueries.softDelete.run(assetId);
+};
+
+// Hard delete (physical deletion - use with caution)
+const hardDeleteAsset = (assetId) => {
+  assetQueries.hardDelete.run(assetId);
 };
 
 const setAssetPublic = (assetId, isPublic) => {
@@ -294,6 +376,40 @@ const setAssetPublic = (assetId, isPublic) => {
 const updateAssetMeta = (assetId, tags, description) => {
   assetQueries.updateMeta.run(tags, description, assetId);
   return assetQueries.findById.get(assetId);
+};
+
+// Set availability period (for time-limited IP assets)
+const setAssetAvailability = (assetId, availableFrom, availableUntil) => {
+  assetQueries.setAvailability.run(availableFrom, availableUntil, assetId);
+  return assetQueries.findById.get(assetId);
+};
+
+// ==================== Project-Asset Operations ====================
+
+const getProjectAssets = (projectId) => {
+  return projectAssetQueries.findByProjectId.all(projectId);
+};
+
+const getAssetUsage = (assetId) => {
+  return projectAssetQueries.findByAssetId.all(assetId);
+};
+
+const getAssetUsageCount = (assetId) => {
+  const result = projectAssetQueries.countByAssetId.get(assetId);
+  return result ? result.count : 0;
+};
+
+const linkAssetToProject = (projectId, assetId, usageType = 'image') => {
+  const id = uuidv4();
+  projectAssetQueries.create.run(id, projectId, assetId, usageType);
+};
+
+const unlinkAssetFromProject = (projectId, assetId) => {
+  projectAssetQueries.delete.run(projectId, assetId);
+};
+
+const unlinkAllAssetsFromProject = (projectId) => {
+  projectAssetQueries.deleteByProjectId.run(projectId);
 };
 
 // ==================== Job Operations ====================
@@ -556,13 +672,24 @@ module.exports = {
   // Asset operations
   getAssetsByOwnerId,
   getAssetById,
+  getActiveAsset,
   getAccessibleAssets,
   searchAssets,
   getPublicAssets,
   createAsset,
   deleteAsset,
+  hardDeleteAsset,
   setAssetPublic,
   updateAssetMeta,
+  setAssetAvailability,
+
+  // Project-Asset operations
+  getProjectAssets,
+  getAssetUsage,
+  getAssetUsageCount,
+  linkAssetToProject,
+  unlinkAssetFromProject,
+  unlinkAllAssetsFromProject,
 
   // Job operations
   getJobById,

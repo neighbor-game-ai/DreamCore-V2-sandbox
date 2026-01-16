@@ -327,15 +327,36 @@ const writeProjectFile = (visitorId, projectId, filename, content) => {
   return filePath;
 };
 
-// Save a generated image to the project's assets directory
-const saveGeneratedImage = (visitorId, projectId, filename, base64Data) => {
-  const projectDir = ensureProjectDir(visitorId, projectId);
-  const assetsDir = path.join(projectDir, 'assets');
+// Central assets directory (outside of project folders)
+const ASSETS_DIR = path.join(__dirname, '..', 'assets');
 
-  // Ensure assets directory exists
-  if (!fs.existsSync(assetsDir)) {
-    fs.mkdirSync(assetsDir, { recursive: true });
+// Ensure user's assets directory exists
+const ensureUserAssetsDir = (visitorId) => {
+  const userAssetsDir = path.join(ASSETS_DIR, visitorId);
+  if (!fs.existsSync(userAssetsDir)) {
+    fs.mkdirSync(userAssetsDir, { recursive: true });
   }
+  return userAssetsDir;
+};
+
+// Save a generated image using reference-based asset management
+// Returns the API path (e.g., "/api/assets/{assetId}") for use in HTML
+const saveGeneratedImage = (visitorId, projectId, filename, base64Data) => {
+  // Get user for DB operations
+  const user = db.getUserByVisitorId(visitorId);
+  if (!user) {
+    console.error('User not found for visitorId:', visitorId);
+    return null;
+  }
+
+  // Ensure user's assets directory exists
+  const userAssetsDir = ensureUserAssetsDir(visitorId);
+
+  // Generate unique asset ID
+  const assetId = require('uuid').v4();
+  const ext = path.extname(filename) || '.png';
+  const storageName = `${assetId}${ext}`;
+  const storagePath = path.join(userAssetsDir, storageName);
 
   // Extract base64 data (remove data:image/png;base64, prefix if present)
   const base64Content = base64Data.includes(',')
@@ -344,14 +365,41 @@ const saveGeneratedImage = (visitorId, projectId, filename, base64Data) => {
 
   // Convert base64 to buffer and save
   const buffer = Buffer.from(base64Content, 'base64');
-  const filePath = path.join(assetsDir, filename);
-  fs.writeFileSync(filePath, buffer);
+  fs.writeFileSync(storagePath, buffer);
+
+  // Determine MIME type from extension
+  const mimeTypes = {
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp'
+  };
+  const mimeType = mimeTypes[ext.toLowerCase()] || 'image/png';
+
+  // Create asset record in database
+  const asset = db.createAsset(
+    user.id,
+    storageName,
+    filename,
+    storagePath,
+    mimeType,
+    buffer.length,
+    false,  // isPublic
+    null,   // tags
+    null    // description
+  );
+
+  // Link asset to project
+  db.linkAssetToProject(projectId, asset.id, 'image');
 
   // Update project timestamp
   db.touchProject(projectId);
 
-  console.log(`Saved generated image: assets/${filename}`);
-  return `assets/${filename}`;
+  console.log(`Saved generated image: ${filename} -> /api/assets/${asset.id}`);
+
+  // Return API path for use in HTML (reference-based)
+  return `/api/assets/${asset.id}`;
 };
 
 // Search files in user's past projects using git

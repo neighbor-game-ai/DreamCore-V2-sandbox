@@ -335,10 +335,27 @@ app.get('/api/assets/search', (req, res) => {
   });
 });
 
-// Get asset file
+// Get asset file (reference-based: checks deletion and availability)
 app.get('/api/assets/:id', (req, res) => {
-  const asset = db.getAssetById(req.params.id);
+  // Use getActiveAsset to check deletion status and availability period
+  const asset = db.getActiveAsset(req.params.id);
+
   if (!asset) {
+    // Check if asset exists but is deleted/unavailable
+    const rawAsset = db.getAssetById(req.params.id);
+    if (rawAsset) {
+      if (rawAsset.is_deleted) {
+        return res.status(410).json({ error: 'Asset has been deleted' });
+      }
+      // Check availability period
+      const now = new Date().toISOString();
+      if (rawAsset.available_until && now > rawAsset.available_until) {
+        return res.status(410).json({ error: 'Asset is no longer available' });
+      }
+      if (rawAsset.available_from && now < rawAsset.available_from) {
+        return res.status(403).json({ error: 'Asset is not yet available' });
+      }
+    }
     return res.status(404).json({ error: 'Asset not found' });
   }
 
@@ -467,7 +484,7 @@ app.put('/api/assets/:id', (req, res) => {
   });
 });
 
-// Delete asset
+// Delete asset (soft delete - file remains but asset becomes inaccessible)
 app.delete('/api/assets/:id', (req, res) => {
   const { visitorId } = req.body;
 
@@ -490,13 +507,18 @@ app.delete('/api/assets/:id', (req, res) => {
     return res.status(403).json({ error: 'Not authorized' });
   }
 
-  // Delete file
-  if (fs.existsSync(asset.storage_path)) {
-    fs.unlinkSync(asset.storage_path);
-  }
-
+  // Soft delete (logical deletion - asset becomes inaccessible but data remains)
+  // This ensures that all projects referencing this asset will see it as "deleted"
   db.deleteAsset(req.params.id);
-  res.json({ success: true });
+
+  // Return usage count so owner knows impact
+  const usageCount = db.getAssetUsageCount(req.params.id);
+  res.json({
+    success: true,
+    message: usageCount > 0
+      ? `Asset deleted. It was used in ${usageCount} project(s) - they will now see a placeholder.`
+      : 'Asset deleted.'
+  });
 });
 
 // ==================== Public Games API ====================

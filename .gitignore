@@ -9,6 +9,9 @@ node_modules/
 # User data (contains generated games and personal data)
 users/
 
+# User assets (reference-based storage)
+assets/
+
 # Database
 data/
 *.db
