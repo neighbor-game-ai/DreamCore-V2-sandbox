@@ -641,29 +641,30 @@ body::before {
   display: inline-flex;
   align-items: center;
   gap: var(--s-8);
-  margin-top: var(--s-12);
-  padding: var(--s-8) var(--s-16);
   background: var(--red);
   color: var(--white);
   border: none;
+  padding: var(--s-12) var(--s-16);
   border-radius: var(--r-full);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration) var(--ease-out);
+  box-shadow: 0 2px 8px rgba(255, 59, 48, 0.3);
 }
 
 .play-game-btn:hover {
-  background: #E5352B;
-  transform: scale(1.02);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(255, 59, 48, 0.4);
 }
 
 .play-game-btn:active {
-  transform: scale(0.98);
+  transform: translateY(0);
 }
 
 .play-game-btn svg {
-  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
 }
 
 .message.system {
