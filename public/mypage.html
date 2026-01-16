@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>マイページ - ゲームクリエイター</title>
+  <link rel="stylesheet" href="/style.css">
+  <meta name="description" content="ゲームクリエイター - マイページ">
+</head>
+<body>
+  <div class="mypage-view" id="mypageView">
+    <!-- Header -->
+    <header class="mypage-header">
+      <button class="mypage-back-btn" id="backBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+      </button>
+      <h1>マイページ</h1>
+      <div class="mypage-header-spacer"></div>
+    </header>
+
+    <!-- Content -->
+    <div class="mypage-content">
+      <!-- Profile Card -->
+      <div class="mypage-profile-card">
+        <div class="mypage-avatar">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div class="mypage-profile-info">
+          <div class="mypage-display-name" id="displayName">-</div>
+          <div class="mypage-username" id="username">@-</div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="mypage-stats">
+        <div class="mypage-stat-item">
+          <div class="mypage-stat-value" id="statGames">0</div>
+          <div class="mypage-stat-label">ゲーム</div>
+        </div>
+        <div class="mypage-stat-item">
+          <div class="mypage-stat-value" id="statPublic">0</div>
+          <div class="mypage-stat-label">公開中</div>
+        </div>
+        <div class="mypage-stat-item">
+          <div class="mypage-stat-value" id="statAssets">0</div>
+          <div class="mypage-stat-label">素材</div>
+        </div>
+      </div>
+
+      <!-- My Games Section -->
+      <section class="mypage-section">
+        <div class="mypage-section-header">
+          <span class="mypage-section-label">MY GAMES</span>
+          <button class="mypage-view-all-btn" id="viewAllBtn">すべて見る</button>
+        </div>
+        <div class="mypage-games-list" id="gamesList">
+          <!-- Games will be loaded here -->
+        </div>
+      </section>
+
+      <!-- Actions -->
+      <div class="mypage-actions">
+        <button class="mypage-logout-btn" id="logoutBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          ログアウト
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/mypage.js"></script>
+</body>
+</html>

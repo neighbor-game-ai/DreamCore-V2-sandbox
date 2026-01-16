@@ -47,6 +47,8 @@ class GameCreatorApp {
     this.homeButton = document.getElementById('homeButton');
     this.userDisplayName = document.getElementById('userDisplayName');
     this.logoutButton = document.getElementById('logoutButton');
+    this.notificationsButton = document.getElementById('notificationsButton');
+    this.notificationsBadge = document.getElementById('notificationsBadge');
 
     // DOM elements (editor view)
     this.chatMessages = document.getElementById('chatMessages');
@@ -218,6 +220,10 @@ class GameCreatorApp {
 
     this.logoutButton.addEventListener('click', () => {
       this.logout();
+    });
+
+    this.notificationsButton?.addEventListener('click', () => {
+      window.location.href = '/notifications';
     });
   }
 
@@ -949,10 +955,8 @@ class GameCreatorApp {
   }
 
   showProfileView() {
-    // For now, show project list as profile
-    this.projectListView.classList.remove('hidden');
-    this.projectListView.classList.add('with-nav');
-    this.currentView = 'list';
+    // Navigate to dedicated mypage
+    window.location.href = '/mypage';
   }
 
   // ==================== Zapping Mode ====================

@@ -1206,6 +1206,18 @@ app.get('/api/projects', (req, res) => {
   res.json({ projects });
 });
 
+// ==================== My Page Route ====================
+
+app.get('/mypage', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'mypage.html'));
+});
+
+// ==================== Notifications Route ====================
+
+app.get('/notifications', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'notifications.html'));
+});
+
 // ==================== SPA Routing ====================
 
 // Handle SPA routes - serve index.html for all non-API, non-asset routes
