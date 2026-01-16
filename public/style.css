@@ -132,7 +132,7 @@ body::before {
 
 /* ===== Project List View - Nintendo × Kashiwa Sato ===== */
 .project-list-view {
-  min-height: 100vh;
+  height: 100%;
   background: var(--white);
   display: flex;
   flex-direction: column;
