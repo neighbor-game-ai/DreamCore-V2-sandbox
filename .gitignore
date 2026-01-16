@@ -45,3 +45,4 @@ google-cloud-cli-*.tar.gz
 # Analysis reports (generated)
 game_classification_report.*
 analyze_classification.js
+.venv/
