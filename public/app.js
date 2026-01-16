@@ -2714,10 +2714,11 @@ class GameCreatorApp {
     if (!this.visitorId) return;
 
     try {
-      const response = await fetch(`/api/assets?visitorId=${this.visitorId}`);
+      const currentProjectId = this.projectId || '';
+      const response = await fetch(`/api/assets?visitorId=${this.visitorId}&currentProjectId=${currentProjectId}`);
       const data = await response.json();
 
-      this.renderAssetGrid(this.myAssetGrid, data.assets, true);
+      this.renderAssetGridGrouped(this.myAssetGrid, data.assets, true, currentProjectId);
 
       // Also load public assets
       const publicResponse = await fetch(`/api/assets/search?visitorId=${this.visitorId}`);
@@ -2743,6 +2744,128 @@ class GameCreatorApp {
     } catch (error) {
       console.error('Error searching assets:', error);
     }
+  }
+
+  renderAssetGridGrouped(container, assets, showActions, currentProjectId) {
+    if (assets.length === 0) {
+      container.innerHTML = `
+        <div class="asset-empty">
+          <div class="asset-empty-icon">📁</div>
+          <p>No assets found</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Group assets by project
+    const currentProjectAssets = [];
+    const otherProjectGroups = new Map(); // projectId -> { name, assets }
+    const unassignedAssets = [];
+
+    assets.forEach(asset => {
+      if (!asset.projects || asset.projects.length === 0) {
+        unassignedAssets.push(asset);
+      } else {
+        // Check if this asset belongs to current project
+        const isCurrentProject = asset.projects.some(p => p.id === currentProjectId);
+        if (isCurrentProject && currentProjectId) {
+          currentProjectAssets.push(asset);
+        }
+        // Also add to other project groups (asset can belong to multiple projects)
+        asset.projects.forEach(project => {
+          if (project.id !== currentProjectId) {
+            if (!otherProjectGroups.has(project.id)) {
+              otherProjectGroups.set(project.id, { name: project.name, assets: [] });
+            }
+            // Avoid duplicates
+            const group = otherProjectGroups.get(project.id);
+            if (!group.assets.some(a => a.id === asset.id)) {
+              group.assets.push(asset);
+            }
+          }
+        });
+      }
+    });
+
+    let html = '';
+
+    // Current project assets first
+    if (currentProjectAssets.length > 0) {
+      const currentProject = currentProjectAssets[0].projects.find(p => p.id === currentProjectId);
+      const projectName = currentProject ? currentProject.name : 'Current Project';
+      html += `
+        <div class="asset-group current-project">
+          <div class="asset-group-header">
+            <span class="asset-group-icon">📂</span>
+            <span class="asset-group-name">${projectName}</span>
+            <span class="asset-group-badge current">作業中</span>
+            <span class="asset-group-count">${currentProjectAssets.length}</span>
+          </div>
+          <div class="asset-group-grid">
+            ${this.renderAssetItems(currentProjectAssets, showActions)}
+          </div>
+        </div>
+      `;
+    }
+
+    // Other project groups
+    otherProjectGroups.forEach((group, projectId) => {
+      html += `
+        <div class="asset-group" data-project-id="${projectId}">
+          <div class="asset-group-header">
+            <span class="asset-group-icon">📁</span>
+            <span class="asset-group-name">${group.name}</span>
+            <span class="asset-group-count">${group.assets.length}</span>
+          </div>
+          <div class="asset-group-grid">
+            ${this.renderAssetItems(group.assets, showActions)}
+          </div>
+        </div>
+      `;
+    });
+
+    // Unassigned assets
+    if (unassignedAssets.length > 0) {
+      html += `
+        <div class="asset-group unassigned">
+          <div class="asset-group-header">
+            <span class="asset-group-icon">📎</span>
+            <span class="asset-group-name">未分類</span>
+            <span class="asset-group-count">${unassignedAssets.length}</span>
+          </div>
+          <div class="asset-group-grid">
+            ${this.renderAssetItems(unassignedAssets, showActions)}
+          </div>
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
+
+    // Add click handlers for selection
+    container.querySelectorAll('.asset-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+        this.selectAsset(item);
+      });
+    });
+  }
+
+  renderAssetItems(assets, showActions) {
+    return assets.map(asset => `
+      <div class="asset-item ${asset.isPublic ? 'public-badge' : ''}" data-id="${asset.id}" data-url="${asset.url}" data-name="${asset.filename}">
+        <div class="asset-thumb">
+          ${this.getAssetThumb(asset)}
+        </div>
+        <div class="asset-name" title="${asset.filename}">${asset.filename}</div>
+        ${showActions && asset.isOwner !== false ? `
+          <div class="asset-actions">
+            <button onclick="app.toggleAssetPublic('${asset.id}', ${!asset.isPublic})">${asset.isPublic ? '🔒' : '🌐'}</button>
+            <button onclick="app.deleteAsset('${asset.id}')">🗑️</button>
+          </div>
+        ` : ''}
+      </div>
+    `).join('');
   }
 
   renderAssetGrid(container, assets, showActions) {

@@ -2314,9 +2314,92 @@ body::before {
 }
 
 .asset-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-16);
+}
+
+/* Asset Group (Project-based grouping) */
+.asset-group {
+  background: var(--gray-50);
+  border-radius: var(--r-12);
+  overflow: hidden;
+}
+
+.asset-group.current-project {
+  background: var(--red-light);
+  border: 2px solid var(--red);
+}
+
+.asset-group-header {
+  display: flex;
+  align-items: center;
+  gap: var(--s-8);
+  padding: var(--s-12) var(--s-16);
+  background: var(--gray-100);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.asset-group.current-project .asset-group-header {
+  background: var(--red);
+  color: var(--white);
+}
+
+.asset-group-icon {
+  font-size: 1rem;
+}
+
+.asset-group-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asset-group-badge {
+  font-size: 0.625rem;
+  padding: var(--s-2) var(--s-8);
+  border-radius: var(--r-full);
+  background: var(--gray-200);
+  color: var(--gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.asset-group-badge.current {
+  background: var(--white);
+  color: var(--red);
+}
+
+.asset-group-count {
+  font-size: 0.75rem;
+  padding: var(--s-2) var(--s-8);
+  border-radius: var(--r-full);
+  background: var(--gray-200);
+  color: var(--gray-600);
+}
+
+.asset-group.current-project .asset-group-count {
+  background: rgba(255, 255, 255, 0.3);
+  color: var(--white);
+}
+
+.asset-group-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: var(--s-12);
+  padding: var(--s-12);
+}
+
+.asset-group.unassigned {
+  background: var(--gray-50);
+  border: 1px dashed var(--gray-300);
+}
+
+.asset-group.unassigned .asset-group-header {
+  background: var(--gray-50);
+  color: var(--gray-500);
 }
 
 .asset-item {

@@ -401,7 +401,7 @@ app.get('/api/assets/:id/meta', (req, res) => {
 
 // List user's assets
 app.get('/api/assets', (req, res) => {
-  const { visitorId } = req.query;
+  const { visitorId, currentProjectId } = req.query;
 
   if (!visitorId) {
     return res.status(400).json({ error: 'visitorId required' });
@@ -412,10 +412,18 @@ app.get('/api/assets', (req, res) => {
     return res.status(404).json({ error: 'User not found' });
   }
 
-  const assets = db.getAssetsByOwnerId(user.id);
+  const assets = db.getAssetsWithProjectsByOwnerId(user.id);
 
-  res.json({
-    assets: assets.map(a => ({
+  // Parse project info and group assets
+  const assetsWithProjects = assets.map(a => {
+    const projectIds = a.project_ids ? a.project_ids.split(',') : [];
+    const projectNames = a.project_names ? a.project_names.split(',') : [];
+    const projects = projectIds.map((id, index) => ({
+      id,
+      name: projectNames[index] || 'Unknown'
+    }));
+
+    return {
       id: a.id,
       filename: a.original_name,
       mimeType: a.mime_type,
@@ -423,8 +431,15 @@ app.get('/api/assets', (req, res) => {
       isPublic: !!a.is_public,
       tags: a.tags,
       description: a.description,
-      url: `/api/assets/${a.id}`
-    }))
+      url: `/api/assets/${a.id}`,
+      projects,
+      createdAt: a.created_at
+    };
+  });
+
+  res.json({
+    assets: assetsWithProjects,
+    currentProjectId
   });
 });
 

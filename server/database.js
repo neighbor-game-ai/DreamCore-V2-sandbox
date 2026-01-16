@@ -414,6 +414,23 @@ const unlinkAllAssetsFromProject = (projectId) => {
   projectAssetQueries.deleteByProjectId.run(projectId);
 };
 
+// Get assets with project information for asset library display
+const getAssetsWithProjectsByOwnerId = (ownerId) => {
+  const stmt = db.prepare(`
+    SELECT
+      a.*,
+      GROUP_CONCAT(DISTINCT p.id) as project_ids,
+      GROUP_CONCAT(DISTINCT p.name) as project_names
+    FROM assets a
+    LEFT JOIN project_assets pa ON a.id = pa.asset_id
+    LEFT JOIN projects p ON pa.project_id = p.id
+    WHERE a.owner_id = ? AND a.is_deleted = 0
+    GROUP BY a.id
+    ORDER BY a.created_at DESC
+  `);
+  return stmt.all(ownerId);
+};
+
 // ==================== Job Operations ====================
 
 const jobQueries = {
@@ -692,6 +709,7 @@ module.exports = {
   linkAssetToProject,
   unlinkAssetFromProject,
   unlinkAllAssetsFromProject,
+  getAssetsWithProjectsByOwnerId,
 
   // Job operations
   getJobById,
