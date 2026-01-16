@@ -793,20 +793,79 @@ class GameCreatorApp {
     if (this.visibilityHandlerSetup) return;
     this.visibilityHandlerSetup = true;
 
+    // visibilitychange - main handler
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         console.log('[Visibility] Page became visible, checking connection...');
-        this.checkAndReconnect();
+        // Small delay to let network stabilize after wake
+        setTimeout(() => this.checkAndReconnect(), 300);
       }
     });
 
-    // Also handle pageshow event (for back/forward cache on mobile)
+    // focus - backup for visibilitychange (more reliable on some mobile browsers)
+    window.addEventListener('focus', () => {
+      console.log('[Focus] Window focused, checking connection...');
+      setTimeout(() => this.checkAndReconnect(), 300);
+    });
+
+    // online - network reconnected
+    window.addEventListener('online', () => {
+      console.log('[Online] Network restored, checking connection...');
+      setTimeout(() => this.checkAndReconnect(), 500);
+    });
+
+    // pageshow - for back/forward cache on mobile
     window.addEventListener('pageshow', (event) => {
       if (event.persisted) {
         console.log('[Pageshow] Page restored from cache, checking connection...');
         this.checkAndReconnect();
       }
     });
+
+    // First touch after returning - trigger reconnect check
+    this.setupTouchReconnect();
+  }
+
+  setupTouchReconnect() {
+    let lastCheckTime = 0;
+    const minInterval = 3000; // Don't check more than once per 3 seconds
+
+    const checkOnInteraction = () => {
+      const now = Date.now();
+      if (now - lastCheckTime > minInterval) {
+        lastCheckTime = now;
+        // Only check if connection seems stale
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          // Silent check - don't update UI unless there's a problem
+          this.silentConnectionCheck();
+        } else if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
+          console.log('[Touch] Connection dead, reconnecting...');
+          this.checkAndReconnect();
+        }
+      }
+    };
+
+    document.addEventListener('touchstart', checkOnInteraction, { passive: true });
+    document.addEventListener('click', checkOnInteraction, { passive: true });
+  }
+
+  silentConnectionCheck() {
+    // Quick ping without UI update
+    if (this.silentPingTimeout) return; // Already checking
+
+    this.silentPingTimeout = setTimeout(() => {
+      console.log('[Silent] Ping timeout, forcing reconnect...');
+      this.silentPingTimeout = null;
+      this.forceReconnect();
+    }, 2000);
+
+    try {
+      this.ws.send(JSON.stringify({ type: 'ping' }));
+    } catch (e) {
+      clearTimeout(this.silentPingTimeout);
+      this.silentPingTimeout = null;
+      this.forceReconnect();
+    }
   }
 
   checkAndReconnect() {
@@ -1275,10 +1334,14 @@ class GameCreatorApp {
     console.log('[WS Received]', data.type, data);
     switch (data.type) {
       case 'pong':
-        // Connection verified - clear timeout and restore status
+        // Connection verified - clear all ping timeouts
         if (this.pingTimeout) {
           clearTimeout(this.pingTimeout);
           this.pingTimeout = null;
+        }
+        if (this.silentPingTimeout) {
+          clearTimeout(this.silentPingTimeout);
+          this.silentPingTimeout = null;
         }
         console.log('[Reconnect] Pong received, connection verified');
         this.updateStatus('connected', '接続中');
