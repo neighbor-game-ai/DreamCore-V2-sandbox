@@ -222,11 +222,16 @@ body::before {
   color: var(--gray-600);
 }
 
-/* Hero Create Button */
+/* Hero Create Button (Floating) */
 .create-hero {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
   display: flex;
   justify-content: center;
-  padding: var(--s-64) var(--s-32);
+  padding: var(--s-32);
 }
 
 .create-btn {
@@ -278,6 +283,7 @@ body::before {
 .games-section {
   flex: 1;
   padding: 0 var(--s-32) var(--s-64);
+  margin-top: 280px;
 }
 
 .games-label {
@@ -1562,7 +1568,8 @@ body::before {
   }
 
   .create-hero {
-    padding: var(--s-32) var(--s-16);
+    top: 60px;
+    padding: var(--s-24) var(--s-16);
   }
 
   .create-btn {
@@ -1599,6 +1606,7 @@ body::before {
 
   .games-section {
     padding: 0 var(--s-16) var(--s-32);
+    margin-top: 220px;
   }
 
   .project-grid {
