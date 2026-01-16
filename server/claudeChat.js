@@ -146,7 +146,7 @@ class ClaudeChat {
       userMessage,
       projectDir,
       gameSpec = null,
-      // currentCode and conversationHistory not used - Haiku reads files itself
+      conversationHistory = []
     } = options;
 
     if (!this.isAvailable()) {
@@ -187,7 +187,23 @@ ${gameSpec}
 `;
     }
 
-    prompt += `## ユーザーの質問
+    // Include conversation history for context
+    if (conversationHistory && conversationHistory.length > 0) {
+      // Get last 10 messages to keep context manageable
+      const recentHistory = conversationHistory.slice(-10);
+      prompt += `## 会話履歴（直近のやり取り）
+`;
+      for (const msg of recentHistory) {
+        const role = msg.role === 'user' ? 'ユーザー' : 'アシスタント';
+        // Truncate long messages
+        const content = msg.content.length > 500 ? msg.content.substring(0, 500) + '...' : msg.content;
+        prompt += `${role}: ${content}\n`;
+      }
+      prompt += `
+`;
+    }
+
+    prompt += `## ユーザーの質問（今回）
 ${userMessage}
 
 ## 出力形式（必ず守ること）

@@ -128,6 +128,7 @@ class ClaudeRunner {
 
       const claude = spawn('claude', [
         '--print',
+        '--model', 'haiku',
         '--dangerously-skip-permissions'
       ], {
         cwd: process.cwd(),
@@ -145,21 +146,27 @@ class ClaudeRunner {
 
       claude.on('close', (code) => {
         const result = output.trim().toLowerCase();
+        console.log('[detectIntent] Raw output:', output.trim());
         if (result.includes('restore')) {
+          console.log('[detectIntent] Result: restore');
           resolve('restore');
         } else if (result.includes('chat')) {
+          console.log('[detectIntent] Result: chat');
           resolve('chat');
         } else {
+          console.log('[detectIntent] Result: edit (default)');
           resolve('edit');
         }
       });
 
-      claude.on('error', () => {
+      claude.on('error', (err) => {
+        console.log('[detectIntent] Error:', err.message);
         resolve('edit'); // Default to edit on error
       });
 
       // Timeout after 5 seconds
       setTimeout(() => {
+        console.log('[detectIntent] TIMEOUT - defaulting to edit');
         claude.kill();
         resolve('edit');
       }, 5000);
@@ -1229,10 +1236,12 @@ ${skillInstructions}
 
         try {
           const gameSpec = this.readSpec(visitorId, projectId);
+          const history = userManager.getConversationHistory(visitorId, projectId);
           const chatResult = await claudeChat.handleChat({
             userMessage,
             projectDir,
-            gameSpec
+            gameSpec,
+            conversationHistory: history || []
           });
 
           jobManager.updateProgress(jobId, 100, '回答完了');
@@ -1658,38 +1667,164 @@ ${skillInstructions}
 
   // Update specs asynchronously after code generation (selective update)
   async updateSpec(visitorId, projectId, userMessage = '') {
+    console.log('[updateSpec] Called for project:', projectId);
     const projectDir = userManager.getProjectDir(visitorId, projectId);
     const specsDir = path.join(projectDir, 'specs');
     const indexPath = path.join(projectDir, 'index.html');
 
     if (!fs.existsSync(indexPath)) {
-      console.log('No index.html, skipping spec update');
+      console.log('[updateSpec] No index.html, skipping');
       return;
     }
 
-    const currentCode = fs.readFileSync(indexPath, 'utf-8');
-
     // Skip if it's just the welcome page
+    const currentCode = fs.readFileSync(indexPath, 'utf-8');
     if (currentCode.length < 2000 && currentCode.includes('Welcome to Game Creator')) {
       return;
     }
 
-    // Detect which specs need updating
-    const relevantSpecs = await this.detectRelevantSpecs(userMessage);
-    console.log(`Updating specs: ${relevantSpecs.join(', ')}`);
-
-    // Always ensure progress.md is updated
-    if (!relevantSpecs.includes('progress')) {
-      relevantSpecs.push('progress');
+    // Get diff from git (last commit vs current)
+    let diff = '';
+    try {
+      const { execSync } = require('child_process');
+      diff = execSync('git diff HEAD~1 HEAD -- index.html 2>/dev/null || git diff HEAD -- index.html 2>/dev/null || echo ""', {
+        cwd: projectDir,
+        encoding: 'utf-8',
+        timeout: 5000
+      }).trim();
+    } catch (e) {
+      console.log('[updateSpec] Could not get git diff:', e.message);
     }
 
-    // Update each relevant spec file
-    for (const specType of relevantSpecs) {
-      await this.updateSingleSpec(visitorId, projectId, specType, currentCode);
+    // Skip if no changes
+    if (!diff) {
+      console.log('[updateSpec] No diff found, skipping');
+      return;
     }
+
+    console.log(`[updateSpec] Diff size: ${diff.length} chars`);
+
+    // Update specs with diff (not full code)
+    await this.updateSpecsWithDiff(visitorId, projectId, userMessage, diff);
   }
 
-  // Update a single spec file
+  // Update specs using diff (not full code) - more efficient
+  async updateSpecsWithDiff(visitorId, projectId, userMessage, diff) {
+    const projectDir = userManager.getProjectDir(visitorId, projectId);
+    const specsDir = path.join(projectDir, 'specs');
+
+    // Ensure specs directory exists
+    if (!fs.existsSync(specsDir)) {
+      fs.mkdirSync(specsDir, { recursive: true });
+    }
+
+    // Read current specs
+    const currentSpecs = {};
+    for (const specType of ['game', 'mechanics', 'progress']) {
+      const specPath = path.join(specsDir, `${specType}.md`);
+      currentSpecs[specType] = fs.existsSync(specPath) ? fs.readFileSync(specPath, 'utf-8') : '';
+    }
+
+    const prompt = `ゲームコードの差分を分析し、仕様書を更新してください。
+
+## ユーザーの変更リクエスト
+「${userMessage}」
+
+## コードの差分（git diff）
+\`\`\`diff
+${diff.substring(0, 4000)}
+\`\`\`
+
+## 現在の仕様書
+### game.md
+${currentSpecs.game || '（なし）'}
+
+### mechanics.md
+${currentSpecs.mechanics || '（なし）'}
+
+### progress.md
+${currentSpecs.progress || '（なし）'}
+
+## 指示
+- 差分から変更内容を読み取り、関連する仕様を更新
+- 変更がない部分は維持
+- JSON形式で3つのファイル内容を出力
+
+## 出力形式（厳守）
+\`\`\`json
+{
+  "game": "更新後のgame.md内容（変更なければ現在のまま）",
+  "mechanics": "更新後のmechanics.md内容（変更なければ現在のまま）",
+  "progress": "更新後のprogress.md内容（今回の変更を追記）"
+}
+\`\`\``;
+
+    return new Promise((resolve) => {
+      const claude = spawn('claude', [
+        '--print',
+        '--model', 'haiku',
+        '--dangerously-skip-permissions'
+      ], {
+        cwd: projectDir,
+        env: { ...process.env }
+      });
+
+      claude.stdin.write(prompt);
+      claude.stdin.end();
+
+      let output = '';
+      let stderr = '';
+      claude.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+      claude.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      claude.on('close', (code) => {
+        if (stderr) {
+          console.log('[updateSpec] stderr:', stderr.substring(0, 500));
+        }
+        console.log('[updateSpec] exit code:', code);
+        try {
+          console.log('[updateSpec] Haiku response length:', output.length);
+          const jsonMatch = output.match(/\{[\s\S]*"game"[\s\S]*"mechanics"[\s\S]*"progress"[\s\S]*\}/);
+          if (jsonMatch) {
+            console.log('[updateSpec] JSON found, parsing...');
+            const specs = JSON.parse(jsonMatch[0]);
+
+            if (specs.game) {
+              fs.writeFileSync(path.join(specsDir, 'game.md'), specs.game, 'utf-8');
+            }
+            if (specs.mechanics) {
+              fs.writeFileSync(path.join(specsDir, 'mechanics.md'), specs.mechanics, 'utf-8');
+            }
+            if (specs.progress) {
+              fs.writeFileSync(path.join(specsDir, 'progress.md'), specs.progress, 'utf-8');
+            }
+            console.log('[updateSpec] Specs updated with diff');
+          } else {
+            console.log('[updateSpec] Could not parse JSON from response');
+          }
+        } catch (e) {
+          console.log('[updateSpec] Error parsing response:', e.message);
+        }
+        resolve();
+      });
+
+      claude.on('error', () => {
+        resolve();
+      });
+
+      setTimeout(() => {
+        console.log('[updateSpec] TIMEOUT after 45s');
+        claude.kill();
+        resolve();
+      }, 45000);
+    });
+  }
+
+  // Update a single spec file (legacy - kept for backward compatibility)
   async updateSingleSpec(visitorId, projectId, specType, currentCode) {
     const projectDir = userManager.getProjectDir(visitorId, projectId);
     const specsDir = path.join(projectDir, 'specs');
@@ -1852,7 +1987,38 @@ ${generatedCode ? generatedCode.substring(0, 8000) : '(コードなし)'}
 - コードを分析して実際の実装内容を反映すること
 - JSON形式で出力すること`;
 
-      const result = await geminiClient.chat(prompt);
+      // Use Claude Haiku for spec generation
+      const result = await new Promise((resolve) => {
+        const claude = spawn('claude', [
+          '--print',
+          '--model', 'haiku',
+          '--dangerously-skip-permissions'
+        ], {
+          cwd: projectDir,
+          env: { ...process.env }
+        });
+
+        claude.stdin.write(prompt);
+        claude.stdin.end();
+
+        let output = '';
+        claude.stdout.on('data', (data) => {
+          output += data.toString();
+        });
+
+        claude.on('close', () => {
+          resolve(output.trim());
+        });
+
+        claude.on('error', () => {
+          resolve(null);
+        });
+
+        setTimeout(() => {
+          claude.kill();
+          resolve(null);
+        }, 30000);
+      });
 
       if (result) {
         // Extract JSON from response
