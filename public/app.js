@@ -2410,8 +2410,37 @@ class GameCreatorApp {
 
   async copyCode() {
     const code = this.codeViewerCode.textContent;
-    try {
-      await navigator.clipboard.writeText(code);
+    let success = false;
+
+    // Try modern Clipboard API first
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(code);
+        success = true;
+      } catch (error) {
+        console.warn('Clipboard API failed, trying fallback:', error);
+      }
+    }
+
+    // Fallback for non-HTTPS or unsupported browsers
+    if (!success) {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = code;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        textarea.style.top = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        success = document.execCommand('copy');
+        document.body.removeChild(textarea);
+      } catch (error) {
+        console.error('Fallback copy failed:', error);
+      }
+    }
+
+    if (success) {
       this.copyCodeButton.classList.add('copied');
       this.copyCodeButton.innerHTML = `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2429,8 +2458,8 @@ class GameCreatorApp {
           コピー
         `;
       }, 2000);
-    } catch (error) {
-      console.error('Failed to copy:', error);
+    } else {
+      alert('コピーに失敗しました。手動でコードを選択してコピーしてください。');
     }
   }
 
