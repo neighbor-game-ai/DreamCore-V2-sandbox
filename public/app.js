@@ -934,8 +934,7 @@ class GameCreatorApp {
         this.showCreateView();
         break;
       case 'notifications':
-        // TODO: Implement notifications view
-        this.showCreateView(); // Fallback for now
+        window.location.href = '/notifications';
         break;
       case 'profile':
         this.showProfileView();
