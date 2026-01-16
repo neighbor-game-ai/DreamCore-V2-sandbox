@@ -77,7 +77,7 @@ class MyPageApp {
 
     // Zapping button
     document.getElementById('navZappingBtn')?.addEventListener('click', () => {
-      window.location.href = '/?tab=zapping';
+      window.location.href = '/zap';
     });
   }
 

@@ -493,6 +493,17 @@ class GameCreatorApp {
       return { view: 'editor', projectId: projectMatch[1] };
     }
 
+    // Match /zap/:gameId
+    const zappingMatch = path.match(/^\/zap\/([a-zA-Z0-9_-]+)$/);
+    if (zappingMatch) {
+      return { view: 'zapping', gameId: zappingMatch[1] };
+    }
+
+    // Match /zap (start from first game)
+    if (path === '/zap') {
+      return { view: 'zapping', gameId: null };
+    }
+
     // Default to list view
     return { view: 'list' };
   }
@@ -510,7 +521,41 @@ class GameCreatorApp {
       if (this.currentProjectId !== route.projectId) {
         this.selectProject(route.projectId, false); // Don't push state
       }
+    } else if (route.view === 'zapping') {
+      this.handleZappingRoute(route.gameId);
     }
+  }
+
+  async handleZappingRoute(gameId) {
+    // Load public games if not already loaded
+    if (this.publicGames.length === 0) {
+      await this.loadPublicGames();
+    }
+
+    if (this.publicGames.length === 0) {
+      // No games available, redirect to discover
+      this.navigateTo('/', { view: 'list' });
+      return;
+    }
+
+    // Find the game index
+    let startIndex = 0;
+    if (gameId) {
+      const index = this.publicGames.findIndex(g => g.id === gameId);
+      if (index !== -1) {
+        startIndex = index;
+      } else {
+        // Game not found, update URL to first game
+        const firstGame = this.publicGames[0];
+        history.replaceState({ view: 'zapping', gameId: firstGame.id }, '', `/zap/${firstGame.id}`);
+      }
+    } else {
+      // No gameId specified, use first game and update URL
+      const firstGame = this.publicGames[0];
+      history.replaceState({ view: 'zapping', gameId: firstGame.id }, '', `/zap/${firstGame.id}`);
+    }
+
+    this.enterZappingMode(startIndex, false); // Don't update URL, already done
   }
 
   navigateTo(path, state = {}) {
@@ -1075,7 +1120,7 @@ class GameCreatorApp {
     this.zappingShare?.addEventListener('click', () => this.shareCurrentGame());
   }
 
-  enterZappingMode(startIndex = 0) {
+  enterZappingMode(startIndex = 0, updateUrl = true) {
     if (this.publicGames.length === 0) return;
 
     this.zappingGames = [...this.publicGames];
@@ -1090,13 +1135,24 @@ class GameCreatorApp {
     this.zappingMode.classList.remove('hidden');
     this.showBottomNav();
 
+    // Update URL if requested
+    if (updateUrl) {
+      const currentGame = this.zappingGames[this.zappingIndex];
+      if (currentGame) {
+        history.pushState({ view: 'zapping', gameId: currentGame.id }, '', `/zap/${currentGame.id}`);
+      }
+    }
+
     // Render the current game
     this.renderZappingSlides();
   }
 
   exitZappingMode() {
     this.zappingMode.classList.add('hidden');
+    this.currentView = 'discover';
 
+    // Navigate back to discover (or home)
+    this.navigateTo('/', { view: 'list' });
     this.showBottomNav();
     this.switchTab('discover');
   }
@@ -1125,6 +1181,7 @@ class GameCreatorApp {
   zappingNext() {
     if (this.zappingIndex < this.zappingGames.length - 1) {
       this.zappingIndex++;
+      this.updateZappingUrl();
       this.renderZappingSlides();
     }
   }
@@ -1132,7 +1189,15 @@ class GameCreatorApp {
   zappingPrev() {
     if (this.zappingIndex > 0) {
       this.zappingIndex--;
+      this.updateZappingUrl();
       this.renderZappingSlides();
+    }
+  }
+
+  updateZappingUrl() {
+    const currentGame = this.zappingGames[this.zappingIndex];
+    if (currentGame) {
+      history.replaceState({ view: 'zapping', gameId: currentGame.id }, '', `/zap/${currentGame.id}`);
     }
   }
 
@@ -1162,7 +1227,7 @@ class GameCreatorApp {
     const game = this.zappingGames[this.zappingIndex];
     if (!game) return;
 
-    const shareUrl = `${window.location.origin}/play/${game.id}`;
+    const shareUrl = `${window.location.origin}/zap/${game.id}`;
 
     if (navigator.share) {
       navigator.share({
