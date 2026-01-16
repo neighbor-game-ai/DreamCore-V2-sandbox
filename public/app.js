@@ -95,8 +95,8 @@ class GameCreatorApp {
     // Error state
     this.currentErrors = [];
 
-    // Notification permission
-    this.notificationPermission = Notification.permission;
+    // Notification permission (check support first for iOS Safari)
+    this.notificationPermission = ('Notification' in window) ? Notification.permission : 'denied';
     this.requestNotificationPermission();
 
     // Restore state
@@ -201,6 +201,17 @@ class GameCreatorApp {
       this.login();
     });
 
+    // iOS Safari workaround: listen for both click and touchend
+    this.loginButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.login();
+    });
+
+    this.loginButton.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this.login();
+    });
+
     this.logoutButton.addEventListener('click', () => {
       this.logout();
     });
@@ -233,6 +244,9 @@ class GameCreatorApp {
   }
 
   async login() {
+    // Prevent double submission
+    if (this.loginButton.disabled) return;
+
     const username = this.loginUsername.value.trim();
 
     if (!username) {
@@ -710,29 +724,8 @@ class GameCreatorApp {
       }
     });
 
-    // Mobile keyboard visibility handling
-    this.chatInput.addEventListener('focus', () => {
-      // Delay to allow keyboard to appear
-      setTimeout(() => {
-        this.chatInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 300);
-    });
-
-    this.chatInput.addEventListener('blur', () => {
-      // Reset styles when keyboard closes
-      const chatView = document.querySelector('.chat-view');
-      if (chatView) {
-        chatView.style.height = '';
-        chatView.style.paddingBottom = '';
-      }
-    });
-
-    // Handle visual viewport resize (keyboard show/hide)
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', () => {
-        this.handleKeyboardResize();
-      });
-    }
+    // Mobile keyboard visibility handling (iOS/Android)
+    this.setupMobileKeyboardHandling();
 
     this.refreshButton.addEventListener('click', () => this.refreshPreview());
     this.newProjectButton.addEventListener('click', () => this.createNewProject());
@@ -1539,32 +1532,109 @@ class GameCreatorApp {
     }
   }
 
-  // Handle mobile keyboard resize
-  handleKeyboardResize() {
-    if (!window.visualViewport) return;
+  // Mobile keyboard handling for iOS/Android
+  setupMobileKeyboardHandling() {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (!isMobile) return;
 
-    const viewport = window.visualViewport;
-    const chatView = document.querySelector('.chat-view');
+    const inputContainer = document.querySelector('.chat-input-container');
+    const chatMessages = document.getElementById('chatMessages');
+    let isKeyboardVisible = false;
 
-    if (chatView && document.activeElement === this.chatInput) {
-      // Calculate the offset caused by keyboard
-      const keyboardHeight = window.innerHeight - viewport.height;
+    const adjustForKeyboard = () => {
+      if (document.activeElement !== this.chatInput) return;
+      if (!window.visualViewport) return;
+
+      const vv = window.visualViewport;
+      const keyboardHeight = window.innerHeight - vv.height;
+
+      console.log('[Keyboard]', {
+        innerHeight: window.innerHeight,
+        vvHeight: vv.height,
+        keyboardHeight,
+        offsetTop: vv.offsetTop
+      });
 
       if (keyboardHeight > 100) {
-        // Keyboard is visible, adjust container
-        chatView.style.height = `${viewport.height}px`;
-        chatView.style.paddingBottom = '0';
+        isKeyboardVisible = true;
 
-        // Scroll input into view
-        setTimeout(() => {
-          this.chatInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-      } else {
-        // Keyboard is hidden, reset
-        chatView.style.height = '';
-        chatView.style.paddingBottom = '';
+        // Fixed position input at keyboard top
+        if (inputContainer) {
+          inputContainer.style.position = 'fixed';
+          inputContainer.style.bottom = `${keyboardHeight}px`;
+          inputContainer.style.left = '0';
+          inputContainer.style.right = '0';
+          inputContainer.style.zIndex = '1000';
+          inputContainer.style.background = 'white';
+          inputContainer.style.boxShadow = '0 -2px 10px rgba(0,0,0,0.1)';
+        }
+
+        // Add padding to chat messages so content isn't hidden
+        if (chatMessages) {
+          chatMessages.style.paddingBottom = '120px';
+          // Scroll to bottom
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
       }
+    };
+
+    const resetLayout = () => {
+      console.log('[Keyboard] resetLayout called', { isKeyboardVisible });
+      isKeyboardVisible = false;
+
+      if (inputContainer) {
+        inputContainer.style.position = '';
+        inputContainer.style.bottom = '';
+        inputContainer.style.left = '';
+        inputContainer.style.right = '';
+        inputContainer.style.zIndex = '';
+        inputContainer.style.background = '';
+        inputContainer.style.boxShadow = '';
+      }
+
+      if (chatMessages) {
+        chatMessages.style.paddingBottom = '';
+      }
+    };
+
+    // Focus event
+    this.chatInput.addEventListener('focus', () => {
+      console.log('[Keyboard] focus');
+      setTimeout(adjustForKeyboard, 100);
+      setTimeout(adjustForKeyboard, 300);
+      setTimeout(adjustForKeyboard, 500);
+    });
+
+    // Blur event
+    this.chatInput.addEventListener('blur', () => {
+      console.log('[Keyboard] blur');
+      setTimeout(resetLayout, 100);
+      setTimeout(resetLayout, 300);
+    });
+
+    // Visual viewport events
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => {
+        const vv = window.visualViewport;
+        const keyboardHeight = window.innerHeight - vv.height;
+        console.log('[Keyboard] viewport resize', { keyboardHeight, activeElement: document.activeElement?.id });
+
+        if (keyboardHeight < 100) {
+          // Keyboard is hidden
+          resetLayout();
+        } else if (document.activeElement === this.chatInput) {
+          adjustForKeyboard();
+        }
+      });
     }
+
+    // Also reset on touch outside input
+    document.addEventListener('touchstart', (e) => {
+      if (isKeyboardVisible && !inputContainer?.contains(e.target)) {
+        // Tapped outside input area, keyboard will close
+        setTimeout(resetLayout, 300);
+      }
+    });
   }
 
   sendMessage() {
