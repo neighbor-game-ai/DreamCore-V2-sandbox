@@ -5,6 +5,7 @@ const userManager = require('./userManager');
 const jobManager = require('./jobManager');
 const db = require('./database');
 const geminiClient = require('./geminiClient');
+const claudeChat = require('./claudeChat');
 
 // Skills to exclude (causing errors or not ready)
 const EXCLUDED_SKILLS = [
@@ -863,6 +864,41 @@ ${skillInstructions}
         }
       }
 
+      // For existing projects: Check if this is a chat request (question/consultation)
+      // Use Claude Haiku for chat (cheaper and better context understanding)
+      if (!isNewProject && claudeChat.isAvailable() && claudeChat.isChatRequest(effectiveUserMessage)) {
+        console.log('Detected chat request, using Claude Haiku...');
+        jobManager.updateProgress(jobId, 10, 'Claude Haikuで回答中...');
+
+        try {
+          const projectDir = userManager.getProjectDir(visitorId, projectId);
+          const chatResult = await claudeChat.handleChat({
+            userMessage: effectiveUserMessage,
+            projectDir,
+            gameSpec,
+            currentCode,
+            conversationHistory: history || []
+          });
+
+          jobManager.updateProgress(jobId, 100, '回答完了');
+          jobManager.notifySubscribers(jobId, {
+            type: 'geminiChat',  // Use same type for frontend compatibility
+            mode: 'chat',
+            message: chatResult.message,
+            suggestions: chatResult.suggestions || []
+          });
+
+          return {
+            mode: 'chat',
+            message: chatResult.message,
+            suggestions: chatResult.suggestions || []
+          };
+        } catch (chatError) {
+          console.error('Claude Haiku chat failed, falling back to Gemini:', chatError.message);
+          // Fall through to Gemini
+        }
+      }
+
       // AI-driven skill detection (async) - now with game spec and dimension for better context
       jobManager.updateProgress(jobId, 5, 'スキルを分析中...');
       let detectedSkills = await this.detectSkillsWithAI(effectiveUserMessage, currentCode, isNewProject, gameSpec, detectedDimension);
@@ -957,8 +993,13 @@ ${skillInstructions}
           mode: result.mode || 'create',
           files: result.files,
           edits: result.edits,
-          summary: result.summary
+          summary: result.summary,
+          suggestions: result.suggestions || []
         });
+
+        // Add AI context info for traceability
+        result.detectedSkills = detectedSkills;
+        result.userPrompt = effectiveUserMessage;
 
         return result;
       }
@@ -973,7 +1014,8 @@ ${skillInstructions}
 
   // Apply Gemini-generated result (create or edit mode)
   // gameCode and gameSpec are used by Haiku to determine image direction
-  async applyGeminiResult(visitorId, projectId, geminiResult, jobId, gameCode = null, gameSpec = null) {
+  // aiContext contains prompt/skills info for traceability
+  async applyGeminiResult(visitorId, projectId, geminiResult, jobId, gameCode = null, gameSpec = null, aiContext = null) {
     const projectDir = userManager.getProjectDir(visitorId, projectId);
 
     try {
@@ -1060,9 +1102,14 @@ ${skillInstructions}
         }
       }
 
-      // Create git commit
+      // Create git commit with AI context
       jobManager.updateProgress(jobId, 88, 'バージョン保存中...');
-      userManager.createVersionSnapshot(visitorId, projectId, geminiResult.summary || 'Gemini generated code');
+      userManager.createVersionSnapshot(
+        visitorId,
+        projectId,
+        geminiResult.summary || 'Gemini generated code',
+        aiContext  // Pass AI context for traceability
+      );
 
       jobManager.updateProgress(jobId, 95, 'ファイル適用完了');
       return true;
@@ -1176,7 +1223,16 @@ ${skillInstructions}
           gameCodeForImages = indexFile ? indexFile.content : geminiResult.files[0].content;
         }
         const gameSpec = this.readSpec(visitorId, projectId);
-        const applied = await this.applyGeminiResult(visitorId, projectId, geminiResult, jobId, gameCodeForImages, gameSpec);
+
+        // Build AI context for traceability
+        const aiContext = {
+          userPrompt: geminiResult.userPrompt || userMessage,
+          aiSummary: geminiResult.summary || '',
+          skills: geminiResult.detectedSkills || [],
+          generator: 'gemini'
+        };
+
+        const applied = await this.applyGeminiResult(visitorId, projectId, geminiResult, jobId, gameCodeForImages, gameSpec, aiContext);
 
         if (applied) {
           const responseMessage = geminiResult.summary || 'Geminiでゲームを生成しました';
@@ -1339,11 +1395,19 @@ ${skillInstructions}
             userManager.writeProjectFile(visitorId, projectId, 'index.html', htmlMatch[1]);
           }
 
-          // Create version snapshot
-          userManager.createVersionSnapshot(visitorId, projectId, userMessage.substring(0, 50));
-
           // Use collected assistant text or default message
           const responseMessage = assistantText.trim() || 'ゲームを更新しました';
+
+          // Build AI context for traceability
+          const aiContext = {
+            userPrompt: userMessage,
+            aiSummary: responseMessage,
+            skills: detectedSkills,
+            generator: 'claude'
+          };
+
+          // Create version snapshot with AI context
+          userManager.createVersionSnapshot(visitorId, projectId, userMessage.substring(0, 50), aiContext);
 
           // Add to history
           userManager.addToHistory(visitorId, projectId, 'assistant', responseMessage);

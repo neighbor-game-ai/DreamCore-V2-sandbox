@@ -499,6 +499,76 @@ app.delete('/api/assets/:id', (req, res) => {
   res.json({ success: true });
 });
 
+// ==================== Public Games API ====================
+
+// Get public games for discover feed
+app.get('/api/public-games', (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const publicProjects = db.getPublicProjects(limit);
+
+    const games = publicProjects.map(project => {
+      // Get creator info
+      const creator = db.getUserById(project.user_id);
+      return {
+        id: project.id,
+        name: project.name,
+        creatorId: creator?.visitor_id,
+        creatorName: creator?.display_name || creator?.username || 'anonymous',
+        createdAt: project.created_at,
+        updatedAt: project.updated_at,
+        likes: project.likes || 0
+      };
+    });
+
+    res.json({ games });
+  } catch (error) {
+    console.error('Failed to get public games:', error);
+    res.status(500).json({ error: 'Failed to get public games' });
+  }
+});
+
+// Get single public game preview
+app.get('/api/projects/:projectId/preview', (req, res) => {
+  const { visitorId } = req.query;
+  const { projectId } = req.params;
+
+  try {
+    const project = db.getProjectById(projectId);
+    if (!project) {
+      return res.status(404).send('Game not found');
+    }
+
+    // Allow access if public OR if owner
+    const user = visitorId ? db.getUserByVisitorId(visitorId) : null;
+    const isOwner = user && project.user_id === user.id;
+
+    if (!project.is_public && !isOwner) {
+      return res.status(403).send('This game is not public');
+    }
+
+    // Get the creator's visitor_id
+    const creator = db.getUserById(project.user_id);
+    if (!creator) {
+      return res.status(404).send('Creator not found');
+    }
+
+    // Read the index.html file
+    const projectDir = userManager.getProjectDir(creator.visitor_id, projectId);
+    const indexPath = path.join(projectDir, 'index.html');
+
+    if (!fs.existsSync(indexPath)) {
+      return res.status(404).send('Game file not found');
+    }
+
+    const html = fs.readFileSync(indexPath, 'utf-8');
+    res.type('html').send(html);
+  } catch (error) {
+    console.error('Preview error:', error);
+    res.status(500).send('Error loading game');
+  }
+});
+
 // Error detection script to inject into game HTML
 const ERROR_DETECTION_SCRIPT = `
 <script>
@@ -679,6 +749,11 @@ wss.on('connection', (ws) => {
             visitorId,
             projects
           });
+          break;
+
+        case 'ping':
+          // Respond to ping for connection health check
+          safeSend({ type: 'pong' });
           break;
 
         case 'selectProject':

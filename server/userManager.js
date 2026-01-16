@@ -418,7 +418,54 @@ const addToHistory = (visitorId, projectId, role, content) => {
 
 // ==================== Version Control Operations ====================
 
-const createVersionSnapshot = (visitorId, projectId, message = '') => {
+/**
+ * Save AI context (prompt, reasoning, skills) to .ai-context/ folder
+ * This file is committed alongside code changes for full traceability
+ * @param {string} projectDir - Project directory path
+ * @param {Object} aiContext - AI context information
+ * @param {string} aiContext.userPrompt - User's original request
+ * @param {string} aiContext.aiSummary - AI's summary of changes
+ * @param {string[]} aiContext.skills - Skills used for generation
+ * @param {string} aiContext.generator - 'gemini' or 'claude'
+ */
+const saveAIContext = (projectDir, aiContext) => {
+  const contextDir = path.join(projectDir, '.ai-context');
+
+  // Create directory if needed
+  if (!fs.existsSync(contextDir)) {
+    fs.mkdirSync(contextDir, { recursive: true });
+  }
+
+  // Generate filename from timestamp (ISO format, replace colons for filesystem)
+  const timestamp = new Date().toISOString();
+  const filename = timestamp.replace(/:/g, '-').replace(/\.\d{3}Z$/, '') + '.json';
+  const filePath = path.join(contextDir, filename);
+
+  // Build context object
+  const context = {
+    timestamp,
+    userPrompt: aiContext.userPrompt || '',
+    aiSummary: aiContext.aiSummary || '',
+    skills: aiContext.skills || [],
+    generator: aiContext.generator || 'unknown',
+    systemPromptVersion: '1.0'
+  };
+
+  // Write file
+  fs.writeFileSync(filePath, JSON.stringify(context, null, 2), 'utf-8');
+  console.log(`Saved AI context: ${filename}`);
+
+  return filePath;
+};
+
+/**
+ * Create version snapshot with optional AI context
+ * @param {string} visitorId - Visitor ID
+ * @param {string} projectId - Project ID
+ * @param {string} message - Commit message
+ * @param {Object} aiContext - Optional AI context to save alongside commit
+ */
+const createVersionSnapshot = (visitorId, projectId, message = '', aiContext = null) => {
   const projectDir = getProjectDir(visitorId, projectId);
   const indexPath = path.join(projectDir, 'index.html');
 
@@ -431,7 +478,12 @@ const createVersionSnapshot = (visitorId, projectId, message = '') => {
     return null;
   }
 
-  // Commit to project Git
+  // Save AI context if provided (before git add)
+  if (aiContext) {
+    saveAIContext(projectDir, aiContext);
+  }
+
+  // Commit to project Git (includes .ai-context/ files)
   const hash = commitToProject(projectDir, message || 'Update');
 
   if (hash) {

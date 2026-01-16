@@ -15,10 +15,18 @@ class GameCreatorApp {
     this.isAuthenticated = false;
 
     // Current view state
-    this.currentView = 'list'; // 'list' or 'editor'
+    this.currentView = 'list'; // 'list', 'editor', 'discover', 'zapping'
+    this.currentTab = 'create'; // 'discover', 'create', 'notifications', 'profile'
 
     // Current version state (null = latest)
     this.currentVersionId = null;
+
+    // Discover/Zapping state
+    this.publicGames = [];
+    this.zappingIndex = 0;
+    this.zappingGames = [];
+    this.touchStartY = 0;
+    this.touchDeltaY = 0;
 
     // Login elements
     this.loginView = document.getElementById('loginView');
@@ -146,6 +154,27 @@ class GameCreatorApp {
     // Debug toggles
     this.disableSkillsToggle = document.getElementById('disableSkillsToggle');
     this.useClaudeToggle = document.getElementById('useClaudeToggle');
+
+    // Bottom navigation elements
+    this.bottomNav = document.getElementById('bottomNav');
+    this.navItems = document.querySelectorAll('.nav-item');
+    this.navZappingBtn = document.getElementById('navZappingBtn');
+
+    // Discover view elements
+    this.discoverView = document.getElementById('discoverView');
+    this.discoverGrid = document.getElementById('discoverGrid');
+    this.discoverEmpty = document.getElementById('discoverEmpty');
+
+    // Zapping mode elements
+    this.zappingMode = document.getElementById('zappingMode');
+    this.zappingContainer = document.getElementById('zappingContainer');
+    this.zappingBack = document.getElementById('zappingBack');
+    this.zappingGameName = document.getElementById('zappingGameName');
+    this.zappingCreator = document.getElementById('zappingCreator');
+    this.zappingLike = document.getElementById('zappingLike');
+    this.zappingLikeCount = document.getElementById('zappingLikeCount');
+    this.zappingRemix = document.getElementById('zappingRemix');
+    this.zappingShare = document.getElementById('zappingShare');
 
     // IME composition state
     this.isComposing = false;
@@ -467,7 +496,12 @@ class GameCreatorApp {
   showListView() {
     this.currentView = 'list';
     this.projectListView.classList.remove('hidden');
+    this.projectListView.classList.add('with-nav');
     this.editorView.classList.add('hidden');
+    this.discoverView?.classList.add('hidden');
+    this.zappingMode?.classList.add('hidden');
+    this.showBottomNav();
+    this.updateNavActive('create');
     this.renderProjectGrid();
     document.title = 'Game Creator - Projects';
   }
@@ -476,6 +510,16 @@ class GameCreatorApp {
     this.currentView = 'editor';
     this.projectListView.classList.add('hidden');
     this.editorView.classList.remove('hidden');
+    this.discoverView?.classList.add('hidden');
+    this.zappingMode?.classList.add('hidden');
+    this.hideBottomNav();
+  }
+
+  updateNavActive(tab) {
+    this.navItems?.forEach(item => {
+      item.classList.toggle('active', item.dataset.tab === tab);
+    });
+    this.currentTab = tab;
   }
 
   renderProjectGrid() {
@@ -604,6 +648,46 @@ class GameCreatorApp {
       console.error(`[${this.sessionId}] WebSocket error:`, error);
       this.updateStatus('', 'エラー');
     };
+
+    // Auto-reconnect when page becomes visible (important for mobile)
+    this.setupVisibilityHandler();
+  }
+
+  setupVisibilityHandler() {
+    // Only set up once
+    if (this.visibilityHandlerSetup) return;
+    this.visibilityHandlerSetup = true;
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[Visibility] Page became visible, checking connection...');
+        this.checkAndReconnect();
+      }
+    });
+
+    // Also handle pageshow event (for back/forward cache on mobile)
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) {
+        console.log('[Pageshow] Page restored from cache, checking connection...');
+        this.checkAndReconnect();
+      }
+    });
+  }
+
+  checkAndReconnect() {
+    if (!this.ws || this.ws.readyState === WebSocket.CLOSED || this.ws.readyState === WebSocket.CLOSING) {
+      console.log('[Reconnect] WebSocket is closed, reconnecting...');
+      this.connectWebSocket();
+    } else if (this.ws.readyState === WebSocket.OPEN) {
+      console.log('[Reconnect] WebSocket is already connected');
+      // Send a ping to verify connection is alive
+      try {
+        this.ws.send(JSON.stringify({ type: 'ping' }));
+      } catch (e) {
+        console.log('[Reconnect] Ping failed, reconnecting...');
+        this.connectWebSocket();
+      }
+    }
   }
 
   setupEventListeners() {
@@ -672,6 +756,295 @@ class GameCreatorApp {
 
     // Mobile tab switching
     this.setupMobileTabListeners();
+
+    // Bottom navigation
+    this.setupBottomNavListeners();
+
+    // Zapping mode
+    this.setupZappingListeners();
+  }
+
+  // ==================== Bottom Navigation ====================
+
+  setupBottomNavListeners() {
+    if (!this.bottomNav) return;
+
+    this.navItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const tab = item.dataset.tab;
+        // Skip if no tab (like zapping button)
+        if (tab) {
+          this.switchTab(tab);
+        }
+      });
+    });
+  }
+
+  switchTab(tab) {
+    // Update active state
+    this.navItems.forEach(item => {
+      item.classList.toggle('active', item.dataset.tab === tab);
+    });
+
+    this.currentTab = tab;
+
+    // Hide all views first
+    this.projectListView.classList.add('hidden');
+    this.discoverView.classList.add('hidden');
+    this.editorView.classList.add('hidden');
+
+    switch (tab) {
+      case 'discover':
+        this.showDiscoverView();
+        break;
+      case 'create':
+        this.showCreateView();
+        break;
+      case 'notifications':
+        // TODO: Implement notifications view
+        this.showCreateView(); // Fallback for now
+        break;
+      case 'profile':
+        this.showProfileView();
+        break;
+    }
+  }
+
+  showBottomNav() {
+    if (this.bottomNav) {
+      this.bottomNav.classList.remove('hidden');
+    }
+  }
+
+  hideBottomNav() {
+    if (this.bottomNav) {
+      this.bottomNav.classList.add('hidden');
+    }
+  }
+
+  // ==================== Discover View ====================
+
+  showDiscoverView() {
+    this.discoverView.classList.remove('hidden');
+    this.currentView = 'discover';
+    this.loadPublicGames();
+  }
+
+  async loadPublicGames() {
+    try {
+      const response = await fetch('/api/public-games');
+      if (response.ok) {
+        const data = await response.json();
+        this.publicGames = data.games || [];
+        this.renderDiscoverGrid();
+      }
+    } catch (error) {
+      console.error('Failed to load public games:', error);
+      this.publicGames = [];
+      this.renderDiscoverGrid();
+    }
+  }
+
+  renderDiscoverGrid() {
+    if (!this.discoverGrid) return;
+
+    if (this.publicGames.length === 0) {
+      this.discoverGrid.classList.add('hidden');
+      this.discoverEmpty.classList.remove('hidden');
+      return;
+    }
+
+    this.discoverGrid.classList.remove('hidden');
+    this.discoverEmpty.classList.add('hidden');
+
+    this.discoverGrid.innerHTML = this.publicGames.map((game, index) => `
+      <div class="discover-card" data-game-index="${index}" data-game-id="${game.id}">
+        <div class="discover-card-thumbnail" style="background: linear-gradient(135deg, hsl(${(index * 37) % 360}, 70%, 85%), hsl(${(index * 37 + 40) % 360}, 70%, 75%));">
+        </div>
+        <div class="discover-card-overlay">
+          <div class="discover-card-title">${this.escapeHtml(game.name)}</div>
+          <div class="discover-card-creator">@${this.escapeHtml(game.creatorName || 'anonymous')}</div>
+        </div>
+      </div>
+    `).join('');
+
+    // Add click listeners
+    this.discoverGrid.querySelectorAll('.discover-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const index = parseInt(card.dataset.gameIndex);
+        this.enterZappingMode(index);
+      });
+    });
+  }
+
+  showCreateView() {
+    // Show the project list (MY GAMES)
+    this.projectListView.classList.remove('hidden');
+    this.projectListView.classList.add('with-nav');
+    this.currentView = 'list';
+  }
+
+  showProfileView() {
+    // For now, show project list as profile
+    this.projectListView.classList.remove('hidden');
+    this.projectListView.classList.add('with-nav');
+    this.currentView = 'list';
+  }
+
+  // ==================== Zapping Mode ====================
+
+  setupZappingListeners() {
+    if (!this.zappingMode) return;
+
+    // Back button
+    this.zappingBack?.addEventListener('click', () => {
+      this.exitZappingMode();
+    });
+
+    // Nav zapping button (enter zapping or next game)
+    this.navZappingBtn?.addEventListener('click', () => {
+      if (this.currentView === 'zapping') {
+        this.zappingNext();
+      } else {
+        // Load public games first if needed, then enter zapping
+        if (this.publicGames.length > 0) {
+          this.enterZappingMode(0);
+        } else {
+          this.loadPublicGames().then(() => {
+            if (this.publicGames.length > 0) {
+              this.enterZappingMode(0);
+            }
+          });
+        }
+      }
+    });
+
+    // Swipe on container for navigation (optional, still works)
+    this.zappingContainer?.addEventListener('touchstart', (e) => {
+      this.touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    this.zappingContainer?.addEventListener('touchmove', (e) => {
+      this.touchDeltaY = e.touches[0].clientY - this.touchStartY;
+    }, { passive: true });
+
+    this.zappingContainer?.addEventListener('touchend', () => {
+      if (Math.abs(this.touchDeltaY) > 50) {
+        if (this.touchDeltaY < 0) {
+          this.zappingNext();
+        } else {
+          this.zappingPrev();
+        }
+      }
+      this.touchDeltaY = 0;
+    });
+
+    // Action buttons
+    this.zappingLike?.addEventListener('click', () => this.likeCurrentGame());
+    this.zappingRemix?.addEventListener('click', () => this.remixCurrentGame());
+    this.zappingShare?.addEventListener('click', () => this.shareCurrentGame());
+  }
+
+  enterZappingMode(startIndex = 0) {
+    if (this.publicGames.length === 0) return;
+
+    this.zappingGames = [...this.publicGames];
+    this.zappingIndex = startIndex;
+    this.currentView = 'zapping';
+
+    // Hide other views but keep nav visible
+    this.discoverView.classList.add('hidden');
+    this.projectListView.classList.add('hidden');
+
+    // Show zapping mode with bottom nav
+    this.zappingMode.classList.remove('hidden');
+    this.showBottomNav();
+
+    // Render the current game
+    this.renderZappingSlides();
+  }
+
+  exitZappingMode() {
+    this.zappingMode.classList.add('hidden');
+
+    this.showBottomNav();
+    this.switchTab('discover');
+  }
+
+  renderZappingSlides() {
+    if (!this.zappingContainer) return;
+
+    const currentGame = this.zappingGames[this.zappingIndex];
+    if (!currentGame) return;
+
+    // Update game info
+    this.zappingGameName.textContent = currentGame.name;
+    this.zappingCreator.textContent = `@${currentGame.creatorName || 'anonymous'}`;
+    this.zappingLikeCount.textContent = currentGame.likes || 0;
+
+    // Create slide with iframe
+    const gameUrl = `/api/projects/${currentGame.id}/preview?visitorId=${currentGame.creatorId}`;
+
+    this.zappingContainer.innerHTML = `
+      <div class="zapping-slide current">
+        <iframe src="${gameUrl}" sandbox="allow-scripts allow-same-origin"></iframe>
+      </div>
+    `;
+  }
+
+  zappingNext() {
+    if (this.zappingIndex < this.zappingGames.length - 1) {
+      this.zappingIndex++;
+      this.renderZappingSlides();
+    }
+  }
+
+  zappingPrev() {
+    if (this.zappingIndex > 0) {
+      this.zappingIndex--;
+      this.renderZappingSlides();
+    }
+  }
+
+  likeCurrentGame() {
+    const game = this.zappingGames[this.zappingIndex];
+    if (!game) return;
+
+    // Toggle like (visual only for now)
+    this.zappingLike.classList.toggle('liked');
+    const currentLikes = parseInt(this.zappingLikeCount.textContent) || 0;
+    if (this.zappingLike.classList.contains('liked')) {
+      this.zappingLikeCount.textContent = currentLikes + 1;
+    } else {
+      this.zappingLikeCount.textContent = Math.max(0, currentLikes - 1);
+    }
+  }
+
+  remixCurrentGame() {
+    const game = this.zappingGames[this.zappingIndex];
+    if (!game) return;
+
+    // TODO: Implement remix functionality
+    alert(`リミックス機能は近日公開予定です！`);
+  }
+
+  shareCurrentGame() {
+    const game = this.zappingGames[this.zappingIndex];
+    if (!game) return;
+
+    const shareUrl = `${window.location.origin}/play/${game.id}`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: game.name,
+        text: `${game.name} - Game Creator で作られたゲーム`,
+        url: shareUrl
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        alert('リンクをコピーしました！');
+      });
+    }
   }
 
   // ==================== Mobile View Switching ====================
@@ -712,6 +1085,12 @@ class GameCreatorApp {
         this.projects = data.projects || [];
         this.updateProjectList();
 
+        // Reset streaming state on fresh connection
+        this.hideStreaming();
+        this.isProcessing = false;
+        this.currentJobId = null;
+        this.stopButton.classList.add('hidden');
+
         // Update status indicators
         this.listStatusIndicator.className = 'status-indicator connected';
         this.listStatusIndicator.textContent = '接続中';
@@ -751,6 +1130,12 @@ class GameCreatorApp {
         localStorage.setItem('gameCreatorLastProjectId', this.currentProjectId);
         this.chatInput.disabled = false;
         this.sendButton.disabled = false;
+
+        // Reset streaming state (in case of reconnect with stale UI)
+        this.hideStreaming();
+        this.isProcessing = false;
+        this.currentJobId = null;
+        this.stopButton.classList.add('hidden');
 
         // Clear and reload history
         this.chatMessages.innerHTML = '';
@@ -857,10 +1242,8 @@ class GameCreatorApp {
       case 'gameUpdated':
         this.currentVersionId = null; // Reset to latest version
         this.refreshPreview();
-        // On mobile, switch to preview panel
-        if (window.innerWidth <= 768) {
-          this.showPreviewPanel();
-        }
+        // Don't auto-switch to preview on mobile - let user read AI response first
+        // User can tap "ゲームを遊ぶ" button when ready
         break;
 
       case 'error':
@@ -1398,8 +1781,26 @@ class GameCreatorApp {
       });
     }
 
+    // Show suggestions as clickable buttons
+    if (data.suggestions && data.suggestions.length > 0) {
+      html += '<div class="chat-suggestions">';
+      data.suggestions.forEach((suggestion, i) => {
+        const btnId = `suggestion-${Date.now()}-${i}`;
+        html += `<button class="suggestion-btn" id="${btnId}" data-suggestion="${this.escapeHtml(suggestion)}">${this.escapeHtml(suggestion)}</button>`;
+      });
+      html += '</div>';
+    }
+
     messageDiv.innerHTML = html;
     this.chatMessages.appendChild(messageDiv);
+
+    // Attach click handlers for suggestions
+    messageDiv.querySelectorAll('.suggestion-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.applySuggestion(btn.dataset.suggestion);
+      });
+    });
+
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
   }
 

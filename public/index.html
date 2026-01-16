@@ -450,6 +450,117 @@
     </div>
   </div>
 
+  <!-- Bottom Navigation Bar (SNS-style) -->
+  <nav class="bottom-nav hidden" id="bottomNav">
+    <button class="nav-item active" data-tab="discover">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.35-4.35"></path>
+      </svg>
+      <span>発見</span>
+    </button>
+    <button class="nav-item" data-tab="create">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      <span>作る</span>
+    </button>
+    <button class="nav-item nav-zapping" id="navZappingBtn">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+      <span>次へ</span>
+    </button>
+    <button class="nav-item" data-tab="notifications">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+      </svg>
+      <span>通知</span>
+    </button>
+    <button class="nav-item" data-tab="profile">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>マイ</span>
+    </button>
+  </nav>
+
+  <!-- Discover View (public games feed) -->
+  <div class="discover-view hidden" id="discoverView">
+    <header class="discover-header">
+      <h1>発見</h1>
+      <button class="search-btn" id="searchGamesBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+      </button>
+    </header>
+    <div class="discover-content">
+      <div class="discover-grid" id="discoverGrid">
+        <!-- Public games will be loaded here -->
+      </div>
+      <div class="discover-empty hidden" id="discoverEmpty">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+          <line x1="9" y1="9" x2="9.01" y2="9"></line>
+          <line x1="15" y1="9" x2="15.01" y2="9"></line>
+        </svg>
+        <p>まだ公開ゲームがありません</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Zapping Mode (fullscreen game carousel) -->
+  <div class="zapping-mode hidden" id="zappingMode">
+    <!-- Top bar - always visible -->
+    <div class="zapping-topbar">
+      <button class="zapping-back" id="zappingBack">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+      </button>
+      <div class="zapping-topbar-info">
+        <div class="zapping-game-name" id="zappingGameName">ゲーム名</div>
+        <div class="zapping-creator" id="zappingCreator">@creator</div>
+      </div>
+      <div class="zapping-topbar-actions">
+        <button class="zapping-topbar-action" id="zappingLike">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+          </svg>
+          <span id="zappingLikeCount">0</span>
+        </button>
+        <button class="zapping-topbar-action" id="zappingRemix">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="17 1 21 5 17 9"></polyline>
+            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+            <polyline points="7 23 3 19 7 15"></polyline>
+            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+          </svg>
+        </button>
+        <button class="zapping-topbar-action" id="zappingShare">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="18" cy="5" r="3"></circle>
+            <circle cx="6" cy="12" r="3"></circle>
+            <circle cx="18" cy="19" r="3"></circle>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <!-- Game container - full area below top bar, above bottom nav -->
+    <div class="zapping-container" id="zappingContainer">
+      <!-- Game slides will be dynamically created -->
+    </div>
+  </div>
+
   <!-- Version Restore Modal -->
   <div class="restore-modal hidden" id="restoreModal">
     <div class="restore-modal-content">
