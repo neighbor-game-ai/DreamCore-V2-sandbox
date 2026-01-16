@@ -710,6 +710,30 @@ class GameCreatorApp {
       }
     });
 
+    // Mobile keyboard visibility handling
+    this.chatInput.addEventListener('focus', () => {
+      // Delay to allow keyboard to appear
+      setTimeout(() => {
+        this.chatInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    });
+
+    this.chatInput.addEventListener('blur', () => {
+      // Reset styles when keyboard closes
+      const chatView = document.querySelector('.chat-view');
+      if (chatView) {
+        chatView.style.height = '';
+        chatView.style.paddingBottom = '';
+      }
+    });
+
+    // Handle visual viewport resize (keyboard show/hide)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => {
+        this.handleKeyboardResize();
+      });
+    }
+
     this.refreshButton.addEventListener('click', () => this.refreshPreview());
     this.newProjectButton.addEventListener('click', () => this.createNewProject());
     this.stopButton.addEventListener('click', () => this.stopGeneration());
@@ -1512,6 +1536,34 @@ class GameCreatorApp {
       this.viewCodeButton.classList.add('hidden');
       this.downloadButton.classList.add('hidden');
       this.hideVersionPanel();
+    }
+  }
+
+  // Handle mobile keyboard resize
+  handleKeyboardResize() {
+    if (!window.visualViewport) return;
+
+    const viewport = window.visualViewport;
+    const chatView = document.querySelector('.chat-view');
+
+    if (chatView && document.activeElement === this.chatInput) {
+      // Calculate the offset caused by keyboard
+      const keyboardHeight = window.innerHeight - viewport.height;
+
+      if (keyboardHeight > 100) {
+        // Keyboard is visible, adjust container
+        chatView.style.height = `${viewport.height}px`;
+        chatView.style.paddingBottom = '0';
+
+        // Scroll input into view
+        setTimeout(() => {
+          this.chatInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      } else {
+        // Keyboard is hidden, reset
+        chatView.style.height = '';
+        chatView.style.paddingBottom = '';
+      }
     }
   }
 
