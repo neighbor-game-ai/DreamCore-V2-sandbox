@@ -188,211 +188,6 @@ class ClaudeRunner {
     return 'unclear';
   }
 
-  // Detect intent for new projects: create (game creation) or chat (consultation/ideation)
-  // Uses pattern matching first, then falls back to Claude Haiku
-  async detectIntentForNewProject(userMessage) {
-    const messageLower = userMessage.toLowerCase();
-
-    // Pattern 1: Clear creation intent
-    const createPatterns = [
-      /作って/,
-      /作りたい/,
-      /作成して/,
-      /ゲーム.*(して|したい)/,
-      /シューティング|アクション|パズル|RPG|レース/i,
-      /^(2d|3d|２d|３d)/i,
-    ];
-
-    for (const pattern of createPatterns) {
-      if (pattern.test(messageLower)) {
-        console.log('Intent: create (pattern match)');
-        return 'create';
-      }
-    }
-
-    // Pattern 2: Clear consultation intent
-    const chatPatterns = [
-      /アイデア.*(ない|ありません|思いつ)/,
-      /何を作れば/,
-      /何作ろう/,
-      /おすすめ/,
-      /どんなゲーム/,
-      /迷って/,
-      /わからない/,
-      /相談/,
-      /一緒に考えて/,
-      /ヘルプ|help/i,
-    ];
-
-    for (const pattern of chatPatterns) {
-      if (pattern.test(messageLower)) {
-        console.log('Intent: chat (pattern match)');
-        return 'chat';
-      }
-    }
-
-    // Pattern 3: Fallback to Claude Haiku for ambiguous cases
-    console.log('Intent unclear, using Claude Haiku...');
-
-    return new Promise((resolve) => {
-      const prompt = `ユーザーが新しいゲームプロジェクトを開始しました。最初のメッセージから意図を判定してください。
-
-メッセージ: "${userMessage}"
-
-以下のいずれかを1単語で答えてください：
-- create: 具体的なゲームを作りたい（ジャンルや内容が分かる）
-- chat: 相談したい、アイデアがない、何を作るか決まっていない
-
-回答:`;
-
-      const claude = spawn('claude', [
-        '--print',
-        '--model', 'haiku',
-        '--dangerously-skip-permissions'
-      ], {
-        cwd: process.cwd(),
-        env: { ...process.env }
-      });
-
-      claude.stdin.write(prompt);
-      claude.stdin.end();
-
-      let output = '';
-      claude.stdout.on('data', (data) => {
-        output += data.toString();
-      });
-
-      claude.on('close', (code) => {
-        const result = output.trim().toLowerCase();
-        if (result.includes('chat')) {
-          console.log('Intent: chat (Haiku)');
-          resolve('chat');
-        } else {
-          console.log('Intent: create (Haiku/default)');
-          resolve('create');
-        }
-      });
-
-      claude.on('error', () => {
-        console.log('Intent detection error, defaulting to create');
-        resolve('create');
-      });
-
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        claude.kill();
-        console.log('Intent detection timeout, defaulting to create');
-        resolve('create');
-      }, 5000);
-    });
-  }
-
-  // Handle ideation chat with Claude Haiku - free conversation about game ideas
-  async handleIdeationChat(userMessage, history) {
-    return new Promise((resolve) => {
-      const historyText = history
-        ?.slice(-6)
-        .map(m => `${m.role === 'user' ? 'ユーザー' : 'アシスタント'}: ${m.content}`)
-        .join('\n') || '';
-
-      const prompt = `あなたはゲーム制作をサポートするフレンドリーなアシスタントです。
-ユーザーと自然に会話しながら、ゲームのアイデアを一緒に考えてください。
-
-## これまでの会話
-${historyText || '（初めての会話）'}
-
-## ユーザーの最新メッセージ
-「${userMessage}」
-
-## あなたの役割
-- ユーザーの話を聞いて、共感しながら会話する
-- ゲームのアイデアを一緒に膨らませる
-- 具体的なゲームが決まりそうなら、提案する
-- 押し付けがましくならないようにする
-
-## suggestionsについて
-- ユーザーが次に言いそうなこと、または選択肢を2-3個提案
-- 具体的なゲームジャンル（「シューティング」「パズル」など）が決まりそうなら、それを含める
-- 会話を続けたい場合は「もっと教えて」「他のアイデア」なども可
-
-## 出力形式（JSON）
-{"message": "あなたの応答（自然な会話）", "suggestions": ["選択肢1", "選択肢2"]}
-
-JSON形式で出力:`;
-
-      const claude = spawn('claude', [
-        '--print',
-        '--model', 'haiku',
-        '--dangerously-skip-permissions'
-      ], {
-        cwd: process.cwd(),
-        env: { ...process.env }
-      });
-
-      claude.stdin.write(prompt);
-      claude.stdin.end();
-
-      let output = '';
-      claude.stdout.on('data', (data) => {
-        output += data.toString();
-      });
-
-      claude.on('close', (code) => {
-        try {
-          const jsonMatch = output.match(/\{[\s\S]*"message"[\s\S]*"suggestions"[\s\S]*\}/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            console.log('Ideation chat:', parsed.message?.substring(0, 100));
-            resolve({
-              mode: 'chat',
-              message: parsed.message,
-              suggestions: parsed.suggestions || []
-            });
-            return;
-          }
-        } catch (e) {
-          console.error('Failed to parse ideation response:', e.message);
-        }
-
-        // If JSON parsing failed, try to use raw output as message
-        const cleanOutput = output.trim();
-        if (cleanOutput && cleanOutput.length > 10) {
-          resolve({
-            mode: 'chat',
-            message: cleanOutput.substring(0, 500),
-            suggestions: ['シューティング', 'アクション', 'パズル']
-          });
-          return;
-        }
-
-        // Fallback response
-        resolve({
-          mode: 'chat',
-          message: 'なるほど！どんなゲームが作りたいか、もう少し教えてもらえますか？',
-          suggestions: ['爽快なゲーム', 'のんびりしたゲーム', '頭を使うゲーム']
-        });
-      });
-
-      claude.on('error', (err) => {
-        console.error('Ideation chat error:', err.message);
-        resolve({
-          mode: 'chat',
-          message: 'どんなゲームに興味がありますか？',
-          suggestions: ['シューティング', 'アクション', 'パズル']
-        });
-      });
-
-      setTimeout(() => {
-        claude.kill();
-        resolve({
-          mode: 'chat',
-          message: 'どんなゲームが作りたいですか？ジャンルや雰囲気を教えてください。',
-          suggestions: ['シューティング', 'アクション', 'パズル']
-        });
-      }, 15000);
-    });
-  }
-
   // Guess image role from name and prompt
   guessImageRole(imageName, prompt) {
     const combined = (imageName + ' ' + prompt).toLowerCase();
@@ -988,66 +783,9 @@ ${skillInstructions}
 
         // First check if user is responding to dimension question
         const userMessageLower = userMessage.toLowerCase();
-
-        // Check if this is NOT a dimension selection response - then detect intent
         const is2DSelection = userMessageLower.includes('2dで作成') || userMessageLower.includes('2dで') || userMessageLower === '2d';
         const is3DSelection = userMessageLower.includes('3dで作成') || userMessageLower.includes('3dで') || userMessageLower === '3d';
 
-        if (!is2DSelection && !is3DSelection) {
-          // Check if we're continuing an ideation conversation
-          // Look for signs that we're in ideation mode (not in game creation mode)
-          const lastAssistantMsg = history?.slice().reverse().find(m => m.role === 'assistant');
-          const isIdeationContinuation = lastAssistantMsg && (
-            // Previous response was a chat/ideation response (not asking about 2D/3D)
-            !lastAssistantMsg.content?.includes('2Dゲームと3Dゲーム') &&
-            !lastAssistantMsg.content?.includes('2Dで作成') &&
-            // And it looks like a conversational response
-            (lastAssistantMsg.content?.includes('？') || lastAssistantMsg.content?.includes('ゲーム'))
-          );
-
-          if (isIdeationContinuation) {
-            // Continue ideation with Claude Haiku
-            console.log('Continuing ideation conversation...');
-            jobManager.updateProgress(jobId, 5, 'AIと相談中...');
-
-            userManager.addToHistory(visitorId, projectId, 'user', userMessage);
-
-            const ideationResponse = await this.handleIdeationChat(userMessage, history);
-
-            jobManager.updateProgress(jobId, 100, '相談モード');
-            jobManager.notifySubscribers(jobId, {
-              type: 'geminiChat',
-              ...ideationResponse
-            });
-
-            return ideationResponse;
-          }
-
-          // Detect user intent: create or chat
-          jobManager.updateProgress(jobId, 2, '意図を判定中...');
-          const userIntent = await this.detectIntentForNewProject(userMessage);
-
-          if (userIntent === 'chat') {
-            // User wants consultation/ideation - use Claude Haiku for free conversation
-            console.log('New project: User wants consultation, starting AI conversation');
-
-            // Store the message in history
-            userManager.addToHistory(visitorId, projectId, 'user', userMessage);
-
-            jobManager.updateProgress(jobId, 5, 'AIと相談中...');
-            const ideationResponse = await this.handleIdeationChat(userMessage, history);
-
-            jobManager.updateProgress(jobId, 100, '相談モード');
-            jobManager.notifySubscribers(jobId, {
-              type: 'geminiChat',
-              ...ideationResponse
-            });
-
-            return ideationResponse;
-          }
-        }
-
-        // Now handle dimension selection or detection
         if (is2DSelection || is3DSelection) {
           detectedDimension = is2DSelection ? '2d' : '3d';
           console.log(`User selected ${detectedDimension.toUpperCase()} from suggestion`);
@@ -1311,58 +1049,36 @@ ${skillInstructions}
       }
 
       if (geminiResult.mode === 'edit' && geminiResult.edits) {
-        // Edit mode - apply line-based edits
+        // Edit mode - apply diffs
         const totalEdits = geminiResult.edits.length;
         console.log(`Applying ${totalEdits} edit(s)...`);
         jobManager.updateProgress(jobId, 60, `${totalEdits}件の編集を適用中...`);
 
-        // Group edits by file path
-        const editsByFile = {};
-        for (const edit of geminiResult.edits) {
-          if (!editsByFile[edit.path]) {
-            editsByFile[edit.path] = [];
-          }
-          editsByFile[edit.path].push(edit);
-        }
-
-        let editIndex = 0;
-        for (const [filePath, edits] of Object.entries(editsByFile)) {
-          const fullPath = path.join(projectDir, filePath);
+        for (let i = 0; i < geminiResult.edits.length; i++) {
+          const edit = geminiResult.edits[i];
+          const filePath = path.join(projectDir, edit.path);
 
           // Progress: 60% to 85%
-          const progress = 60 + Math.floor((editIndex / totalEdits) * 25);
-          jobManager.updateProgress(jobId, progress, `編集中: ${filePath}`);
+          const progress = 60 + Math.floor((i / totalEdits) * 25);
+          jobManager.updateProgress(jobId, progress, `編集中: ${edit.path}`);
 
-          if (!fs.existsSync(fullPath)) {
-            console.error(`File not found: ${filePath}`);
-            editIndex += edits.length;
+          if (!fs.existsSync(filePath)) {
+            console.error(`File not found: ${edit.path}`);
             continue;
           }
 
-          let content = fs.readFileSync(fullPath, 'utf-8');
-          let lines = content.split('\n');
+          let content = fs.readFileSync(filePath, 'utf-8');
 
-          // Sort edits by startLine descending (apply from bottom to top)
-          edits.sort((a, b) => b.startLine - a.startLine);
-
-          for (const edit of edits) {
-            const startIdx = edit.startLine - 1; // Convert to 0-indexed
-            const deleteCount = edit.deleteCount || 0;
-            const newLines = edit.newContent ? edit.newContent.split('\n') : [];
-
-            if (startIdx < 0 || startIdx > lines.length) {
-              console.error(`Invalid startLine ${edit.startLine} in ${filePath} (total lines: ${lines.length})`);
-              continue;
-            }
-
-            // Remove deleteCount lines and insert newLines at startIdx
-            lines.splice(startIdx, deleteCount, ...newLines);
-            console.log(`Edit at line ${edit.startLine}: -${deleteCount} +${newLines.length} lines`);
-            editIndex++;
+          if (!content.includes(edit.old_string)) {
+            console.error(`old_string not found in ${edit.path}:`);
+            console.error(`Looking for: "${edit.old_string.substring(0, 100)}..."`);
+            // Try to continue with other edits
+            continue;
           }
 
-          fs.writeFileSync(fullPath, lines.join('\n'), 'utf-8');
-          console.log(`Edited: ${filePath}`);
+          content = content.replace(edit.old_string, edit.new_string);
+          fs.writeFileSync(filePath, content, 'utf-8');
+          console.log(`Edited: ${edit.path}`);
         }
       } else {
         // Create mode - write full files

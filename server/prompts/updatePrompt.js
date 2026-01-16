@@ -46,9 +46,8 @@ ${getBaseRules()}
   "edits": [
     {
       "path": "index.html",
-      "startLine": 42,
-      "deleteCount": 3,
-      "newContent": "置換後のコード（複数行可）"
+      "old_string": "置換前の文字列（既存コードから正確にコピー）",
+      "new_string": "置換後の文字列"
     }
   ],
   "images": [
@@ -60,12 +59,6 @@ ${getBaseRules()}
   "summary": "変更内容の日本語説明（1-2文）",
   "suggestions": ["次にできそうな改善案1", "次にできそうな改善案2"]
 }
-
-editsフィールドの説明：
-- path: 編集対象ファイル
-- startLine: 編集開始行（1始まり、コードの行番号を参照）
-- deleteCount: 削除する行数（0なら挿入のみ）
-- newContent: 挿入するコード（空文字なら削除のみ）
 
 [ビジュアルスタイルについて]
 既存のゲームにビジュアルスタイルが適用されている場合は、そのスタイルを維持してください。
@@ -110,22 +103,9 @@ editsフィールドの説明：
 
 [重要な注意]
 - 迷ったらchatモードを選択（勝手にコードを変更しない）
-- startLine はコードの行番号（左端の数字）を正確に指定すること
+- old_string は既存コードに存在する文字列を正確にコピーすること
 - 変更箇所が複数ある場合は edits 配列に複数追加
-- 新規追加の場合は deleteCount: 0 で挿入位置を指定`;
-}
-
-/**
- * Add line numbers to code for Gemini to reference
- * @param {string} code - The code content
- * @returns {string} - Code with line numbers prefixed
- */
-function addLineNumbers(code) {
-  const lines = code.split('\n');
-  const padding = String(lines.length).length;
-  return lines
-    .map((line, i) => `${String(i + 1).padStart(padding, ' ')}| ${line}`)
-    .join('\n');
+- 新規追加の場合は old_string に挿入位置の前後の文字列を指定`;
 }
 
 /**
@@ -174,11 +154,8 @@ function buildRequest(options) {
     currentMessage += `[現在のゲーム仕様 - これを維持すること]\n${gameSpec}\n\n`;
   }
 
-  // Add line numbers so Gemini can reference specific lines
-  const numberedCode = addLineNumbers(currentCode);
-
   currentMessage += `[現在のコード]
-${numberedCode}
+${currentCode}
 
 [修正依頼]
 ${userMessage}`;
