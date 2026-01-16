@@ -9,21 +9,21 @@
 </head>
 <body>
   <!-- Login View (shown when not authenticated) -->
-  <div class="login-view" id="loginView">
+  <div class="login-view hidden" id="loginView">
     <div class="login-container">
       <div class="login-header">
         <h1>ゲームクリエイター</h1>
         <p class="login-subtitle">招待ユーザー専用</p>
       </div>
-      <form class="login-form" id="loginForm">
+      <form class="login-form" id="loginForm" onsubmit="return false;">
         <div class="form-group">
           <label for="loginUsername">ユーザーID</label>
-          <input type="text" id="loginUsername" placeholder="IDを入力してください" autocomplete="username" required>
+          <input type="text" id="loginUsername" placeholder="IDを入力してください" autocomplete="username">
         </div>
         <div class="login-error hidden" id="loginError">
           このIDは登録されていません
         </div>
-        <button type="submit" class="login-button" id="loginButton">
+        <button type="button" class="login-button" id="loginButton">
           ログイン
         </button>
       </form>
