@@ -667,12 +667,25 @@ class GameCreatorApp {
     }));
   }
 
-  updateProjectTitle(name) {
+  updateProjectTitle(name, animate = false) {
     if (!name) {
       this.projectTitle.textContent = 'ゲームクリエイター';
       this.projectTitle.classList.remove('editable');
     } else {
-      this.projectTitle.textContent = name;
+      if (animate && this.projectTitle.textContent !== name) {
+        // Animate title change
+        this.projectTitle.classList.add('title-updating');
+        setTimeout(() => {
+          this.projectTitle.textContent = name;
+          this.projectTitle.classList.remove('title-updating');
+          this.projectTitle.classList.add('title-updated');
+          setTimeout(() => {
+            this.projectTitle.classList.remove('title-updated');
+          }, 600);
+        }, 150);
+      } else {
+        this.projectTitle.textContent = name;
+      }
       this.projectTitle.classList.add('editable');
     }
   }
@@ -1504,7 +1517,7 @@ class GameCreatorApp {
         if (data.project && this.currentProjectId === data.project.id) {
           document.title = `${data.project.name} - ゲームクリエイター`;
           this.currentProjectName = data.project.name;
-          this.updateProjectTitle(data.project.name);
+          this.updateProjectTitle(data.project.name, true); // Animate title update
           // Also update in projects array
           const proj = this.projects.find(p => p.id === data.project.id);
           if (proj) {
@@ -1552,6 +1565,33 @@ class GameCreatorApp {
         this.refreshPreview();
         // Don't auto-switch to preview on mobile - let user read AI response first
         // User can tap "ゲームを遊ぶ" button when ready
+
+        // Check for project name update after spec generation completes
+        if (this.currentProjectId) {
+          setTimeout(() => {
+            this.ws.send(JSON.stringify({
+              type: 'getProjectInfo',
+              projectId: this.currentProjectId
+            }));
+          }, 2000); // Wait for spec generation to complete
+        }
+        break;
+
+      case 'projectInfo':
+        // Update project name if changed (from auto-rename)
+        if (data.project && this.currentProjectId === data.project.id) {
+          if (this.currentProjectName !== data.project.name) {
+            document.title = `${data.project.name} - ゲームクリエイター`;
+            this.currentProjectName = data.project.name;
+            this.updateProjectTitle(data.project.name, true);
+            // Update in projects array
+            const proj = this.projects.find(p => p.id === data.project.id);
+            if (proj) {
+              proj.name = data.project.name;
+              this.updateProjectList();
+            }
+          }
+        }
         break;
 
       case 'error':

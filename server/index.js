@@ -880,6 +880,25 @@ wss.on('connection', (ws) => {
           });
           break;
 
+        case 'getProjectInfo':
+          if (!visitorId || !data.projectId) {
+            safeSend({ type: 'error', message: 'Invalid request' });
+            return;
+          }
+          const projectInfo = db.getProjectById(data.projectId);
+          if (projectInfo) {
+            safeSend({
+              type: 'projectInfo',
+              project: {
+                id: projectInfo.id,
+                name: projectInfo.name,
+                createdAt: projectInfo.created_at,
+                updatedAt: projectInfo.updated_at
+              }
+            });
+          }
+          break;
+
         case 'message':
           if (!visitorId || !currentProjectId) {
             safeSend({ type: 'error', message: 'No project selected' });
