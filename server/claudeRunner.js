@@ -1337,25 +1337,46 @@ ${skillInstructions}
           console.log('Job completed with Gemini:', jobId);
 
           // Create/Update specs asynchronously (don't wait)
-          // For create mode: create initial spec from generated code
+          // For create mode: use specs from Gemini response (if available)
           // For edit mode: update existing spec
           if (geminiResult.mode === 'create') {
-            this.createInitialSpecFromCode(visitorId, projectId, userMessage, null, gameCodeForImages)
-              .then(() => {
-                // Auto-rename after spec is created
-                return this.maybeAutoRenameProject(visitorId, projectId);
-              })
-              .then(renamed => {
-                if (renamed) {
-                  jobManager.notifySubscribers(jobId, {
-                    type: 'projectRenamed',
-                    project: renamed
-                  });
-                }
-              })
-              .catch(err => {
-                console.error('Spec creation error:', err.message);
-              });
+            // Use specs from Gemini response directly (saves Sonnet API call)
+            if (geminiResult.specs) {
+              this.saveSpecsFromGemini(visitorId, projectId, geminiResult.specs)
+                .then(() => {
+                  console.log('Specs saved from Gemini response');
+                  return this.maybeAutoRenameProject(visitorId, projectId);
+                })
+                .then(renamed => {
+                  if (renamed) {
+                    jobManager.notifySubscribers(jobId, {
+                      type: 'projectRenamed',
+                      project: renamed
+                    });
+                  }
+                })
+                .catch(err => {
+                  console.error('Spec save error:', err.message);
+                });
+            } else {
+              // Fallback: create spec from code if Gemini didn't include specs
+              console.log('No specs in Gemini response, using fallback');
+              this.createInitialSpecFromCode(visitorId, projectId, userMessage, null, gameCodeForImages)
+                .then(() => {
+                  return this.maybeAutoRenameProject(visitorId, projectId);
+                })
+                .then(renamed => {
+                  if (renamed) {
+                    jobManager.notifySubscribers(jobId, {
+                      type: 'projectRenamed',
+                      project: renamed
+                    });
+                  }
+                })
+                .catch(err => {
+                  console.error('Spec creation error:', err.message);
+                });
+            }
           } else {
             this.updateSpec(visitorId, projectId, userMessage)
               .then(() => {
@@ -2417,6 +2438,32 @@ ${dimension === '3d' ? '3D' : dimension === '2d' ? '2D' : '未指定'}
     const filePath = path.join(specsDir, `${specType}.md`);
     fs.writeFileSync(filePath, content, 'utf-8');
     console.log(`Wrote specs/${specType}.md`);
+  }
+
+  // Save specs from Gemini response (no additional API call needed)
+  async saveSpecsFromGemini(visitorId, projectId, specs) {
+    const projectDir = userManager.getProjectDir(visitorId, projectId);
+    const specsDir = path.join(projectDir, 'specs');
+
+    if (!fs.existsSync(specsDir)) {
+      fs.mkdirSync(specsDir, { recursive: true });
+    }
+
+    // Write each spec file
+    if (specs.game) {
+      fs.writeFileSync(path.join(specsDir, 'game.md'), specs.game, 'utf-8');
+      console.log('Saved specs/game.md from Gemini');
+    }
+    if (specs.mechanics) {
+      fs.writeFileSync(path.join(specsDir, 'mechanics.md'), specs.mechanics, 'utf-8');
+      console.log('Saved specs/mechanics.md from Gemini');
+    }
+    if (specs.progress) {
+      fs.writeFileSync(path.join(specsDir, 'progress.md'), specs.progress, 'utf-8');
+      console.log('Saved specs/progress.md from Gemini');
+    }
+
+    console.log('All specs saved from Gemini response (Sonnet API call skipped)');
   }
 
   // Detect which spec files need updating based on user message
