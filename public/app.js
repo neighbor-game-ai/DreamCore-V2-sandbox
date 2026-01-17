@@ -2119,7 +2119,21 @@ class GameCreatorApp {
     }
 
     this.chatMessages.appendChild(messageDiv);
-    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    this.scrollToLatestMessage(messageDiv);
+  }
+
+  scrollToLatestMessage(messageDiv) {
+    // Use scrollIntoView for better mobile keyboard handling
+    // Delay slightly to ensure DOM is updated and keyboard state is stable
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (messageDiv && messageDiv.scrollIntoView) {
+          messageDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        } else {
+          this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+        }
+      }, 100);
+    });
   }
 
   showWelcomeMessage() {
@@ -2498,7 +2512,7 @@ class GameCreatorApp {
       });
     });
 
-    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    this.scrollToLatestMessage(messageDiv);
   }
 
   // Display restore confirmation dialog
@@ -2543,7 +2557,7 @@ class GameCreatorApp {
       messageDiv.querySelector('.restore-buttons').remove();
     });
 
-    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    this.scrollToLatestMessage(messageDiv);
   }
 
   // Execute restore to previous version
@@ -3591,7 +3605,7 @@ class GameCreatorApp {
       }));
     });
 
-    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    this.scrollToLatestMessage(messageDiv);
   }
 }
 
