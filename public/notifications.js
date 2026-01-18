@@ -59,7 +59,7 @@ class NotificationsApp {
   setupListeners() {
     // Back button
     this.backBtn?.addEventListener('click', () => {
-      window.location.href = '/';
+      window.location.href = '/discover';
     });
 
     // Mark all as read
@@ -71,6 +71,32 @@ class NotificationsApp {
         const filter = tab.dataset.filter;
         this.setFilter(filter);
       });
+    });
+
+    // Bottom navigation
+    document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        switch (tab) {
+          case 'discover':
+            window.location.href = '/discover';
+            break;
+          case 'create':
+            window.location.href = '/create';
+            break;
+          case 'notifications':
+            // Already on notifications
+            break;
+          case 'profile':
+            window.location.href = '/mypage';
+            break;
+        }
+      });
+    });
+
+    // Zapping button
+    document.getElementById('navZappingBtn')?.addEventListener('click', () => {
+      window.location.href = '/discover?zap=1';
     });
   }
 

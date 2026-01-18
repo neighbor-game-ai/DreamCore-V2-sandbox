@@ -69,15 +69,26 @@ class MyPageApp {
     document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
-        if (tab === 'profile') return; // Already on profile
-        // Navigate to main app with tab
-        window.location.href = `/?tab=${tab}`;
+        switch (tab) {
+          case 'discover':
+            window.location.href = '/discover';
+            break;
+          case 'create':
+            window.location.href = '/create';
+            break;
+          case 'notifications':
+            window.location.href = '/notifications';
+            break;
+          case 'profile':
+            // Already on profile
+            break;
+        }
       });
     });
 
     // Zapping button
     document.getElementById('navZappingBtn')?.addEventListener('click', () => {
-      window.location.href = '/zap';
+      window.location.href = '/discover?zap=1';
     });
   }
 
