@@ -91,14 +91,15 @@ async function removeMagentaBackground(base64Image) {
       }
     }
 
-    // Create final image
+    // Create final image with trim to remove transparent borders
     outputBuffer = await sharp(Buffer.from(erodedPixels), {
       raw: { width, height, channels: 4 }
     })
+      .trim()  // Auto-crop transparent borders
       .png()
       .toBuffer();
 
-    console.log('Magenta background removed with 1px erosion');
+    console.log('Magenta background removed with 1px erosion and trimmed');
     return `data:image/png;base64,${outputBuffer.toString('base64')}`;
   } catch (error) {
     console.error('Error removing background:', error);
