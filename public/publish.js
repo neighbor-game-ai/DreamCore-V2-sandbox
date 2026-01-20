@@ -489,85 +489,131 @@ class PublishPage {
     await this.generateThumbnail();
   }
 
-  // 画像をリサイズ（スマホ画面サイズ: 最大1080x1920）
-  async resizeImage(file, maxWidth = 1080, maxHeight = 1920) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        let { width, height } = img;
+  // 画像エディタの初期化
+  initImageEditor() {
+    this.imageEditorModal = document.getElementById('imageEditorModal');
+    this.cropperImage = document.getElementById('cropperImage');
+    this.cropper = null;
 
-        // アスペクト比を維持しながらリサイズ
-        if (width > maxWidth || height > maxHeight) {
-          const ratio = Math.min(maxWidth / width, maxHeight / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
-        }
+    document.getElementById('closeImageEditor')?.addEventListener('click', () => this.closeImageEditor());
+    document.getElementById('cancelEdit')?.addEventListener('click', () => this.closeImageEditor());
+    document.getElementById('saveEditedImage')?.addEventListener('click', () => this.applyImageEdit());
 
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob((blob) => {
-          resolve(new File([blob], 'thumbnail.webp', { type: 'image/webp' }));
-        }, 'image/webp', 0.85);
-      };
-      img.src = URL.createObjectURL(file);
+    // 回転・反転ボタン
+    document.getElementById('rotateRight')?.addEventListener('click', () => {
+      this.cropper?.rotate(90);
     });
+    document.getElementById('flipHorizontal')?.addEventListener('click', () => {
+      this.cropper?.scaleX(this.cropper.getData().scaleX === -1 ? 1 : -1);
+    });
+    document.getElementById('flipVertical')?.addEventListener('click', () => {
+      this.cropper?.scaleY(this.cropper.getData().scaleY === -1 ? 1 : -1);
+    });
+  }
+
+  openImageEditor(file) {
+    if (!this.imageEditorModal) {
+      this.initImageEditor();
+    }
+
+    // Load image into cropper
+    const url = URL.createObjectURL(file);
+    this.cropperImage.src = url;
+    this.pendingFile = file;
+
+    this.imageEditorModal.classList.remove('hidden');
+
+    // Initialize cropper after image loads
+    this.cropperImage.onload = () => {
+      if (this.cropper) {
+        this.cropper.destroy();
+      }
+      this.cropper = new Cropper(this.cropperImage, {
+        aspectRatio: 9 / 16,
+        viewMode: 1,
+        autoCropArea: 1,
+        responsive: true,
+        background: false
+      });
+    };
+  }
+
+  closeImageEditor() {
+    this.imageEditorModal?.classList.add('hidden');
+    if (this.cropper) {
+      this.cropper.destroy();
+      this.cropper = null;
+    }
+    this.pendingFile = null;
+  }
+
+  async applyImageEdit() {
+    if (!this.cropper) return;
+
+    const placeholder = this.thumbnailPreview.querySelector('.thumbnail-placeholder');
+
+    // Get cropped canvas
+    const canvas = this.cropper.getCroppedCanvas({
+      maxWidth: 1080,
+      maxHeight: 1920,
+      imageSmoothingEnabled: true,
+      imageSmoothingQuality: 'high'
+    });
+
+    this.closeImageEditor();
+
+    this.thumbnailPreview.classList.add('generating');
+    if (placeholder) {
+      placeholder.querySelector('span').textContent = 'アップロード中...';
+    }
+
+    try {
+      // Convert to WebP blob
+      const blob = await new Promise(resolve => {
+        canvas.toBlob(resolve, 'image/webp', 0.85);
+      });
+      const file = new File([blob], 'thumbnail.webp', { type: 'image/webp' });
+      console.log(`Cropped & compressed: ${this.pendingFile?.size || 0} -> ${file.size} bytes`);
+
+      const formData = new FormData();
+      formData.append('thumbnail', file);
+      formData.append('visitorId', this.visitorId);
+
+      const response = await fetch(`/api/projects/${this.projectId}/upload-thumbnail`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.thumbnailUrl) {
+          this.publishData.thumbnailUrl = result.thumbnailUrl;
+          this.thumbnailImage.src = result.thumbnailUrl + '?t=' + Date.now();
+          this.thumbnailImage.classList.remove('hidden');
+          if (placeholder) placeholder.classList.add('hidden');
+          await this.savePublishData();
+        }
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (error) {
+      console.error('Error uploading thumbnail:', error);
+      if (placeholder) {
+        placeholder.querySelector('span').textContent = 'アップロードに失敗しました';
+      }
+    } finally {
+      this.thumbnailPreview.classList.remove('generating');
+    }
   }
 
   uploadThumbnail() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = async (e) => {
+    input.onchange = (e) => {
       const file = e.target.files[0];
       if (file) {
-        const placeholder = this.thumbnailPreview.querySelector('.thumbnail-placeholder');
-        this.thumbnailPreview.classList.add('generating');
-        if (placeholder) {
-          placeholder.querySelector('span').textContent = 'リサイズ中...';
-        }
-
-        try {
-          // 画像をリサイズ
-          const resizedFile = await this.resizeImage(file);
-          console.log(`Resized: ${file.size} -> ${resizedFile.size} bytes`);
-
-          if (placeholder) {
-            placeholder.querySelector('span').textContent = 'アップロード中...';
-          }
-
-          const formData = new FormData();
-          formData.append('thumbnail', resizedFile);
-          formData.append('visitorId', this.visitorId);
-
-          const response = await fetch(`/api/projects/${this.projectId}/upload-thumbnail`, {
-            method: 'POST',
-            body: formData
-          });
-
-          if (response.ok) {
-            const result = await response.json();
-            if (result.thumbnailUrl) {
-              this.publishData.thumbnailUrl = result.thumbnailUrl;
-              this.thumbnailImage.src = result.thumbnailUrl + '?t=' + Date.now();
-              this.thumbnailImage.classList.remove('hidden');
-              if (placeholder) placeholder.classList.add('hidden');
-              await this.savePublishData();
-            }
-          } else {
-            throw new Error('Upload failed');
-          }
-        } catch (error) {
-          console.error('Error uploading thumbnail:', error);
-          if (placeholder) {
-            placeholder.querySelector('span').textContent = 'アップロードに失敗しました';
-          }
-        } finally {
-          this.thumbnailPreview.classList.remove('generating');
-        }
+        this.openImageEditor(file);
       }
     };
     input.click();
