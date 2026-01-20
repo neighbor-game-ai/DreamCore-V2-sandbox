@@ -464,44 +464,41 @@ body[data-page="publish"] {
   position: relative;
 }
 
-/* Clean overlay with subtle red tint */
+/* Animated overlay - breathing effect */
 .input-with-generate.generating::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,241,240,0.95) 100%);
+  background: var(--red-light);
   border: 2px solid var(--red);
   border-radius: var(--r-12);
   z-index: 10;
-  opacity: 0;
-  animation: overlayFadeIn 0.3s ease-out forwards;
+  animation: overlayBreathe 2s ease-in-out infinite;
 }
 
-@keyframes overlayFadeIn {
-  to { opacity: 1; }
+@keyframes overlayBreathe {
+  0%, 100% {
+    background: var(--red-light);
+    opacity: 0.9;
+  }
+  50% {
+    background: #ffe5e3;
+    opacity: 1;
+  }
 }
 
-/* Loading indicator - pill badge */
+/* Simple text label */
 .input-with-generate.generating::after {
   content: '生成中';
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
-  color: var(--white);
-  background: var(--red);
-  padding: var(--s-8) var(--s-16);
-  border-radius: var(--r-full);
+  letter-spacing: 0.15em;
+  color: var(--red);
   z-index: 11;
-  animation: badgePulse 1.6s ease-in-out infinite;
-}
-
-@keyframes badgePulse {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-  50% { transform: translate(-50%, -50%) scale(0.96); opacity: 0.85; }
 }
 
 /* Generate button - fade out cleanly */
@@ -515,7 +512,6 @@ body[data-page="publish"] {
 .tags-container.generating {
   position: relative;
   min-height: 48px;
-  background: var(--gray-50);
   border-radius: var(--r-8);
 }
 
@@ -523,12 +519,11 @@ body[data-page="publish"] {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,241,240,0.95) 100%);
+  background: var(--red-light);
   border: 2px solid var(--red);
   border-radius: var(--r-8);
   z-index: 10;
-  opacity: 0;
-  animation: overlayFadeIn 0.3s ease-out forwards;
+  animation: overlayBreathe 2s ease-in-out infinite;
 }
 
 .tags-container.generating::after {
@@ -537,15 +532,11 @@ body[data-page="publish"] {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
-  color: var(--white);
-  background: var(--red);
-  padding: var(--s-4) var(--s-12);
-  border-radius: var(--r-full);
+  letter-spacing: 0.15em;
+  color: var(--red);
   z-index: 11;
-  animation: badgePulse 1.6s ease-in-out infinite;
 }
 
 /* Thumbnail generating state */
@@ -557,12 +548,11 @@ body[data-page="publish"] {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,241,240,0.95) 100%);
+  background: var(--red-light);
   border: 2px solid var(--red);
   border-radius: var(--r-16);
   z-index: 10;
-  opacity: 0;
-  animation: overlayFadeIn 0.3s ease-out forwards;
+  animation: overlayBreathe 2s ease-in-out infinite;
 }
 
 .thumbnail-preview.generating::after {
@@ -571,15 +561,11 @@ body[data-page="publish"] {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
-  color: var(--white);
-  background: var(--red);
-  padding: var(--s-8) var(--s-16);
-  border-radius: var(--r-full);
+  letter-spacing: 0.15em;
+  color: var(--red);
   z-index: 11;
-  animation: badgePulse 1.6s ease-in-out infinite;
 }
 
 .thumbnail-preview.generating .thumbnail-placeholder {
