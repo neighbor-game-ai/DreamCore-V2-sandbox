@@ -621,23 +621,23 @@ body::before {
   height: 16px;
 }
 
-#historyButton {
+#playGameButton {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: var(--gray-100);
+  background: var(--gray-900);
   border: none;
   border-radius: var(--r-full);
-  color: var(--gray-500);
+  color: var(--white);
   cursor: pointer;
   transition: all var(--duration) var(--ease-out);
 }
 
-#historyButton:hover {
-  background: var(--gray-200);
-  color: var(--gray-700);
+#playGameButton:hover {
+  background: var(--gray-600);
+  transform: scale(1.05);
 }
 
 .status-indicator {

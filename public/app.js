@@ -58,7 +58,7 @@ class GameCreatorApp {
     this.stopButton = document.getElementById('stopButton');
     this.refreshButton = document.getElementById('refreshButton');
     this.newProjectButton = document.getElementById('newProjectButton');
-    this.historyButton = document.getElementById('historyButton');
+    this.playGameButton = document.getElementById('playGameButton');
     this.gamePreview = document.getElementById('gamePreview');
     this.statusIndicator = document.getElementById('statusIndicator');
     this.projectTitle = document.getElementById('projectTitle');
@@ -1057,10 +1057,7 @@ class GameCreatorApp {
 
     this.refreshButton?.addEventListener('click', () => this.refreshPreview());
     this.newProjectButton?.addEventListener('click', () => this.createNewProject());
-    this.historyButton?.addEventListener('click', () => {
-      history.pushState(null, '', '/');
-      this.showListView();
-    });
+    this.playGameButton?.addEventListener('click', () => this.showPreviewPanel());
     this.stopButton?.addEventListener('click', () => this.stopGeneration());
     this.versionsButton?.addEventListener('click', () => this.toggleVersionPanel());
     this.closeVersionsButton?.addEventListener('click', () => this.hideVersionPanel());
@@ -2757,6 +2754,7 @@ class GameCreatorApp {
     }
   }
 
+  
   updateStatus(className, text) {
     if (!this.statusIndicator) return;
     this.statusIndicator.className = `status-indicator ${className}`;
