@@ -264,6 +264,91 @@ app.post('/api/generate-image', async (req, res) => {
   }
 });
 
+// ==================== Background Removal API ====================
+
+// Remove background using Replicate API (851-labs/background-remover)
+app.post('/api/assets/remove-background', async (req, res) => {
+  try {
+    const { image, visitorId } = req.body;
+
+    if (!image) {
+      return res.status(400).json({ error: 'image is required' });
+    }
+
+    if (!visitorId) {
+      return res.status(400).json({ error: 'visitorId is required' });
+    }
+
+    const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
+    if (!REPLICATE_API_TOKEN) {
+      return res.status(503).json({ error: 'Background removal service not configured' });
+    }
+
+    console.log('Background removal request received');
+
+    // Create prediction
+    const createResponse = await fetch('https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${REPLICATE_API_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'wait'
+      },
+      body: JSON.stringify({
+        version: 'a029dff38972b5fda4ec5d75e66c30d9a69e696f9c5d5b7a30654f66c77d4e30',
+        input: {
+          image: image
+        }
+      })
+    });
+
+    if (!createResponse.ok) {
+      const error = await createResponse.text();
+      console.error('Replicate API error:', error);
+      throw new Error('Background removal service error');
+    }
+
+    let prediction = await createResponse.json();
+
+    // Poll for completion if not using "wait" mode
+    while (prediction.status === 'starting' || prediction.status === 'processing') {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const pollResponse = await fetch(prediction.urls.get, {
+        headers: {
+          'Authorization': `Bearer ${REPLICATE_API_TOKEN}`
+        }
+      });
+      prediction = await pollResponse.json();
+    }
+
+    if (prediction.status === 'failed') {
+      throw new Error(prediction.error || 'Background removal failed');
+    }
+
+    // Get the output image URL and fetch it as base64
+    const outputUrl = prediction.output;
+    if (!outputUrl) {
+      throw new Error('No output from background removal');
+    }
+
+    // Fetch the result image and convert to base64
+    const imageResponse = await fetch(outputUrl);
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const base64Image = `data:image/png;base64,${Buffer.from(imageBuffer).toString('base64')}`;
+
+    console.log('Background removal completed');
+    res.json({ success: true, image: base64Image });
+
+  } catch (error) {
+    console.error('Background removal error:', error);
+    res.status(500).json({
+      error: error.message || 'Background removal failed',
+      success: false
+    });
+  }
+});
+
 // ==================== Asset API Endpoints ====================
 
 // Upload asset

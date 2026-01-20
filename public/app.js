@@ -135,6 +135,12 @@ class GameCreatorApp {
     this.assetDescription = document.getElementById('assetDescription');
     this.selectedAssetInfo = document.getElementById('selectedAssetInfo');
     this.insertAssetButton = document.getElementById('insertAssetButton');
+    this.editAssetButton = document.getElementById('editAssetButton');
+
+    // Image Editor elements
+    this.imageEditorModal = document.getElementById('imageEditorModal');
+    this.editorCanvas = document.getElementById('editorCanvas');
+    this.cropOverlay = document.getElementById('cropOverlay');
 
     // Asset state
     this.selectedAsset = null;
@@ -3078,6 +3084,9 @@ class GameCreatorApp {
 
     // Insert asset
     this.insertAssetButton?.addEventListener('click', () => this.insertAssetToChat());
+
+    // Edit asset
+    this.editAssetButton?.addEventListener('click', () => this.openImageEditor());
   }
 
   openAssetModal() {
@@ -3235,7 +3244,7 @@ class GameCreatorApp {
 
   renderAssetItems(assets, showActions) {
     return assets.map(asset => `
-      <div class="asset-item ${asset.isPublic ? 'public-badge' : ''}" data-id="${asset.id}" data-url="${asset.url}" data-name="${asset.filename}">
+      <div class="asset-item ${asset.isPublic ? 'public-badge' : ''}" data-id="${asset.id}" data-url="${asset.url}" data-name="${asset.filename}" data-mimetype="${asset.mimeType || ''}">
         <div class="asset-thumb">
           ${this.getAssetThumb(asset)}
         </div>
@@ -3262,7 +3271,7 @@ class GameCreatorApp {
     }
 
     container.innerHTML = assets.map(asset => `
-      <div class="asset-item ${asset.isPublic ? 'public-badge' : ''}" data-id="${asset.id}" data-url="${asset.url}" data-name="${asset.filename}">
+      <div class="asset-item ${asset.isPublic ? 'public-badge' : ''}" data-id="${asset.id}" data-url="${asset.url}" data-name="${asset.filename}" data-mimetype="${asset.mimeType || ''}">
         <div class="asset-thumb">
           ${this.getAssetThumb(asset)}
         </div>
@@ -3305,11 +3314,19 @@ class GameCreatorApp {
     this.selectedAsset = {
       id: item.dataset.id,
       url: item.dataset.url,
-      name: item.dataset.name
+      name: item.dataset.name,
+      mimeType: item.dataset.mimetype
     };
 
     this.selectedAssetInfo.textContent = `Selected: ${this.selectedAsset.name}`;
     this.insertAssetButton.classList.remove('hidden');
+
+    // Show edit button only for images
+    if (this.selectedAsset.mimeType?.startsWith('image/')) {
+      this.editAssetButton?.classList.remove('hidden');
+    } else {
+      this.editAssetButton?.classList.add('hidden');
+    }
   }
 
   clearSelection() {
@@ -3318,6 +3335,7 @@ class GameCreatorApp {
     });
     this.selectedAssetInfo.textContent = '';
     this.insertAssetButton.classList.add('hidden');
+    this.editAssetButton?.classList.add('hidden');
   }
 
   handleFileSelect(files) {
@@ -3563,6 +3581,248 @@ class GameCreatorApp {
   clearAttachedAssets() {
     this.attachedAssetsList = [];
     this.renderAttachedAssets();
+  }
+
+  // ==================== Image Editor ====================
+
+  initImageEditor() {
+    this.imageEditor = new ImageEditor(this.editorCanvas);
+    this.currentTool = null;
+    this.cropSelection = null;
+
+    // Tool buttons
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.selectTool(btn.dataset.tool));
+    });
+
+    // Crop ratio buttons
+    document.querySelectorAll('.ratio-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (this.cropSelection) {
+          this.cropSelection.setAspectRatio(btn.dataset.ratio);
+        }
+      });
+    });
+
+    // Rotate buttons
+    document.querySelectorAll('.rotate-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const angle = parseInt(btn.dataset.angle);
+        this.imageEditor.rotate(angle);
+      });
+    });
+
+    // Resize inputs
+    const resizeWidth = document.getElementById('resizeWidth');
+    const resizeHeight = document.getElementById('resizeHeight');
+    const keepAspect = document.getElementById('keepAspect');
+
+    resizeWidth?.addEventListener('input', () => {
+      if (keepAspect?.checked && this.imageEditor.aspectRatio) {
+        resizeHeight.value = Math.round(resizeWidth.value / this.imageEditor.aspectRatio);
+      }
+    });
+
+    resizeHeight?.addEventListener('input', () => {
+      if (keepAspect?.checked && this.imageEditor.aspectRatio) {
+        resizeWidth.value = Math.round(resizeHeight.value * this.imageEditor.aspectRatio);
+      }
+    });
+
+    // Apply buttons
+    document.getElementById('applyCrop')?.addEventListener('click', () => this.applyCrop());
+    document.getElementById('applyResize')?.addEventListener('click', () => this.applyResize());
+    document.getElementById('applyRemoveBg')?.addEventListener('click', () => this.applyRemoveBackground());
+
+    // Footer buttons
+    document.getElementById('editorUndo')?.addEventListener('click', () => {
+      this.imageEditor.undo();
+      this.updateUndoButton();
+    });
+    document.getElementById('editorReset')?.addEventListener('click', () => {
+      this.imageEditor.reset();
+      this.updateUndoButton();
+    });
+    document.getElementById('cancelEdit')?.addEventListener('click', () => this.closeImageEditor());
+    document.getElementById('saveEditedImage')?.addEventListener('click', () => this.saveEditedImage());
+    document.getElementById('closeImageEditor')?.addEventListener('click', () => this.closeImageEditor());
+  }
+
+  openImageEditor() {
+    if (!this.selectedAsset) return;
+
+    // Initialize editor if not done
+    if (!this.imageEditor) {
+      this.initImageEditor();
+    }
+
+    // Load image
+    this.editingAssetId = this.selectedAsset.id;
+    this.editingAssetName = this.selectedAsset.name;
+    this.imageEditor.loadImage(this.selectedAsset.url).then(() => {
+      // Set resize inputs to current dimensions
+      const resizeWidth = document.getElementById('resizeWidth');
+      const resizeHeight = document.getElementById('resizeHeight');
+      if (resizeWidth && resizeHeight) {
+        resizeWidth.value = this.imageEditor.width;
+        resizeHeight.value = this.imageEditor.height;
+      }
+      this.updateUndoButton();
+    });
+
+    // Show modal
+    this.imageEditorModal?.classList.remove('hidden');
+    this.selectTool(null);
+  }
+
+  closeImageEditor() {
+    this.imageEditorModal?.classList.add('hidden');
+    this.selectTool(null);
+    this.editingAssetId = null;
+    this.editingAssetName = null;
+  }
+
+  selectTool(tool) {
+    this.currentTool = tool;
+
+    // Update toolbar
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tool === tool);
+    });
+
+    // Show/hide panels
+    document.querySelectorAll('.tool-panel').forEach(panel => {
+      panel.classList.add('hidden');
+    });
+
+    if (tool) {
+      const panel = document.getElementById(`${tool === 'remove-bg' ? 'removeBg' : tool}Panel`);
+      panel?.classList.remove('hidden');
+    }
+
+    // Handle crop overlay
+    if (tool === 'crop') {
+      this.startCropSelection();
+    } else {
+      this.endCropSelection();
+    }
+  }
+
+  startCropSelection() {
+    this.cropOverlay?.classList.remove('hidden');
+    this.cropOverlay?.classList.add('active');
+
+    if (!this.cropSelection) {
+      this.cropSelection = new CropSelection(this.editorCanvas, this.cropOverlay, this.imageEditor);
+    }
+    this.cropSelection.enable();
+  }
+
+  endCropSelection() {
+    this.cropOverlay?.classList.add('hidden');
+    this.cropOverlay?.classList.remove('active');
+    this.cropSelection?.disable();
+  }
+
+  applyCrop() {
+    if (!this.cropSelection) return;
+    const rect = this.cropSelection.getRect();
+    if (rect && rect.width > 0 && rect.height > 0) {
+      this.imageEditor.crop(rect.x, rect.y, rect.width, rect.height);
+      this.updateUndoButton();
+
+      // Update resize inputs
+      const resizeWidth = document.getElementById('resizeWidth');
+      const resizeHeight = document.getElementById('resizeHeight');
+      if (resizeWidth && resizeHeight) {
+        resizeWidth.value = this.imageEditor.width;
+        resizeHeight.value = this.imageEditor.height;
+      }
+    }
+    this.selectTool(null);
+  }
+
+  applyResize() {
+    const width = parseInt(document.getElementById('resizeWidth')?.value);
+    const height = parseInt(document.getElementById('resizeHeight')?.value);
+
+    if (width > 0 && height > 0 && width <= 4096 && height <= 4096) {
+      this.imageEditor.resize(width, height);
+      this.updateUndoButton();
+      this.selectTool(null);
+    } else {
+      alert('サイズは1〜4096pxの範囲で指定してください');
+    }
+  }
+
+  async applyRemoveBackground() {
+    const processing = document.getElementById('bgProcessing');
+    const applyBtn = document.getElementById('applyRemoveBg');
+
+    processing?.classList.remove('hidden');
+    if (applyBtn) applyBtn.disabled = true;
+
+    try {
+      await this.imageEditor.removeBackground(this.visitorId);
+      this.updateUndoButton();
+      this.selectTool(null);
+    } catch (error) {
+      console.error('Background removal failed:', error);
+      alert('背景削除に失敗しました: ' + error.message);
+    } finally {
+      processing?.classList.add('hidden');
+      if (applyBtn) applyBtn.disabled = false;
+    }
+  }
+
+  updateUndoButton() {
+    const undoBtn = document.getElementById('editorUndo');
+    if (undoBtn) {
+      undoBtn.disabled = !this.imageEditor?.canUndo();
+    }
+  }
+
+  async saveEditedImage() {
+    try {
+      const blob = await this.imageEditor.toBlob();
+
+      // Create filename with _edited suffix
+      const baseName = this.editingAssetName.replace(/\.[^/.]+$/, '');
+      const ext = this.editingAssetName.includes('.png') || this.imageEditor.hasTransparency ? '.png' : '.jpg';
+      const newName = `${baseName}_edited${ext}`;
+
+      // Upload as new asset
+      const formData = new FormData();
+      formData.append('file', blob, newName);
+      formData.append('visitorId', this.visitorId);
+      formData.append('originalName', newName);
+      if (this.projectManager?.currentProjectId) {
+        formData.append('projectId', this.projectManager.currentProjectId);
+      }
+
+      const response = await fetch('/api/assets/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const result = await response.json();
+
+      // Close editor and refresh asset list
+      this.closeImageEditor();
+      await this.loadAssets();
+
+      // Show success
+      console.log('Image saved:', result.asset);
+    } catch (error) {
+      console.error('Save failed:', error);
+      alert('保存に失敗しました: ' + error.message);
+    }
   }
 
   // ==================== Image Generation ====================
@@ -3880,6 +4140,446 @@ class GameCreatorApp {
     });
 
     this.scrollToLatestMessage(messageDiv);
+  }
+}
+
+// ==================== ImageEditor Class ====================
+
+class ImageEditor {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.originalImage = null;
+    this.currentImage = null;
+    this.history = [];
+    this.width = 0;
+    this.height = 0;
+    this.aspectRatio = 1;
+    this.hasTransparency = false;
+  }
+
+  async loadImage(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        this.originalImage = img;
+        this.currentImage = this.imageToCanvas(img);
+        this.width = img.width;
+        this.height = img.height;
+        this.aspectRatio = img.width / img.height;
+        this.history = [];
+        this.hasTransparency = false;
+        this.render();
+        resolve();
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
+  imageToCanvas(img) {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    return canvas;
+  }
+
+  render() {
+    // Fit canvas to container while maintaining aspect ratio
+    const container = this.canvas.parentElement;
+    const maxWidth = container.clientWidth - 20;
+    const maxHeight = container.clientHeight - 20;
+
+    let displayWidth = this.width;
+    let displayHeight = this.height;
+
+    if (displayWidth > maxWidth) {
+      displayWidth = maxWidth;
+      displayHeight = displayWidth / this.aspectRatio;
+    }
+    if (displayHeight > maxHeight) {
+      displayHeight = maxHeight;
+      displayWidth = displayHeight * this.aspectRatio;
+    }
+
+    this.canvas.width = displayWidth;
+    this.canvas.height = displayHeight;
+    this.canvas.style.width = displayWidth + 'px';
+    this.canvas.style.height = displayHeight + 'px';
+
+    // Draw checkerboard pattern for transparency
+    this.drawCheckerboard();
+
+    // Draw image
+    this.ctx.drawImage(this.currentImage, 0, 0, displayWidth, displayHeight);
+
+    // Store scale for crop calculations
+    this.displayScale = displayWidth / this.width;
+  }
+
+  drawCheckerboard() {
+    const size = 10;
+    const colors = ['#ffffff', '#e0e0e0'];
+    for (let y = 0; y < this.canvas.height; y += size) {
+      for (let x = 0; x < this.canvas.width; x += size) {
+        this.ctx.fillStyle = colors[((x / size) + (y / size)) % 2 | 0];
+        this.ctx.fillRect(x, y, size, size);
+      }
+    }
+  }
+
+  saveHistory() {
+    // Save current state to history
+    const dataUrl = this.currentImage.toDataURL('image/png');
+    this.history.push({
+      dataUrl,
+      width: this.width,
+      height: this.height,
+      hasTransparency: this.hasTransparency
+    });
+    if (this.history.length > 10) this.history.shift();
+  }
+
+  canUndo() {
+    return this.history.length > 0;
+  }
+
+  undo() {
+    if (this.history.length === 0) return;
+
+    const prev = this.history.pop();
+    const img = new Image();
+    img.onload = () => {
+      this.currentImage = this.imageToCanvas(img);
+      this.width = prev.width;
+      this.height = prev.height;
+      this.aspectRatio = this.width / this.height;
+      this.hasTransparency = prev.hasTransparency;
+      this.render();
+    };
+    img.src = prev.dataUrl;
+  }
+
+  reset() {
+    if (!this.originalImage) return;
+    this.currentImage = this.imageToCanvas(this.originalImage);
+    this.width = this.originalImage.width;
+    this.height = this.originalImage.height;
+    this.aspectRatio = this.width / this.height;
+    this.history = [];
+    this.hasTransparency = false;
+    this.render();
+  }
+
+  crop(x, y, width, height) {
+    this.saveHistory();
+
+    const cropped = document.createElement('canvas');
+    cropped.width = width;
+    cropped.height = height;
+    const ctx = cropped.getContext('2d');
+    ctx.drawImage(this.currentImage, x, y, width, height, 0, 0, width, height);
+
+    this.currentImage = cropped;
+    this.width = width;
+    this.height = height;
+    this.aspectRatio = width / height;
+    this.render();
+  }
+
+  resize(newWidth, newHeight) {
+    this.saveHistory();
+
+    const resized = document.createElement('canvas');
+    resized.width = newWidth;
+    resized.height = newHeight;
+    const ctx = resized.getContext('2d');
+    ctx.drawImage(this.currentImage, 0, 0, newWidth, newHeight);
+
+    this.currentImage = resized;
+    this.width = newWidth;
+    this.height = newHeight;
+    this.aspectRatio = newWidth / newHeight;
+    this.render();
+  }
+
+  rotate(degrees) {
+    this.saveHistory();
+
+    const radians = degrees * Math.PI / 180;
+    const w = this.width;
+    const h = this.height;
+
+    // For 90/180/270 degrees, calculate exact dimensions
+    let newW, newH;
+    if (degrees === 90 || degrees === -90 || degrees === 270 || degrees === -270) {
+      newW = h;
+      newH = w;
+    } else if (degrees === 180 || degrees === -180) {
+      newW = w;
+      newH = h;
+    } else {
+      const sin = Math.abs(Math.sin(radians));
+      const cos = Math.abs(Math.cos(radians));
+      newW = Math.ceil(w * cos + h * sin);
+      newH = Math.ceil(h * cos + w * sin);
+    }
+
+    const rotated = document.createElement('canvas');
+    rotated.width = newW;
+    rotated.height = newH;
+    const ctx = rotated.getContext('2d');
+
+    ctx.translate(newW / 2, newH / 2);
+    ctx.rotate(radians);
+    ctx.drawImage(this.currentImage, -w / 2, -h / 2);
+
+    this.currentImage = rotated;
+    this.width = newW;
+    this.height = newH;
+    this.aspectRatio = newW / newH;
+    this.render();
+  }
+
+  async removeBackground(visitorId) {
+    // Get current image as base64
+    const dataUrl = this.currentImage.toDataURL('image/png');
+
+    const response = await fetch('/api/assets/remove-background', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: dataUrl,
+        visitorId
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Background removal failed');
+    }
+
+    const result = await response.json();
+
+    // Load result image
+    this.saveHistory();
+
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        this.currentImage = this.imageToCanvas(img);
+        this.width = img.width;
+        this.height = img.height;
+        this.aspectRatio = this.width / this.height;
+        this.hasTransparency = true;
+        this.render();
+        resolve();
+      };
+      img.onerror = reject;
+      img.src = result.image;
+    });
+  }
+
+  toDataURL(format = 'image/png') {
+    return this.currentImage.toDataURL(format);
+  }
+
+  toBlob(format = 'image/png', quality = 0.92) {
+    return new Promise(resolve => {
+      this.currentImage.toBlob(resolve, format, quality);
+    });
+  }
+}
+
+// ==================== CropSelection Class ====================
+
+class CropSelection {
+  constructor(canvas, overlay, editor) {
+    this.canvas = canvas;
+    this.overlay = overlay;
+    this.editor = editor;
+    this.rect = null;
+    this.aspectRatio = null;
+    this.isDragging = false;
+    this.startX = 0;
+    this.startY = 0;
+    this.enabled = false;
+
+    this.handleMouseDown = this.handleMouseDown.bind(this);
+    this.handleMouseMove = this.handleMouseMove.bind(this);
+    this.handleMouseUp = this.handleMouseUp.bind(this);
+    this.handleTouchStart = this.handleTouchStart.bind(this);
+    this.handleTouchMove = this.handleTouchMove.bind(this);
+    this.handleTouchEnd = this.handleTouchEnd.bind(this);
+  }
+
+  enable() {
+    this.enabled = true;
+    this.rect = null;
+    this.overlay.innerHTML = '';
+
+    // Use overlay for events since it's on top of canvas
+    this.overlay.addEventListener('mousedown', this.handleMouseDown);
+    document.addEventListener('mousemove', this.handleMouseMove);
+    document.addEventListener('mouseup', this.handleMouseUp);
+    this.overlay.addEventListener('touchstart', this.handleTouchStart);
+    document.addEventListener('touchmove', this.handleTouchMove);
+    document.addEventListener('touchend', this.handleTouchEnd);
+  }
+
+  disable() {
+    this.enabled = false;
+    this.overlay.removeEventListener('mousedown', this.handleMouseDown);
+    document.removeEventListener('mousemove', this.handleMouseMove);
+    document.removeEventListener('mouseup', this.handleMouseUp);
+    this.overlay.removeEventListener('touchstart', this.handleTouchStart);
+    document.removeEventListener('touchmove', this.handleTouchMove);
+    document.removeEventListener('touchend', this.handleTouchEnd);
+    this.overlay.innerHTML = '';
+  }
+
+  setAspectRatio(ratio) {
+    if (!ratio || ratio === 'free') {
+      this.aspectRatio = null;
+    } else {
+      const [w, h] = ratio.split(':').map(Number);
+      this.aspectRatio = w / h;
+    }
+  }
+
+  getRect() {
+    if (!this.rect) return null;
+
+    // Convert display coordinates to actual image coordinates
+    const scale = this.editor.displayScale;
+    return {
+      x: Math.round(this.rect.x / scale),
+      y: Math.round(this.rect.y / scale),
+      width: Math.round(this.rect.width / scale),
+      height: Math.round(this.rect.height / scale)
+    };
+  }
+
+  getMousePos(e) {
+    // Use overlay rect since events come from overlay
+    const rect = this.overlay.getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(e.clientX - rect.left, rect.width)),
+      y: Math.max(0, Math.min(e.clientY - rect.top, rect.height))
+    };
+  }
+
+  getTouchPos(e) {
+    const touch = e.touches[0] || e.changedTouches[0];
+    return this.getMousePos(touch);
+  }
+
+  handleMouseDown(e) {
+    if (!this.enabled) return;
+    e.preventDefault();
+    const pos = this.getMousePos(e);
+    this.startDrag(pos);
+  }
+
+  handleTouchStart(e) {
+    if (!this.enabled) return;
+    e.preventDefault();
+    const pos = this.getTouchPos(e);
+    this.startDrag(pos);
+  }
+
+  startDrag(pos) {
+    this.isDragging = true;
+    this.startX = pos.x;
+    this.startY = pos.y;
+    this.rect = { x: pos.x, y: pos.y, width: 0, height: 0 };
+  }
+
+  handleMouseMove(e) {
+    if (!this.isDragging) return;
+    const pos = this.getMousePos(e);
+    this.updateDrag(pos);
+  }
+
+  handleTouchMove(e) {
+    if (!this.isDragging) return;
+    e.preventDefault();
+    const pos = this.getTouchPos(e);
+    this.updateDrag(pos);
+  }
+
+  updateDrag(pos) {
+    let width = pos.x - this.startX;
+    let height = pos.y - this.startY;
+
+    // Handle negative dimensions (dragging up/left)
+    let x = this.startX;
+    let y = this.startY;
+
+    if (width < 0) {
+      x = pos.x;
+      width = -width;
+    }
+    if (height < 0) {
+      y = pos.y;
+      height = -height;
+    }
+
+    // Apply aspect ratio constraint
+    if (this.aspectRatio) {
+      const currentRatio = width / height;
+      if (currentRatio > this.aspectRatio) {
+        width = height * this.aspectRatio;
+      } else {
+        height = width / this.aspectRatio;
+      }
+    }
+
+    // Clamp to canvas bounds
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (x + width > this.canvas.width) width = this.canvas.width - x;
+    if (y + height > this.canvas.height) height = this.canvas.height - y;
+
+    this.rect = { x, y, width, height };
+    this.drawOverlay();
+    this.updateCropInfo();
+  }
+
+  handleMouseUp() {
+    this.isDragging = false;
+  }
+
+  handleTouchEnd() {
+    this.isDragging = false;
+  }
+
+  drawOverlay() {
+    if (!this.rect) return;
+
+    const { x, y, width, height } = this.rect;
+
+    this.overlay.innerHTML = `
+      <div class="crop-selection" style="left:${x}px;top:${y}px;width:${width}px;height:${height}px;">
+        <div class="crop-handle nw"></div>
+        <div class="crop-handle ne"></div>
+        <div class="crop-handle sw"></div>
+        <div class="crop-handle se"></div>
+      </div>
+    `;
+  }
+
+  updateCropInfo() {
+    const info = document.getElementById('cropSizeInfo');
+    if (info && this.rect) {
+      const actualRect = this.getRect();
+      if (actualRect) {
+        info.textContent = `${actualRect.width} × ${actualRect.height} px`;
+      }
+    }
   }
 }
 
