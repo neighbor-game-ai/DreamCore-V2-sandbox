@@ -803,6 +803,7 @@ class GameCreatorApp {
     if (!project) return;
 
     const modal = document.getElementById('renameModal');
+    const modalContent = modal?.querySelector('.new-game-content');
     const input = document.getElementById('renameInput');
     const confirmBtn = document.getElementById('confirmRename');
     const cancelBtn = document.getElementById('cancelRename');
@@ -815,11 +816,57 @@ class GameCreatorApp {
     input.focus();
     input.select();
 
+    // Mobile keyboard handling
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    let handleViewportResize = null;
+
+    if (isMobile && window.visualViewport && modalContent) {
+      handleViewportResize = () => {
+        const vv = window.visualViewport;
+        const keyboardHeight = window.innerHeight - vv.height;
+
+        if (keyboardHeight > 100) {
+          // Keyboard is visible - move modal up
+          modalContent.style.position = 'fixed';
+          modalContent.style.bottom = `${keyboardHeight + 20}px`;
+          modalContent.style.top = 'auto';
+          modalContent.style.left = '16px';
+          modalContent.style.right = '16px';
+          modalContent.style.transform = 'none';
+          modalContent.style.width = 'auto';
+        } else {
+          // Keyboard hidden - reset
+          modalContent.style.position = '';
+          modalContent.style.bottom = '';
+          modalContent.style.top = '';
+          modalContent.style.left = '';
+          modalContent.style.right = '';
+          modalContent.style.transform = '';
+          modalContent.style.width = '';
+        }
+      };
+      window.visualViewport.addEventListener('resize', handleViewportResize);
+    }
+
     const closeModal = () => {
       modal.classList.add('hidden');
+      // Reset modal content position
+      if (modalContent) {
+        modalContent.style.position = '';
+        modalContent.style.bottom = '';
+        modalContent.style.top = '';
+        modalContent.style.left = '';
+        modalContent.style.right = '';
+        modalContent.style.transform = '';
+        modalContent.style.width = '';
+      }
+      // Remove event listeners
       confirmBtn.removeEventListener('click', handleConfirm);
       cancelBtn.removeEventListener('click', closeModal);
       input.removeEventListener('keydown', handleKeydown);
+      if (handleViewportResize) {
+        window.visualViewport.removeEventListener('resize', handleViewportResize);
+      }
     };
 
     const handleConfirm = () => {
