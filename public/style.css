@@ -2842,7 +2842,7 @@ body::before {
 /* Ghost button (edit) - Secondary text action */
 .ghost-btn {
   height: 44px;
-  padding: 0 var(--s-16);
+  padding: 0 var(--s-16) 0 0;
   background: transparent;
   border: 1.5px solid var(--gray-300);
   border-radius: 22px;
@@ -2907,7 +2907,7 @@ body::before {
 
   .ghost-btn {
     height: 40px;
-    padding: 0 var(--s-12);
+    padding: 0 var(--s-12) 0 0;
     font-size: 0.8125rem;
   }
 
