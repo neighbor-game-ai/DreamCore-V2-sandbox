@@ -253,7 +253,8 @@ class PublishPage {
           this.thumbnailImage.src = result.thumbnailUrl;
           this.thumbnailImage.classList.remove('hidden');
           if (placeholder) placeholder.classList.add('hidden');
-          this.scheduleAutoSave();
+          // Save immediately (not debounced) to persist thumbnail
+          await this.savePublishData();
         }
       }
     } catch (error) {
