@@ -3154,8 +3154,9 @@ body::before {
   box-shadow: 0 4px 12px var(--red-glow);
 }
 
-/* Mobile styles for Image Editor */
+/* ===== Mobile Image Editor - Instagram/X Style (Light) ===== */
 @media (max-width: 768px) {
+  /* Full-screen modal */
   .image-editor-modal {
     width: 100%;
     height: 100%;
@@ -3164,40 +3165,380 @@ body::before {
     border-radius: 0;
     display: flex;
     flex-direction: column;
+    background: var(--white);
+    overflow: hidden;
   }
 
+  /* Minimal header */
+  .image-editor-modal .modal-header {
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+    padding: var(--s-12) var(--s-16);
+    flex-shrink: 0;
+  }
+
+  .image-editor-modal .modal-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  /* Main body - flex layout */
   .image-editor-body {
     flex: 1;
-    overflow-y: auto;
-    padding: var(--s-12);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    background: var(--gray-50);
   }
 
+  /* Canvas area takes most of the screen */
   .editor-canvas-area {
-    min-height: 200px;
-    max-height: 40vh;
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    background: var(--gray-100);
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
   }
 
+  .canvas-wrapper {
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #editorCanvas {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  /* Bottom toolbar */
   .editor-toolbar {
-    gap: var(--s-4);
+    flex-shrink: 0;
+    display: flex;
+    gap: 0;
+    justify-content: stretch;
+    background: var(--white);
+    border-top: 1px solid var(--gray-200);
+    padding: var(--s-8) 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
 
+  .editor-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Tool buttons */
   .tool-btn {
-    padding: var(--s-8) var(--s-12);
-    min-width: 60px;
+    flex: 1;
+    min-width: 72px;
+    padding: var(--s-12) var(--s-8);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    color: var(--gray-500);
+    transition: all 0.15s ease;
+    position: relative;
+  }
+
+  .tool-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 2px;
+    background: var(--red);
+    transition: width 0.2s ease;
+  }
+
+  .tool-btn:hover,
+  .tool-btn:active {
+    background: var(--gray-50);
+    color: var(--gray-700);
+  }
+
+  .tool-btn.active {
+    color: var(--red);
+    background: transparent;
+  }
+
+  .tool-btn.active::after {
+    width: 24px;
   }
 
   .tool-btn svg {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
+    stroke-width: 1.5;
   }
 
   .tool-btn span {
     font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    margin-top: var(--s-4);
   }
 
-  .image-editor-footer {
-    padding: var(--s-12) var(--s-16);
+  /* Tool panels - slide up from bottom */
+  .tool-panels {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    min-height: 0;
+    pointer-events: none;
   }
+
+  .tool-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--white);
+    border-radius: 16px 16px 0 0;
+    padding: var(--s-20) var(--s-16) calc(var(--s-16) + env(safe-area-inset-bottom));
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    pointer-events: auto;
+    max-height: 50vh;
+    overflow-y: auto;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  }
+
+  .tool-panel:not(.hidden) {
+    transform: translateY(0);
+  }
+
+  /* Panel drag indicator */
+  .tool-panel::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    background: var(--gray-300);
+    border-radius: 2px;
+  }
+
+  .panel-title {
+    color: var(--gray-800);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    margin-bottom: var(--s-16);
+    text-align: center;
+    padding-top: var(--s-8);
+  }
+
+  .panel-desc {
+    color: var(--gray-500);
+    text-align: center;
+  }
+
+  /* Ratio buttons - pill style */
+  .preset-ratios {
+    display: flex;
+    gap: var(--s-8);
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: var(--s-16);
+  }
+
+  .ratio-btn {
+    padding: var(--s-10) var(--s-16);
+    background: var(--gray-100);
+    border: 1px solid var(--gray-200);
+    border-radius: 20px;
+    color: var(--gray-700);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .ratio-btn:hover {
+    background: var(--gray-200);
+  }
+
+  .ratio-btn.active {
+    background: var(--red);
+    border-color: var(--red);
+    color: var(--white);
+  }
+
+  .crop-info {
+    color: var(--gray-500);
+    text-align: center;
+    font-size: 0.8125rem;
+  }
+
+  /* Resize inputs */
+  .resize-inputs {
+    display: flex;
+    gap: var(--s-12);
+    justify-content: center;
+    margin-bottom: var(--s-16);
+  }
+
+  .input-group {
+    display: flex;
+    align-items: center;
+    gap: var(--s-8);
+    background: var(--gray-100);
+    border-radius: 12px;
+    padding: var(--s-8) var(--s-12);
+  }
+
+  .input-group label {
+    color: var(--gray-500);
+    font-size: 0.75rem;
+    min-width: auto;
+  }
+
+  .input-group input {
+    width: 60px;
+    padding: var(--s-6);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--gray-300);
+    color: var(--gray-800);
+    font-size: 0.9375rem;
+    text-align: center;
+  }
+
+  .input-group input:focus {
+    border-bottom-color: var(--red);
+    outline: none;
+  }
+
+  .input-group span {
+    color: var(--gray-400);
+  }
+
+  .checkbox-label {
+    color: var(--gray-600);
+    justify-content: center;
+    margin-bottom: var(--s-16);
+  }
+
+  .checkbox-label input {
+    accent-color: var(--red);
+  }
+
+  /* Rotate buttons */
+  .rotate-buttons {
+    display: flex;
+    gap: var(--s-8);
+    justify-content: center;
+  }
+
+  .rotate-btn {
+    flex: none;
+    width: 80px;
+    padding: var(--s-12);
+    background: var(--gray-100);
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    color: var(--gray-700);
+    font-size: 0.8125rem;
+    transition: all 0.2s ease;
+  }
+
+  .rotate-btn:hover,
+  .rotate-btn:active {
+    background: var(--gray-200);
+    transform: scale(0.98);
+  }
+
+  /* Apply button */
+  .apply-btn {
+    background: var(--red);
+    color: var(--white);
+    border-radius: 12px;
+    padding: var(--s-14) var(--s-24);
+    font-size: 0.9375rem;
+    margin-top: var(--s-8);
+  }
+
+  .apply-btn:hover {
+    transform: none;
+    box-shadow: none;
+    opacity: 0.9;
+  }
+
+  /* Processing indicator */
+  .processing-indicator {
+    color: var(--gray-600);
+  }
+
+  .processing-indicator .spinner {
+    border-color: var(--gray-200);
+    border-top-color: var(--red);
+  }
+
+  /* Footer */
+  .image-editor-footer {
+    flex-shrink: 0;
+    padding: var(--s-12) var(--s-16);
+    padding-bottom: calc(var(--s-12) + env(safe-area-inset-bottom));
+    background: var(--white);
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-left,
+  .footer-right {
+    display: flex;
+    gap: var(--s-8);
+  }
+
+  .secondary-btn {
+    padding: var(--s-10) var(--s-16);
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border-radius: 8px;
+    font-size: 0.875rem;
+  }
+
+  .secondary-btn:hover {
+    background: var(--gray-200);
+  }
+
+  .secondary-btn:disabled {
+    color: var(--gray-400);
+    background: var(--gray-50);
+  }
+
+  .primary-btn {
+    padding: var(--s-10) var(--s-20);
+    background: var(--red);
+    color: var(--white);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .primary-btn:hover {
+    transform: none;
+    box-shadow: none;
+    opacity: 0.9;
+  }
+
 }
 
 /* ===== Image Generation Modal ===== */
