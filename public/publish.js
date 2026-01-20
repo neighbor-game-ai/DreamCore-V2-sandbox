@@ -223,52 +223,10 @@ class PublishPage {
   }
 
   setFieldsGenerating(isGenerating) {
-    // Title field
-    const titleWrapper = this.titleInput.closest('.input-with-generate');
-    const titleGroup = this.titleInput.closest('.form-group');
-
-    // Description field
-    const descWrapper = this.descriptionInput.closest('.input-with-generate');
-    const descGroup = this.descriptionInput.closest('.form-group');
-
-    // How to play field
-    const howToPlayWrapper = this.howToPlayInput.closest('.input-with-generate');
-    const howToPlayGroup = this.howToPlayInput.closest('.form-group');
-
-    // Tags
-    const tagsGroup = this.tagsContainer.closest('.form-group');
-
-    const elements = [
-      titleWrapper, titleGroup,
-      descWrapper, descGroup,
-      howToPlayWrapper, howToPlayGroup,
-      tagsGroup, this.tagsContainer
-    ];
-
-    const buttons = [
-      this.regenerateTitleBtn,
-      this.regenerateDescriptionBtn,
-      this.regenerateHowToPlayBtn,
-      this.regenerateTagsBtn
-    ];
-
-    if (isGenerating) {
-      elements.forEach(el => el?.classList.add('generating'));
-      buttons.forEach(btn => btn?.classList.add('generating'));
-
-      // Set placeholder text
-      this.titleInput.placeholder = '生成中...';
-      this.descriptionInput.placeholder = '生成中...';
-      this.howToPlayInput.placeholder = '生成中...';
-    } else {
-      elements.forEach(el => el?.classList.remove('generating'));
-      buttons.forEach(btn => btn?.classList.remove('generating'));
-
-      // Restore placeholder text
-      this.titleInput.placeholder = 'ゲームのタイトル';
-      this.descriptionInput.placeholder = 'ゲームの概要や特徴';
-      this.howToPlayInput.placeholder = 'ゲームのルールと操作方法';
-    }
+    // Toggle all fields at once (for initial generation)
+    ['title', 'description', 'howToPlay', 'tags'].forEach(field => {
+      this.setFieldGenerating(field, isGenerating);
+    });
   }
 
   async generateThumbnail() {
@@ -413,26 +371,45 @@ class PublishPage {
     }
   }
 
-  async regenerateAll() {
+  async regenerateField(fieldName) {
     if (this.isGenerating) return;
 
     this.isGenerating = true;
-    this.setFieldsGenerating(true);
+    this.setFieldGenerating(fieldName, true);
 
     try {
       const response = await fetch(`/api/projects/${this.projectId}/generate-publish-info`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ visitorId: this.visitorId })
+        body: JSON.stringify({ visitorId: this.visitorId, field: fieldName })
       });
 
       if (response.ok) {
         const result = await response.json();
-        this.publishData.title = result.title || this.publishData.title;
-        this.publishData.description = result.description || this.publishData.description;
-        this.publishData.howToPlay = result.howToPlay || this.publishData.howToPlay;
-        this.publishData.tags = result.tags || this.publishData.tags;
-        this.updateUI();
+
+        // Only update the requested field
+        switch (fieldName) {
+          case 'title':
+            this.publishData.title = result.title || this.publishData.title;
+            this.titleInput.value = this.publishData.title;
+            this.titleCount.textContent = this.publishData.title.length;
+            break;
+          case 'description':
+            this.publishData.description = result.description || this.publishData.description;
+            this.descriptionInput.value = this.publishData.description;
+            this.descriptionCount.textContent = this.publishData.description.length;
+            break;
+          case 'howToPlay':
+            this.publishData.howToPlay = result.howToPlay || this.publishData.howToPlay;
+            this.howToPlayInput.value = this.publishData.howToPlay;
+            this.howToPlayCount.textContent = this.publishData.howToPlay.length;
+            break;
+          case 'tags':
+            this.publishData.tags = result.tags || this.publishData.tags;
+            this.renderTags();
+            break;
+        }
+
         this.scheduleAutoSave();
       }
     } catch (error) {
@@ -440,24 +417,61 @@ class PublishPage {
       alert('再生成に失敗しました');
     } finally {
       this.isGenerating = false;
-      this.setFieldsGenerating(false);
+      this.setFieldGenerating(fieldName, false);
+    }
+  }
+
+  setFieldGenerating(fieldName, isGenerating) {
+    let wrapper, group, button;
+
+    switch (fieldName) {
+      case 'title':
+        wrapper = this.titleInput.closest('.input-with-generate');
+        group = this.titleInput.closest('.form-group');
+        button = this.regenerateTitleBtn;
+        break;
+      case 'description':
+        wrapper = this.descriptionInput.closest('.input-with-generate');
+        group = this.descriptionInput.closest('.form-group');
+        button = this.regenerateDescriptionBtn;
+        break;
+      case 'howToPlay':
+        wrapper = this.howToPlayInput.closest('.input-with-generate');
+        group = this.howToPlayInput.closest('.form-group');
+        button = this.regenerateHowToPlayBtn;
+        break;
+      case 'tags':
+        wrapper = this.tagsContainer;
+        group = this.tagsContainer.closest('.form-group');
+        button = this.regenerateTagsBtn;
+        break;
+    }
+
+    if (isGenerating) {
+      wrapper?.classList.add('generating');
+      group?.classList.add('generating');
+      button?.classList.add('generating');
+    } else {
+      wrapper?.classList.remove('generating');
+      group?.classList.remove('generating');
+      button?.classList.remove('generating');
     }
   }
 
   async regenerateTitle() {
-    await this.regenerateAll();
+    await this.regenerateField('title');
   }
 
   async regenerateDescription() {
-    await this.regenerateAll();
+    await this.regenerateField('description');
   }
 
   async regenerateTags() {
-    await this.regenerateAll();
+    await this.regenerateField('tags');
   }
 
   async regenerateHowToPlay() {
-    await this.regenerateAll();
+    await this.regenerateField('howToPlay');
   }
 
   async regenerateThumbnail() {
