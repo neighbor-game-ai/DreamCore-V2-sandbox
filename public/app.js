@@ -3243,8 +3243,10 @@ class GameCreatorApp {
   }
 
   renderAssetItems(assets, showActions) {
-    return assets.map(asset => `
-      <div class="asset-item ${asset.isPublic ? 'public-badge' : ''}" data-id="${asset.id}" data-url="${asset.url}" data-name="${asset.filename}" data-mimetype="${asset.mimeType || ''}">
+    return assets.map(asset => {
+      const projectId = asset.projects && asset.projects.length > 0 ? asset.projects[0].id : '';
+      return `
+      <div class="asset-item ${asset.isPublic ? 'public-badge' : ''}" data-id="${asset.id}" data-url="${asset.url}" data-name="${asset.filename}" data-mimetype="${asset.mimeType || ''}" data-projectid="${projectId}">
         <div class="asset-thumb">
           ${this.getAssetThumb(asset)}
         </div>
@@ -3256,7 +3258,7 @@ class GameCreatorApp {
           </div>
         ` : ''}
       </div>
-    `).join('');
+    `}).join('');
   }
 
   renderAssetGrid(container, assets, showActions) {
@@ -3270,8 +3272,10 @@ class GameCreatorApp {
       return;
     }
 
-    container.innerHTML = assets.map(asset => `
-      <div class="asset-item ${asset.isPublic ? 'public-badge' : ''}" data-id="${asset.id}" data-url="${asset.url}" data-name="${asset.filename}" data-mimetype="${asset.mimeType || ''}">
+    container.innerHTML = assets.map(asset => {
+      const projectId = asset.projects && asset.projects.length > 0 ? asset.projects[0].id : '';
+      return `
+      <div class="asset-item ${asset.isPublic ? 'public-badge' : ''}" data-id="${asset.id}" data-url="${asset.url}" data-name="${asset.filename}" data-mimetype="${asset.mimeType || ''}" data-projectid="${projectId}">
         <div class="asset-thumb">
           ${this.getAssetThumb(asset)}
         </div>
@@ -3283,7 +3287,7 @@ class GameCreatorApp {
           </div>
         ` : ''}
       </div>
-    `).join('');
+    `}).join('');
 
     // Add click handlers for selection
     container.querySelectorAll('.asset-item').forEach(item => {
@@ -3315,7 +3319,8 @@ class GameCreatorApp {
       id: item.dataset.id,
       url: item.dataset.url,
       name: item.dataset.name,
-      mimeType: item.dataset.mimetype
+      mimeType: item.dataset.mimetype,
+      projectId: item.dataset.projectid || ''
     };
 
     this.selectedAssetInfo.textContent = `Selected: ${this.selectedAsset.name}`;
@@ -3798,8 +3803,9 @@ class GameCreatorApp {
       formData.append('file', blob, newName);
       formData.append('visitorId', this.visitorId);
       formData.append('originalName', newName);
-      if (this.projectManager?.currentProjectId) {
-        formData.append('projectId', this.projectManager.currentProjectId);
+      // Save to current project
+      if (this.currentProjectId) {
+        formData.append('projectId', this.currentProjectId);
       }
 
       const response = await fetch('/api/assets/upload', {
