@@ -1087,9 +1087,27 @@ class GameCreatorApp {
   }
 
   setupEventListeners() {
-    // Games filter tabs
+    // Games filter tabs with animated slider
+    const filterSlider = document.getElementById('filterSlider');
     this.gamesFilter?.querySelectorAll('.filter-tab').forEach(tab => {
       tab.addEventListener('click', () => {
+        const index = parseInt(tab.dataset.index);
+
+        // Animate slider with stretch effect
+        if (filterSlider && this.gamesFilter) {
+          // Add stretch effect
+          filterSlider.classList.add('stretching');
+
+          // Update position via CSS variable
+          this.gamesFilter.style.setProperty('--slider-index', index);
+
+          // Remove stretch after animation starts
+          setTimeout(() => {
+            filterSlider.classList.remove('stretching');
+          }, 150);
+        }
+
+        // Update active state
         this.gamesFilter.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         this.currentProjectFilter = tab.dataset.filter;

@@ -52,15 +52,16 @@
     <!-- Project Grid -->
     <div class="games-section">
       <div class="games-filter-bar" id="gamesFilter">
-        <button class="filter-tab active" data-filter="all">
+        <div class="filter-slider" id="filterSlider"></div>
+        <button class="filter-tab active" data-filter="all" data-index="0">
           <span class="filter-count" id="filterCountAll">0</span>
           ALL
         </button>
-        <button class="filter-tab" data-filter="published">
+        <button class="filter-tab" data-filter="published" data-index="1">
           <span class="filter-count" id="filterCountPublished">0</span>
           公開
         </button>
-        <button class="filter-tab" data-filter="draft">
+        <button class="filter-tab" data-filter="draft" data-index="2">
           <span class="filter-count" id="filterCountDraft">0</span>
           下書き
         </button>
