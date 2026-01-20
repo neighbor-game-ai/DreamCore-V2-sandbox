@@ -140,7 +140,6 @@ class GameCreatorApp {
     // Image Editor elements
     this.imageEditorModal = document.getElementById('imageEditorModal');
     this.editorCanvas = document.getElementById('editorCanvas');
-    this.cropOverlay = document.getElementById('cropOverlay');
 
     // Asset state
     this.selectedAsset = null;
@@ -3593,20 +3592,31 @@ class GameCreatorApp {
   initImageEditor() {
     this.imageEditor = new ImageEditor(this.editorCanvas);
     this.currentTool = null;
-    this.cropSelection = null;
+    this.cropper = null;
+    this.cropAspectRatio = NaN;
 
     // Tool buttons
     document.querySelectorAll('.tool-btn').forEach(btn => {
       btn.addEventListener('click', () => this.selectTool(btn.dataset.tool));
     });
 
-    // Crop ratio buttons
+    // Crop ratio buttons (for Cropper.js)
     document.querySelectorAll('.ratio-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        if (this.cropSelection) {
-          this.cropSelection.setAspectRatio(btn.dataset.ratio);
+
+        const ratio = btn.dataset.ratio;
+        if (ratio === 'free') {
+          this.cropAspectRatio = NaN;
+        } else {
+          const [w, h] = ratio.split(':').map(Number);
+          this.cropAspectRatio = w / h;
+        }
+
+        // Update Cropper.js if active
+        if (this.cropper) {
+          this.cropper.setAspectRatio(this.cropAspectRatio);
         }
       });
     });
@@ -3707,35 +3717,72 @@ class GameCreatorApp {
       panel?.classList.remove('hidden');
     }
 
-    // Handle crop overlay
+    // Handle Cropper.js
     if (tool === 'crop') {
-      this.startCropSelection();
+      this.startCropper();
     } else {
-      this.endCropSelection();
+      this.endCropper();
     }
   }
 
-  startCropSelection() {
-    this.cropOverlay?.classList.remove('hidden');
-    this.cropOverlay?.classList.add('active');
+  startCropper() {
+    // Get current image from canvas as data URL
+    const dataUrl = this.editorCanvas.toDataURL('image/png');
 
-    if (!this.cropSelection) {
-      this.cropSelection = new CropSelection(this.editorCanvas, this.cropOverlay, this.imageEditor);
-    }
-    this.cropSelection.enable();
+    // Show cropper container, hide canvas
+    const cropperWrapper = document.getElementById('cropperWrapper');
+    const cropperImage = document.getElementById('cropperImage');
+    const canvasWrapper = this.editorCanvas.parentElement;
+
+    canvasWrapper.classList.add('hidden');
+    cropperWrapper.classList.remove('hidden');
+
+    // Set image source
+    cropperImage.src = dataUrl;
+
+    // Initialize Cropper.js
+    this.cropper = new Cropper(cropperImage, {
+      viewMode: 1,
+      dragMode: 'move',
+      aspectRatio: this.cropAspectRatio || NaN,
+      autoCropArea: 1,
+      restore: false,
+      guides: true,
+      center: true,
+      highlight: false,
+      cropBoxMovable: true,
+      cropBoxResizable: true,
+      toggleDragModeOnDblclick: false,
+      responsive: true,
+      background: true
+    });
   }
 
-  endCropSelection() {
-    this.cropOverlay?.classList.add('hidden');
-    this.cropOverlay?.classList.remove('active');
-    this.cropSelection?.disable();
+  endCropper() {
+    if (this.cropper) {
+      this.cropper.destroy();
+      this.cropper = null;
+    }
+
+    // Hide cropper container, show canvas
+    const cropperWrapper = document.getElementById('cropperWrapper');
+    const canvasWrapper = this.editorCanvas.parentElement;
+
+    cropperWrapper?.classList.add('hidden');
+    canvasWrapper?.classList.remove('hidden');
   }
 
   applyCrop() {
-    if (!this.cropSelection) return;
-    const rect = this.cropSelection.getRect();
-    if (rect && rect.width > 0 && rect.height > 0) {
-      this.imageEditor.crop(rect.x, rect.y, rect.width, rect.height);
+    if (!this.cropper) return;
+
+    // Get cropped canvas from Cropper.js
+    const croppedCanvas = this.cropper.getCroppedCanvas();
+    if (!croppedCanvas) return;
+
+    // Apply cropped image to ImageEditor
+    const img = new Image();
+    img.onload = () => {
+      this.imageEditor.loadImageFromElement(img);
       this.updateUndoButton();
 
       // Update resize inputs
@@ -3745,7 +3792,9 @@ class GameCreatorApp {
         resizeWidth.value = this.imageEditor.width;
         resizeHeight.value = this.imageEditor.height;
       }
-    }
+    };
+    img.src = croppedCanvas.toDataURL('image/png');
+
     this.selectTool(null);
   }
 
@@ -4184,6 +4233,15 @@ class ImageEditor {
     });
   }
 
+  loadImageFromElement(img) {
+    this.saveHistory();
+    this.currentImage = this.imageToCanvas(img);
+    this.width = img.width;
+    this.height = img.height;
+    this.aspectRatio = img.width / img.height;
+    this.render();
+  }
+
   imageToCanvas(img) {
     const canvas = document.createElement('canvas');
     canvas.width = img.width;
@@ -4412,6 +4470,9 @@ class CropSelection {
     this.aspectRatio = null;
     this.enabled = false;
 
+    // Detect touch device
+    this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
     // Drag state
     this.dragMode = null; // 'move', 'nw', 'ne', 'sw', 'se', 'n', 's', 'e', 'w'
     this.dragStart = { x: 0, y: 0 };
@@ -4429,9 +4490,13 @@ class CropSelection {
   enable() {
     this.enabled = true;
 
-    // Initialize with full canvas selection
+    // Set overlay size to match canvas exactly
     const w = this.canvas.width;
     const h = this.canvas.height;
+    this.overlay.style.width = w + 'px';
+    this.overlay.style.height = h + 'px';
+
+    // Initialize with full canvas selection
     this.rect = { x: 0, y: 0, width: w, height: h };
 
     // Apply aspect ratio if set
@@ -4442,11 +4507,12 @@ class CropSelection {
     this.drawOverlay();
     this.updateCropInfo();
 
-    // Add event listeners
+    // Add event listeners - use canvas for touch events (more reliable on mobile)
     this.overlay.addEventListener('mousedown', this.handleMouseDown);
     document.addEventListener('mousemove', this.handleMouseMove);
     document.addEventListener('mouseup', this.handleMouseUp);
-    this.overlay.addEventListener('touchstart', this.handleTouchStart, { passive: false });
+    // Touch events on canvas parent wrapper for better mobile support
+    this.canvas.parentElement.addEventListener('touchstart', this.handleTouchStart, { passive: false });
     document.addEventListener('touchmove', this.handleTouchMove, { passive: false });
     document.addEventListener('touchend', this.handleTouchEnd);
   }
@@ -4457,7 +4523,7 @@ class CropSelection {
     this.overlay.removeEventListener('mousedown', this.handleMouseDown);
     document.removeEventListener('mousemove', this.handleMouseMove);
     document.removeEventListener('mouseup', this.handleMouseUp);
-    this.overlay.removeEventListener('touchstart', this.handleTouchStart);
+    this.canvas.parentElement.removeEventListener('touchstart', this.handleTouchStart);
     document.removeEventListener('touchmove', this.handleTouchMove);
     document.removeEventListener('touchend', this.handleTouchEnd);
     this.overlay.innerHTML = '';
@@ -4523,7 +4589,7 @@ class CropSelection {
   }
 
   getMousePos(e) {
-    const rect = this.overlay.getBoundingClientRect();
+    const rect = this.canvas.getBoundingClientRect();
     return {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top
@@ -4532,14 +4598,22 @@ class CropSelection {
 
   getTouchPos(e) {
     const touch = e.touches[0] || e.changedTouches[0];
-    return this.getMousePos(touch);
+    const rect = this.canvas.getBoundingClientRect();
+    // Scale touch position to canvas coordinates
+    const scaleX = this.canvas.width / rect.width;
+    const scaleY = this.canvas.height / rect.height;
+    return {
+      x: (touch.clientX - rect.left) * scaleX,
+      y: (touch.clientY - rect.top) * scaleY
+    };
   }
 
   getHandleAtPos(pos) {
     if (!this.rect) return null;
 
     const { x, y, width, height } = this.rect;
-    const handleSize = 20; // Hit area size
+    // Much larger hit area for touch devices
+    const handleSize = this.isTouchDevice ? 80 : 20;
     const hs = handleSize / 2;
 
     // Check corners first (they have priority)
@@ -4563,6 +4637,15 @@ class CropSelection {
       return 'move';
     }
 
+    // On touch devices, if touch is anywhere near the selection, allow move
+    if (this.isTouchDevice) {
+      const margin = 30;
+      if (pos.x >= x - margin && pos.x <= x + width + margin &&
+          pos.y >= y - margin && pos.y <= y + height + margin) {
+        return 'move';
+      }
+    }
+
     return null;
   }
 
@@ -4580,6 +4663,7 @@ class CropSelection {
   handleTouchStart(e) {
     if (!this.enabled) return;
     e.preventDefault();
+    e.stopPropagation();
     const pos = this.getTouchPos(e);
     this.startDrag(pos);
   }
@@ -4610,6 +4694,7 @@ class CropSelection {
   handleTouchMove(e) {
     if (!this.enabled || !this.dragMode) return;
     e.preventDefault();
+    e.stopPropagation();
     const pos = this.getTouchPos(e);
     this.updateDrag(pos);
   }

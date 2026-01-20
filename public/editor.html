@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ゲームクリエイター - エディタ</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
   <meta name="description" content="チャットで会話するだけで、オリジナルのゲームが作れます。">
 </head>
 <body data-page="editor">
@@ -197,7 +198,10 @@
           <div class="editor-canvas-area">
             <div class="canvas-wrapper">
               <canvas id="editorCanvas"></canvas>
-              <div class="crop-overlay hidden" id="cropOverlay"></div>
+            </div>
+            <!-- Cropper.js container (shown only in crop mode) -->
+            <div class="cropper-container-wrapper hidden" id="cropperWrapper">
+              <img id="cropperImage" src="" alt="Crop preview">
             </div>
           </div>
           <div class="editor-toolbar">
@@ -522,6 +526,7 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>
