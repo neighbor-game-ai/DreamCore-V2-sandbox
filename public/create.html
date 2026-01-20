@@ -51,13 +51,19 @@
 
     <!-- Project Grid -->
     <div class="games-section">
-      <div class="games-section-header">
-        <div class="games-label">MY GAMES</div>
-        <div class="games-filter" id="gamesFilter">
-          <button class="filter-tab active" data-filter="all">すべて</button>
-          <button class="filter-tab" data-filter="published">公開中</button>
-          <button class="filter-tab" data-filter="draft">下書き</button>
-        </div>
+      <div class="games-filter-bar" id="gamesFilter">
+        <button class="filter-tab active" data-filter="all">
+          <span class="filter-count" id="filterCountAll">0</span>
+          ALL
+        </button>
+        <button class="filter-tab" data-filter="published">
+          <span class="filter-count" id="filterCountPublished">0</span>
+          公開
+        </button>
+        <button class="filter-tab" data-filter="draft">
+          <span class="filter-count" id="filterCountDraft">0</span>
+          下書き
+        </button>
       </div>
       <div class="project-grid" id="projectGrid">
         <!-- Projects will be loaded here -->

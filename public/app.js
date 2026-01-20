@@ -688,6 +688,18 @@ class GameCreatorApp {
   renderProjectGrid() {
     if (!this.projectGrid) return;
 
+    // Update filter counts
+    const allCount = this.projects.length;
+    const publishedCount = this.projects.filter(p => p.isPublic).length;
+    const draftCount = this.projects.filter(p => !p.isPublic).length;
+
+    const countAll = document.getElementById('filterCountAll');
+    const countPublished = document.getElementById('filterCountPublished');
+    const countDraft = document.getElementById('filterCountDraft');
+    if (countAll) countAll.textContent = allCount;
+    if (countPublished) countPublished.textContent = publishedCount;
+    if (countDraft) countDraft.textContent = draftCount;
+
     if (this.projects.length === 0) {
       this.projectGrid.innerHTML = `
         <div class="project-empty">
