@@ -146,6 +146,7 @@ class GameCreatorApp {
     this.editAssetButton = document.getElementById('editAssetButton');
     this.publishAssetButton = document.getElementById('publishAssetButton'); // Hidden for now
     this.deleteAssetButton = document.getElementById('deleteAssetButton');
+    this.uploadButton = document.getElementById('uploadButton');
 
     // Image Editor elements
     this.imageEditorModal = document.getElementById('imageEditorModal');
@@ -176,6 +177,7 @@ class GameCreatorApp {
     this.plusMenuButton = document.getElementById('plusMenuButton');
     this.plusMenuPopup = document.getElementById('plusMenuPopup');
     this.plusMenuAsset = document.getElementById('plusMenuAsset');
+    this.plusMenuUpload = document.getElementById('plusMenuUpload');
     this.plusMenuImageGen = document.getElementById('plusMenuImageGen');
 
     // Debug toggles
@@ -3126,6 +3128,7 @@ class GameCreatorApp {
     if (!this.assetButton || !this.assetModal) return;
     // Open/close modal
     this.assetButton.addEventListener('click', () => this.openAssetModal());
+    this.uploadButton?.addEventListener('click', () => this.triggerUpload());
     this.closeAssetModal?.addEventListener('click', () => this.closeAssetModalHandler());
     this.assetModal.addEventListener('click', (e) => {
       if (e.target === this.assetModal) this.closeAssetModalHandler();
@@ -3180,6 +3183,53 @@ class GameCreatorApp {
 
     // Delete asset
     this.deleteAssetButton?.addEventListener('click', () => this.deleteSelectedAssets());
+  }
+
+  triggerUpload() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,audio/*,.mp3,.wav,.ogg';
+    input.multiple = true;
+    input.onchange = async (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length === 0) return;
+
+      for (const file of files) {
+        try {
+          // Compress image before upload
+          let processedFile;
+          try {
+            processedFile = await this.compressImage(file);
+          } catch (error) {
+            alert(`${file.name}: ${error.message}`);
+            continue;
+          }
+
+          const formData = new FormData();
+          formData.append('file', processedFile);
+          formData.append('visitorId', this.visitorId);
+          formData.append('originalName', file.name);
+          if (this.currentProjectId) formData.append('projectId', this.currentProjectId);
+
+          const response = await fetch('/api/assets/upload', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await response.json();
+          if (data.success && data.asset) {
+            // Add to attached assets
+            this.attachedAssetsList.push(data.asset);
+            this.renderAttachedAssets();
+          } else {
+            console.error('Upload failed:', data.error);
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+        }
+      }
+    };
+    input.click();
   }
 
   openAssetModal() {
@@ -4210,6 +4260,12 @@ class GameCreatorApp {
     this.plusMenuAsset?.addEventListener('click', () => {
       this.closePlusMenu();
       this.openAssetModal();
+    });
+
+    // Menu item: Upload
+    this.plusMenuUpload?.addEventListener('click', () => {
+      this.closePlusMenu();
+      this.triggerUpload();
     });
 
     // Menu item: Image Generation
