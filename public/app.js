@@ -695,8 +695,19 @@ class GameCreatorApp {
       return;
     }
 
-    this.projectGrid.innerHTML = this.projects.map(project => `
+    this.projectGrid.innerHTML = this.projects.map((project, index) => `
       <div class="project-card" data-id="${project.id}">
+        <div class="project-card-thumbnail">
+          <img
+            src="/api/projects/${project.id}/thumbnail"
+            alt="${this.escapeHtml(project.name)}"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            onload="this.style.display='block'; this.nextElementSibling.style.display='none';"
+          >
+          <div class="project-card-thumbnail-placeholder" style="background: linear-gradient(135deg, hsl(${(index * 37) % 360}, 65%, 75%), hsl(${(index * 37 + 60) % 360}, 70%, 65%));">
+            <span class="placeholder-title">${this.escapeHtml(project.name)}</span>
+          </div>
+        </div>
         <div class="project-card-header">
           <h3 class="project-card-title">${this.escapeHtml(project.name)}</h3>
           <div class="project-card-actions">
