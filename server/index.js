@@ -1581,22 +1581,32 @@ ${specContent ? `仕様書:\n${specContent.slice(0, 2000)}\n` : ''}
 
 // Get thumbnail image
 app.get('/api/projects/:projectId/thumbnail', (req, res) => {
-  const { projectId } = req.params;
-  const { visitorId } = req.query;
+  try {
+    const { projectId } = req.params;
 
-  // Find project to get visitor ID
-  const project = db.getProjectById(projectId);
-  if (!project) {
-    return res.status(404).send('Project not found');
-  }
+    // Find project to get visitor ID
+    const project = db.getProjectById(projectId);
+    if (!project) {
+      return res.status(404).send('Project not found');
+    }
 
-  const projectDir = userManager.getProjectDir(project.visitor_id, projectId);
-  const thumbnailPath = path.join(projectDir, 'thumbnail.png');
+    // Get user to find visitor_id
+    const user = db.getUserById(project.user_id);
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
 
-  if (fs.existsSync(thumbnailPath)) {
-    res.sendFile(thumbnailPath);
-  } else {
-    res.status(404).send('Thumbnail not found');
+    const projectDir = userManager.getProjectDir(user.visitor_id, projectId);
+    const thumbnailPath = path.join(projectDir, 'thumbnail.png');
+
+    if (fs.existsSync(thumbnailPath)) {
+      res.sendFile(thumbnailPath);
+    } else {
+      res.status(404).send('Thumbnail not found');
+    }
+  } catch (error) {
+    console.error('Error serving thumbnail:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
