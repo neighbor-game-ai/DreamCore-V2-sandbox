@@ -417,7 +417,7 @@ body[data-page="publish"] {
   transform: none;
 }
 
-/* Loading Overlay */
+/* Loading Overlay (for publish action only) */
 .loading-overlay {
   position: fixed;
   inset: 0;
@@ -452,6 +452,85 @@ body[data-page="publish"] {
 .loading-content span {
   font-size: 0.9375rem;
   color: var(--gray-600);
+}
+
+/* ============================================
+   Inline Field Loading (Nintendo-style)
+   ============================================ */
+
+/* Generating state for input fields */
+.input-with-generate.generating input,
+.input-with-generate.generating textarea {
+  background: linear-gradient(
+    90deg,
+    var(--gray-100) 0%,
+    var(--gray-50) 50%,
+    var(--gray-100) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  color: var(--gray-400);
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Generate button spinning state */
+.generate-btn.generating {
+  pointer-events: none;
+  background: var(--red-light);
+  border-color: var(--red);
+}
+
+.generate-btn.generating svg {
+  animation: spin 0.8s linear infinite;
+  color: var(--red);
+}
+
+/* Tags container loading */
+.tags-container.generating {
+  min-height: 40px;
+  background: linear-gradient(
+    90deg,
+    var(--gray-100) 0%,
+    var(--gray-50) 50%,
+    var(--gray-100) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--r-8);
+}
+
+/* Skeleton placeholder text */
+.input-with-generate.generating input::placeholder,
+.input-with-generate.generating textarea::placeholder {
+  color: var(--gray-400);
+}
+
+/* Thumbnail generating state */
+.thumbnail-preview.generating .thumbnail-placeholder {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.thumbnail-preview.generating .thumbnail-placeholder svg {
+  animation: spin 2s linear infinite;
+  opacity: 0.8;
+}
+
+/* Form group label with loading indicator */
+.form-group.generating > label::after {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 8px;
+  border: 2px solid var(--gray-300);
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
 }
 
 /* Mobile Responsive */

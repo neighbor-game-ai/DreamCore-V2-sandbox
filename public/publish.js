@@ -185,8 +185,8 @@ class PublishPage {
   }
 
   async generateInitialData() {
-    this.showLoading('AIが情報を生成しています...');
     this.isGenerating = true;
+    this.setFieldsGenerating(true);
 
     try {
       // Generate title, description, tags with AI
@@ -218,12 +218,62 @@ class PublishPage {
       this.publishData.title = this.projectData.name || '';
     } finally {
       this.isGenerating = false;
-      this.hideLoading();
+      this.setFieldsGenerating(false);
+    }
+  }
+
+  setFieldsGenerating(isGenerating) {
+    // Title field
+    const titleWrapper = this.titleInput.closest('.input-with-generate');
+    const titleGroup = this.titleInput.closest('.form-group');
+
+    // Description field
+    const descWrapper = this.descriptionInput.closest('.input-with-generate');
+    const descGroup = this.descriptionInput.closest('.form-group');
+
+    // How to play field
+    const howToPlayWrapper = this.howToPlayInput.closest('.input-with-generate');
+    const howToPlayGroup = this.howToPlayInput.closest('.form-group');
+
+    // Tags
+    const tagsGroup = this.tagsContainer.closest('.form-group');
+
+    const elements = [
+      titleWrapper, titleGroup,
+      descWrapper, descGroup,
+      howToPlayWrapper, howToPlayGroup,
+      tagsGroup, this.tagsContainer
+    ];
+
+    const buttons = [
+      this.regenerateTitleBtn,
+      this.regenerateDescriptionBtn,
+      this.regenerateHowToPlayBtn,
+      this.regenerateTagsBtn
+    ];
+
+    if (isGenerating) {
+      elements.forEach(el => el?.classList.add('generating'));
+      buttons.forEach(btn => btn?.classList.add('generating'));
+
+      // Set placeholder text
+      this.titleInput.placeholder = '生成中...';
+      this.descriptionInput.placeholder = '生成中...';
+      this.howToPlayInput.placeholder = '生成中...';
+    } else {
+      elements.forEach(el => el?.classList.remove('generating'));
+      buttons.forEach(btn => btn?.classList.remove('generating'));
+
+      // Restore placeholder text
+      this.titleInput.placeholder = 'ゲームのタイトル';
+      this.descriptionInput.placeholder = 'ゲームの概要や特徴';
+      this.howToPlayInput.placeholder = 'ゲームのルールと操作方法';
     }
   }
 
   async generateThumbnail() {
     const placeholder = this.thumbnailPreview.querySelector('.thumbnail-placeholder');
+    this.thumbnailPreview.classList.add('generating');
     if (placeholder) {
       placeholder.querySelector('span').textContent = 'サムネイルを生成中...';
     }
@@ -253,6 +303,8 @@ class PublishPage {
       if (placeholder) {
         placeholder.querySelector('span').textContent = 'サムネイル生成に失敗しました';
       }
+    } finally {
+      this.thumbnailPreview.classList.remove('generating');
     }
   }
 
@@ -364,8 +416,8 @@ class PublishPage {
   async regenerateAll() {
     if (this.isGenerating) return;
 
-    this.showLoading('AIが情報を再生成しています...');
     this.isGenerating = true;
+    this.setFieldsGenerating(true);
 
     try {
       const response = await fetch(`/api/projects/${this.projectId}/generate-publish-info`, {
@@ -388,7 +440,7 @@ class PublishPage {
       alert('再生成に失敗しました');
     } finally {
       this.isGenerating = false;
-      this.hideLoading();
+      this.setFieldsGenerating(false);
     }
   }
 
