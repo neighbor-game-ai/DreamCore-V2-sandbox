@@ -3322,7 +3322,8 @@ class GameCreatorApp {
       projectId: item.dataset.projectid || ''
     };
 
-    this.selectedAssetInfo.textContent = `Selected: ${this.selectedAsset.name}`;
+    this.selectedAssetInfo.textContent = this.selectedAsset.name;
+    this.selectedAssetInfo.title = this.selectedAsset.name; // Full name on hover
     this.insertAssetButton.classList.remove('hidden');
 
     // Show edit button only for images

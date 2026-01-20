@@ -2714,17 +2714,36 @@ body::before {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--s-12);
+}
+
+.asset-selected-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+.asset-footer-buttons {
+  display: flex;
+  gap: var(--s-8);
+  flex-shrink: 0;
 }
 
 .asset-footer button {
-  padding: var(--s-12) var(--s-24);
+  padding: var(--s-10) var(--s-16);
   background: var(--red);
   border: none;
-  border-radius: var(--r-12);
+  border-radius: var(--r-8);
   color: var(--white);
   font-weight: 600;
+  font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .asset-footer button:hover {
@@ -2734,11 +2753,35 @@ body::before {
 
 #editAssetButton {
   background: var(--gray-600);
-  margin-right: var(--s-8);
 }
 
 #editAssetButton:hover {
   background: var(--gray-700);
+}
+
+/* Mobile asset footer */
+@media (max-width: 480px) {
+  .asset-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s-12);
+    padding: var(--s-12) var(--s-16);
+  }
+
+  .asset-selected-name {
+    text-align: center;
+    font-size: 0.8125rem;
+  }
+
+  .asset-footer-buttons {
+    justify-content: center;
+  }
+
+  .asset-footer button {
+    flex: 1;
+    padding: var(--s-12) var(--s-12);
+    font-size: 0.8125rem;
+  }
 }
 
 /* ===== Image Editor Modal ===== */
