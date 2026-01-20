@@ -981,15 +981,6 @@ body::before {
   color: var(--red);
 }
 
-.attached-asset-name {
-  font-size: 0.8rem;
-  color: var(--gray-600);
-  max-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .attached-asset-remove {
   position: absolute;
   top: -6px;

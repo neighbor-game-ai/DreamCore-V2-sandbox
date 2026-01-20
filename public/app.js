@@ -3728,7 +3728,6 @@ class GameCreatorApp {
       <div class="attached-asset-item" data-id="${asset.id}">
         <span class="attached-asset-number">【${index + 1}】</span>
         <img src="${asset.url}" alt="${asset.name}" />
-        <span class="attached-asset-name">${asset.name}</span>
         <button class="attached-asset-remove" data-id="${asset.id}" title="削除">×</button>
       </div>
     `).join('');
