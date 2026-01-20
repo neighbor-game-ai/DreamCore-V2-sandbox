@@ -4253,9 +4253,11 @@ class ImageEditor {
 
   render() {
     // Fit canvas to container while maintaining aspect ratio
-    const container = this.canvas.parentElement;
-    const maxWidth = container.clientWidth - 20;
-    const maxHeight = container.clientHeight - 20;
+    // Use editor-canvas-area (grandparent) not canvas-wrapper (parent) for stable sizing
+    const container = this.canvas.parentElement?.parentElement;
+    if (!container) return;
+    const maxWidth = container.clientWidth - 40;
+    const maxHeight = container.clientHeight - 40;
 
     let displayWidth = this.width;
     let displayHeight = this.height;
