@@ -1446,11 +1446,17 @@ app.post('/api/projects/:projectId/generate-publish-info', async (req, res) => {
       gameCode = fs.readFileSync(indexPath, 'utf-8');
     }
 
-    // Get spec.md if exists
-    const specPath = path.join(projectDir, 'spec.md');
+    // Get spec content (try specs/game.md first, then spec.md)
     let specContent = '';
-    if (fs.existsSync(specPath)) {
-      specContent = fs.readFileSync(specPath, 'utf-8');
+    const specPaths = [
+      path.join(projectDir, 'specs', 'game.md'),
+      path.join(projectDir, 'spec.md')
+    ];
+    for (const specPath of specPaths) {
+      if (fs.existsSync(specPath)) {
+        specContent = fs.readFileSync(specPath, 'utf-8');
+        break;
+      }
     }
 
     const prompt = `以下のゲームプロジェクトの情報から、公開用のタイトル、概要、ルールと操作方法、タグを生成してください。
@@ -1530,10 +1536,17 @@ app.post('/api/projects/:projectId/generate-thumbnail', async (req, res) => {
 
     // Get spec.md if exists
     const projectDir = userManager.getProjectDir(visitorId, projectId);
-    const specPath = path.join(projectDir, 'spec.md');
+    // Try specs/game.md first, then spec.md for backwards compatibility
     let specContent = '';
-    if (fs.existsSync(specPath)) {
-      specContent = fs.readFileSync(specPath, 'utf-8');
+    const specPaths = [
+      path.join(projectDir, 'specs', 'game.md'),
+      path.join(projectDir, 'spec.md')
+    ];
+    for (const specPath of specPaths) {
+      if (fs.existsSync(specPath)) {
+        specContent = fs.readFileSync(specPath, 'utf-8');
+        break;
+      }
     }
 
     // Get project assets for reference images
@@ -1559,27 +1572,25 @@ app.post('/api/projects/:projectId/generate-thumbnail', async (req, res) => {
     // First, use Claude to generate a good image prompt
     const refImageInstruction = limitedAssetPaths.length > 0
       ? `
-重要: 参照画像として${limitedAssetPaths.length}枚のゲームアセット画像が提供されます。
-仕様書の「使用画像アセット」セクションに各画像の役割（プレイヤー、敵、背景等）が記載されています。
-生成するサムネイルには、これらの参照画像に含まれるキャラクターやオブジェクトを必ず含めてください。
-参照画像のアートスタイル、色使い、デザインを維持しながら、魅力的な構図で組み合わせてください。`
+重要: このゲームには${limitedAssetPaths.length}枚の参照画像が提供されます。
+仕様書の「ビジュアルアセット」セクションに各画像の役割が記載されています。
+プロンプトには「参照画像1のXXを中央に配置」「参照画像2のYYを背景に」のように、
+各参照画像をどのように使ってサムネイルを構成するか具体的に指示してください。`
       : '';
 
-    const promptGeneratorPrompt = `以下のゲーム情報から、サムネイル画像生成用のプロンプトを作成してください。
+    const promptGeneratorPrompt = `あなたは画像生成AIへのプロンプトを作成するアシスタントです。
+以下のゲーム情報を元に、サムネイル画像生成用のプロンプトを作成してください。
 
 タイトル: ${title || project.name}
-${specContent ? `仕様書（「使用画像アセット」セクションに各画像の役割が記載されています）:\n${specContent.slice(0, 3000)}\n` : ''}${refImageInstruction}
+${specContent ? `仕様書:\n${specContent.slice(0, 3000)}\n` : ''}${refImageInstruction}
 
 要件:
-- ゲームの世界観やキャラクターを表現する魅力的なイラスト
-- 縦長（9:16）のサムネイルに適したレイアウト
-- ゲームアプリのアイコンやストア画像として使える品質
-- 明るく目を引くデザイン
-${limitedAssetPaths.length > 0 ? '- 参照画像のキャラクター・オブジェクトを必ずサムネイルに含める（新しいキャラクターを作らない）' : ''}
+- 縦長（9:16）のサムネイル向けレイアウト
+- アプリストア用サムネイルとして使える品質
+${limitedAssetPaths.length > 0 ? `- 参照画像が${limitedAssetPaths.length}枚提供されるので、それぞれをどう使うか指示する
+- 「参照画像1の○○を～に配置」のように具体的に指示` : ''}
 
-出力形式: 画像生成プロンプトを1行のみ。説明や前置きは一切不要。
-${limitedAssetPaths.length > 0 ? '必ず「参照画像のキャラクターをそのまま使用」という指示を含める。' : ''}
-例: "カラフルなプラットフォームを飛び越えるかわいい猫キャラクター、ピクセルアート風ゲームシーン"
+出力: プロンプトのみ（説明不要）
 
 プロンプト:`;
 
