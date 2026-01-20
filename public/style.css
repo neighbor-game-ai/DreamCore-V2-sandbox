@@ -598,6 +598,30 @@ body::before {
 #newProjectButton {
   display: flex;
   align-items: center;
+  justify-content: center;
+  padding: var(--s-12);
+  background: var(--gray-100);
+  border: none;
+  border-radius: var(--r-full);
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: all var(--duration) var(--ease-out);
+}
+
+#newProjectButton:hover {
+  background: var(--gray-200);
+  color: var(--gray-900);
+  transform: scale(1.05);
+}
+
+#newProjectButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+#playGameButton {
+  display: flex;
+  align-items: center;
   gap: var(--s-8);
   padding: var(--s-12) var(--s-16);
   background: var(--red);
@@ -611,33 +635,14 @@ body::before {
   box-shadow: 0 4px 12px var(--red-glow);
 }
 
-#newProjectButton:hover {
+#playGameButton:hover {
   transform: scale(1.05);
   box-shadow: 0 6px 20px var(--red-glow);
 }
 
-#newProjectButton svg {
+#playGameButton svg {
   width: 16px;
   height: 16px;
-}
-
-#playGameButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: var(--gray-900);
-  border: none;
-  border-radius: var(--r-full);
-  color: var(--white);
-  cursor: pointer;
-  transition: all var(--duration) var(--ease-out);
-}
-
-#playGameButton:hover {
-  background: var(--gray-600);
-  transform: scale(1.05);
 }
 
 .status-indicator {
