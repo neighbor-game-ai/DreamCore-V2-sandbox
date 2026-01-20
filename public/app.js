@@ -2222,21 +2222,48 @@ class GameCreatorApp {
         messageDiv.appendChild(btnContainer);
       }
     } else {
-      const formattedContent = this.formatContent(content);
-      messageDiv.innerHTML = formattedContent;
-    }
+      let displayContent = content;
+      let assetsToShow = [];
 
-    // Add attached asset thumbnails for user messages (with numbers)
-    if (role === 'user' && options.attachedAssets && options.attachedAssets.length > 0) {
-      const thumbsDiv = document.createElement('div');
-      thumbsDiv.className = 'message-attached-assets';
-      thumbsDiv.innerHTML = options.attachedAssets.map((asset, index) => `
-        <div class="message-asset-thumb">
-          <span class="message-asset-number">【${index + 1}】</span>
-          <img src="${asset.url}" alt="${asset.name}" />
-        </div>
-      `).join('');
-      messageDiv.insertBefore(thumbsDiv, messageDiv.firstChild);
+      // For user messages, parse and extract asset references
+      if (role === 'user') {
+        assetsToShow = options.attachedAssets || [];
+
+        // Parse assets from content if not provided (for history messages)
+        if (assetsToShow.length === 0) {
+          const assetPattern = /(\d+)：画像「([^」]+)」を使用: (\/api\/assets\/[a-f0-9-]+)/g;
+          let match;
+          while ((match = assetPattern.exec(content)) !== null) {
+            assetsToShow.push({
+              name: match[2],
+              url: match[3]
+            });
+          }
+        }
+
+        // Remove asset lines from display content (for history messages)
+        if (assetsToShow.length > 0 && !options.attachedAssets) {
+          displayContent = content
+            .replace(/\d+：画像「[^」]+」を使用: \/api\/assets\/[a-f0-9-]+\n?/g, '')
+            .replace(/^\n+/, ''); // Remove leading newlines
+        }
+      }
+
+      const formattedContent = this.formatContent(displayContent);
+      messageDiv.innerHTML = formattedContent;
+
+      // Add attached asset thumbnails for user messages (with numbers)
+      if (role === 'user' && assetsToShow.length > 0) {
+        const thumbsDiv = document.createElement('div');
+        thumbsDiv.className = 'message-attached-assets';
+        thumbsDiv.innerHTML = assetsToShow.map((asset, index) => `
+          <div class="message-asset-thumb">
+            <span class="message-asset-number">【${index + 1}】</span>
+            <img src="${asset.url}" alt="${asset.name}" />
+          </div>
+        `).join('');
+        messageDiv.insertBefore(thumbsDiv, messageDiv.firstChild);
+      }
     }
 
     this.chatMessages.appendChild(messageDiv);
