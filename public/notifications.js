@@ -4,7 +4,7 @@
 
 class NotificationsApp {
   constructor() {
-    this.sessionId = localStorage.getItem('gameCreatorSessionId');
+    this.sessionId = localStorage.getItem('sessionId');
     this.currentUser = null;
     this.visitorId = null;
     this.notifications = [];
@@ -39,9 +39,7 @@ class NotificationsApp {
   async checkSession() {
     try {
       const response = await fetch(`/api/auth/me?sessionId=${this.sessionId}`);
-      if (!response.ok) {
-        return false;
-      }
+      if (!response.ok) return false;
       const data = await response.json();
       this.currentUser = data.user;
       this.visitorId = data.user.visitorId;

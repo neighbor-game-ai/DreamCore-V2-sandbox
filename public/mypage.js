@@ -4,7 +4,7 @@
 
 class MyPageApp {
   constructor() {
-    this.sessionId = localStorage.getItem('gameCreatorSessionId');
+    this.sessionId = localStorage.getItem('sessionId');
     this.currentUser = null;
     this.visitorId = null;
     this.projects = [];
@@ -186,7 +186,9 @@ class MyPageApp {
       console.error('Logout error:', e);
     }
 
-    localStorage.removeItem('gameCreatorSessionId');
+    localStorage.removeItem('sessionId');
+    localStorage.removeItem('visitorId');
+    localStorage.removeItem('loginUsername');
     window.location.href = '/';
   }
 }

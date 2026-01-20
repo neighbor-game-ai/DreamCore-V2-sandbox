@@ -210,7 +210,7 @@ class GameCreatorApp {
     this.isComposing = false;
 
     // Try to restore session from localStorage
-    this.sessionId = localStorage.getItem('gameCreatorSessionId');
+    this.sessionId = localStorage.getItem('sessionId');
 
     this.init();
   }
