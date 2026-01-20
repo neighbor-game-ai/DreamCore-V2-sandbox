@@ -1502,14 +1502,34 @@ app.post('/api/projects/:projectId/generate-thumbnail', async (req, res) => {
       if (asset.is_deleted) continue;
       if (!asset.mime_type || !asset.mime_type.startsWith('image/')) continue;
 
-      // Build asset description from tags and description
+      // Guess asset type from filename
+      const filename = (asset.original_name || asset.filename || '').toLowerCase();
+      let guessedType = '';
+      if (filename.includes('player') || filename.includes('hero') || filename.includes('character')) {
+        guessedType = 'プレイヤーキャラクター';
+      } else if (filename.includes('enemy') || filename.includes('monster')) {
+        guessedType = '敵キャラクター';
+      } else if (filename.includes('boss')) {
+        guessedType = 'ボスキャラクター';
+      } else if (filename.includes('wall') || filename.includes('block') || filename.includes('obstacle')) {
+        guessedType = '壁・障害物';
+      } else if (filename.includes('goal') || filename.includes('flag') || filename.includes('finish')) {
+        guessedType = 'ゴール';
+      } else if (filename.includes('bg') || filename.includes('background')) {
+        guessedType = '背景';
+      } else if (filename.includes('item') || filename.includes('coin') || filename.includes('star')) {
+        guessedType = 'アイテム';
+      }
+
+      // Build asset description from tags, description, and guessed type
       const assetInfo = [];
-      if (asset.original_name) assetInfo.push(`ファイル名: ${asset.original_name}`);
+      if (asset.original_name) assetInfo.push(asset.original_name);
+      if (guessedType) assetInfo.push(`(${guessedType})`);
       if (asset.tags) assetInfo.push(`種類: ${asset.tags}`);
-      if (asset.description) assetInfo.push(`説明: ${asset.description}`);
+      if (asset.description) assetInfo.push(asset.description);
 
       if (assetInfo.length > 0) {
-        assetDescriptions.push(assetInfo.join(', '));
+        assetDescriptions.push(assetInfo.join(' '));
       }
 
       // Add asset path for reference
@@ -1523,22 +1543,30 @@ app.post('/api/projects/:projectId/generate-thumbnail', async (req, res) => {
 
     // Build prompt with asset information
     const assetSection = assetDescriptions.length > 0
-      ? `\nゲームで使用している画像アセット:\n${assetDescriptions.slice(0, 10).map((d, i) => `${i + 1}. ${d}`).join('\n')}\n`
+      ? `\nゲームで使用している画像アセット（これらの画像がサムネイルに含まれている必要があります）:\n${assetDescriptions.slice(0, 10).map((d, i) => `${i + 1}. ${d}`).join('\n')}\n`
       : '';
 
     // First, use Claude to generate a good image prompt
+    const refImageInstruction = limitedAssetPaths.length > 0
+      ? `
+重要: 参照画像として${limitedAssetPaths.length}枚のゲームアセット画像が提供されます。
+生成するサムネイルには、これらの参照画像に含まれるキャラクターやオブジェクトを必ず含めてください。
+参照画像のアートスタイル、色使い、デザインを維持しながら、魅力的な構図で組み合わせてください。`
+      : '';
+
     const promptGeneratorPrompt = `以下のゲーム情報から、サムネイル画像生成用のプロンプトを作成してください。
 
 タイトル: ${title || project.name}
-${specContent ? `仕様書:\n${specContent.slice(0, 2000)}\n` : ''}${assetSection}
+${specContent ? `仕様書:\n${specContent.slice(0, 2000)}\n` : ''}${assetSection}${refImageInstruction}
+
 要件:
 - ゲームの世界観やキャラクターを表現する魅力的なイラスト
 - 縦長（9:16）のサムネイルに適したレイアウト
 - ゲームアプリのアイコンやストア画像として使える品質
 - 明るく目を引くデザイン
-${limitedAssetPaths.length > 0 ? '- 参照画像のスタイルやキャラクターを取り入れる' : ''}
+${limitedAssetPaths.length > 0 ? '- 参照画像のキャラクター・オブジェクトを必ずサムネイルに含める（新しいキャラクターを作らない）' : ''}
 
-英語のプロンプトを1行で出力してください（プロンプトのみ、他のテキストは不要）:`;
+英語のプロンプトを1行で出力してください。${limitedAssetPaths.length > 0 ? '必ず「Use the provided reference images」という指示を含めてください。' : ''}プロンプトのみ出力:`;
 
     const { spawn } = require('child_process');
 
