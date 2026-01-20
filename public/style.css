@@ -379,13 +379,49 @@ body::before {
   margin-top: 280px;
 }
 
+.games-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--s-16);
+  flex-wrap: wrap;
+  gap: var(--s-12);
+}
+
 .games-label {
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.15em;
   color: var(--gray-400);
-  margin-bottom: var(--s-24);
   padding-left: var(--s-4);
+}
+
+/* Games Filter Tabs */
+.games-filter {
+  display: flex;
+  gap: var(--s-4);
+}
+
+.filter-tab {
+  padding: var(--s-6) var(--s-12);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  background: transparent;
+  border: none;
+  border-radius: var(--r-full);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-tab:hover {
+  color: var(--gray-700);
+  background: var(--gray-100);
+}
+
+.filter-tab.active {
+  color: var(--white);
+  background: var(--gray-900);
 }
 
 /* Project Grid */
@@ -435,6 +471,28 @@ body::before {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+/* Published Badge */
+.project-card-badge {
+  position: absolute;
+  top: var(--s-8);
+  left: var(--s-8);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--white);
+  background: #34C759;
+  border-radius: var(--r-full);
+  z-index: 3;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.project-card-badge svg {
+  flex-shrink: 0;
 }
 
 .project-card-thumbnail-placeholder {
@@ -2095,6 +2153,27 @@ body::before {
   .project-card-thumbnail-placeholder .placeholder-title {
     font-size: 0.875rem;
     -webkit-line-clamp: 3;
+  }
+
+  .project-card-badge {
+    padding: 3px 6px;
+    font-size: 0.5625rem;
+  }
+
+  .project-card-badge svg {
+    width: 8px;
+    height: 8px;
+  }
+
+  .games-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s-8);
+  }
+
+  .filter-tab {
+    padding: var(--s-4) var(--s-8);
+    font-size: 0.6875rem;
   }
 
   /* Show red dot by default on mobile */

@@ -42,6 +42,8 @@ class GameCreatorApp {
     this.projectListView = document.getElementById('projectListView');
     this.editorView = document.getElementById('editorView');
     this.projectGrid = document.getElementById('projectGrid');
+    this.gamesFilter = document.getElementById('gamesFilter');
+    this.currentProjectFilter = 'all';
     this.createProjectButton = document.getElementById('createProjectButton');
     this.listStatusIndicator = document.getElementById('listStatusIndicator');
     this.homeButton = document.getElementById('homeButton');
@@ -695,9 +697,37 @@ class GameCreatorApp {
       return;
     }
 
-    this.projectGrid.innerHTML = this.projects.map((project, index) => `
-      <div class="project-card" data-id="${project.id}">
+    // Filter projects based on current filter
+    const filter = this.currentProjectFilter || 'all';
+    const filteredProjects = this.projects.filter(p => {
+      if (filter === 'published') return p.isPublic;
+      if (filter === 'draft') return !p.isPublic;
+      return true;
+    });
+
+    if (filteredProjects.length === 0) {
+      const emptyMessage = filter === 'published' ? '公開中のゲームはありません' :
+                          filter === 'draft' ? '下書きのゲームはありません' :
+                          'まだゲームがありません';
+      this.projectGrid.innerHTML = `
+        <div class="project-empty">
+          <p>${emptyMessage}</p>
+        </div>
+      `;
+      return;
+    }
+
+    this.projectGrid.innerHTML = filteredProjects.map((project, index) => `
+      <div class="project-card ${project.isPublic ? 'is-published' : ''}" data-id="${project.id}">
         <div class="project-card-thumbnail">
+          ${project.isPublic ? `
+            <div class="project-card-badge">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+              公開中
+            </div>
+          ` : ''}
           <img
             src="/api/projects/${project.id}/thumbnail"
             alt="${this.escapeHtml(project.name)}"
@@ -1045,6 +1075,16 @@ class GameCreatorApp {
   }
 
   setupEventListeners() {
+    // Games filter tabs
+    this.gamesFilter?.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        this.gamesFilter.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        this.currentProjectFilter = tab.dataset.filter;
+        this.renderProjectGrid();
+      });
+    });
+
     // Editor page elements
     this.sendButton?.addEventListener('click', () => this.sendMessage());
 

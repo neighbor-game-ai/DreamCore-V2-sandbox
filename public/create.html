@@ -51,7 +51,14 @@
 
     <!-- Project Grid -->
     <div class="games-section">
-      <div class="games-label">MY GAMES</div>
+      <div class="games-section-header">
+        <div class="games-label">MY GAMES</div>
+        <div class="games-filter" id="gamesFilter">
+          <button class="filter-tab active" data-filter="all">すべて</button>
+          <button class="filter-tab" data-filter="published">公開中</button>
+          <button class="filter-tab" data-filter="draft">下書き</button>
+        </div>
+      </div>
       <div class="project-grid" id="projectGrid">
         <!-- Projects will be loaded here -->
       </div>
