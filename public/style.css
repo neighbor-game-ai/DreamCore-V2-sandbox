@@ -2476,9 +2476,10 @@ body::before {
 }
 
 .asset-tab {
-  padding: var(--s-16) var(--s-24);
+  padding: var(--s-16) var(--s-12);
   background: transparent;
   border: none;
+  white-space: nowrap;
   color: var(--gray-400);
   font-size: 0.875rem;
   font-weight: 600;
@@ -2606,7 +2607,7 @@ body::before {
 
 .asset-group-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--s-12);
   padding: var(--s-12);
 }
