@@ -4,6 +4,7 @@ const WebSocket = require('ws');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
+const sharp = require('sharp');
 const userManager = require('./userManager');
 const { claudeRunner, jobManager } = require('./claudeRunner');
 const db = require('./database');
@@ -1663,17 +1664,34 @@ ${limitedAssetPaths.length > 0 ? `- 参照画像が${limitedAssetPaths.length}�
         console.error('[NanoBanana Error]', data.toString());
       });
 
-      nanoBanana.on('close', (code) => {
+      nanoBanana.on('close', async (code) => {
         if (code === 0 && fs.existsSync(outputPath)) {
+          // Convert PNG to WebP for smaller file size
+          const webpPath = path.join(projectDir, 'thumbnail.webp');
+          try {
+            const originalSize = fs.statSync(outputPath).size;
+            await sharp(outputPath)
+              .resize(1080, 1920, { fit: 'inside', withoutEnlargement: true })
+              .webp({ quality: 85 })
+              .toFile(webpPath);
+            const newSize = fs.statSync(webpPath).size;
+            console.log(`[Thumbnail] Converted to WebP: ${originalSize} -> ${newSize} bytes`);
+
+            // Remove original PNG
+            fs.unlinkSync(outputPath);
+          } catch (convErr) {
+            console.error('[Thumbnail] WebP conversion failed, keeping PNG:', convErr.message);
+          }
+
           // Commit thumbnail to Git (non-blocking)
           const { exec } = require('child_process');
-          exec('git add thumbnail.png && git commit -m "Update thumbnail" --allow-empty', {
+          exec('git add -A && git commit -m "Update thumbnail" --allow-empty', {
             cwd: projectDir
           }, (err) => {
             if (err) {
               console.log('[Thumbnail] Git commit skipped or failed:', err.message);
             } else {
-              console.log('[Thumbnail] Committed thumbnail.png');
+              console.log('[Thumbnail] Committed thumbnail');
             }
           });
 
@@ -1700,6 +1718,55 @@ ${limitedAssetPaths.length > 0 ? `- 参照画像が${limitedAssetPaths.length}�
   }
 });
 
+// Upload thumbnail image
+app.post('/api/projects/:projectId/upload-thumbnail', upload.single('thumbnail'), async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { visitorId } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const project = db.getProjectById(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const projectDir = userManager.getProjectDir(visitorId, projectId);
+    const thumbnailPath = path.join(projectDir, 'thumbnail.webp');
+
+    // Remove old png thumbnail if exists
+    const oldPngPath = path.join(projectDir, 'thumbnail.png');
+    if (fs.existsSync(oldPngPath)) {
+      fs.unlinkSync(oldPngPath);
+    }
+
+    // Move uploaded file to project directory as thumbnail.webp
+    fs.copyFileSync(req.file.path, thumbnailPath);
+    fs.unlinkSync(req.file.path); // Remove temp file
+
+    // Commit to git
+    const { exec } = require('child_process');
+    exec('git add -A && git commit -m "Upload thumbnail" --allow-empty', {
+      cwd: projectDir
+    }, (err) => {
+      if (err) {
+        console.log('[Thumbnail] Git commit skipped:', err.message);
+      } else {
+        console.log('[Thumbnail] Committed uploaded thumbnail');
+      }
+    });
+
+    const thumbnailUrl = `/api/projects/${projectId}/thumbnail?t=${Date.now()}`;
+    res.json({ success: true, thumbnailUrl });
+
+  } catch (error) {
+    console.error('Error uploading thumbnail:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get thumbnail image
 app.get('/api/projects/:projectId/thumbnail', (req, res) => {
   try {
@@ -1718,10 +1785,15 @@ app.get('/api/projects/:projectId/thumbnail', (req, res) => {
     }
 
     const projectDir = userManager.getProjectDir(user.visitor_id, projectId);
-    const thumbnailPath = path.join(projectDir, 'thumbnail.png');
 
-    if (fs.existsSync(thumbnailPath)) {
-      res.sendFile(thumbnailPath);
+    // Check for webp first (uploaded), then png (generated)
+    const webpPath = path.join(projectDir, 'thumbnail.webp');
+    const pngPath = path.join(projectDir, 'thumbnail.png');
+
+    if (fs.existsSync(webpPath)) {
+      res.type('image/webp').sendFile(webpPath);
+    } else if (fs.existsSync(pngPath)) {
+      res.type('image/png').sendFile(pngPath);
     } else {
       res.status(404).send('Thumbnail not found');
     }

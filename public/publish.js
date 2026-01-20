@@ -489,16 +489,85 @@ class PublishPage {
     await this.generateThumbnail();
   }
 
+  // 画像をリサイズ（スマホ画面サイズ: 最大1080x1920）
+  async resizeImage(file, maxWidth = 1080, maxHeight = 1920) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+
+        // アスペクト比を維持しながらリサイズ
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          resolve(new File([blob], 'thumbnail.webp', { type: 'image/webp' }));
+        }, 'image/webp', 0.85);
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
   uploadThumbnail() {
-    // TODO: Implement thumbnail upload
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
     input.onchange = async (e) => {
       const file = e.target.files[0];
       if (file) {
-        // TODO: Upload and set thumbnail
-        console.log('Upload thumbnail:', file.name);
+        const placeholder = this.thumbnailPreview.querySelector('.thumbnail-placeholder');
+        this.thumbnailPreview.classList.add('generating');
+        if (placeholder) {
+          placeholder.querySelector('span').textContent = 'リサイズ中...';
+        }
+
+        try {
+          // 画像をリサイズ
+          const resizedFile = await this.resizeImage(file);
+          console.log(`Resized: ${file.size} -> ${resizedFile.size} bytes`);
+
+          if (placeholder) {
+            placeholder.querySelector('span').textContent = 'アップロード中...';
+          }
+
+          const formData = new FormData();
+          formData.append('thumbnail', resizedFile);
+          formData.append('visitorId', this.visitorId);
+
+          const response = await fetch(`/api/projects/${this.projectId}/upload-thumbnail`, {
+            method: 'POST',
+            body: formData
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.thumbnailUrl) {
+              this.publishData.thumbnailUrl = result.thumbnailUrl;
+              this.thumbnailImage.src = result.thumbnailUrl + '?t=' + Date.now();
+              this.thumbnailImage.classList.remove('hidden');
+              if (placeholder) placeholder.classList.add('hidden');
+              await this.savePublishData();
+            }
+          } else {
+            throw new Error('Upload failed');
+          }
+        } catch (error) {
+          console.error('Error uploading thumbnail:', error);
+          if (placeholder) {
+            placeholder.querySelector('span').textContent = 'アップロードに失敗しました';
+          }
+        } finally {
+          this.thumbnailPreview.classList.remove('generating');
+        }
       }
     };
     input.click();
