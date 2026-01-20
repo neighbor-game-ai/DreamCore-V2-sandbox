@@ -2637,7 +2637,7 @@ body::before {
 .asset-thumb img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .asset-name {
@@ -2728,79 +2728,192 @@ body::before {
   margin-top: var(--s-16);
 }
 
+/* ===== Asset Footer - Nintendo + Sato Kashiwa Style ===== */
 .asset-footer {
-  padding: var(--s-16) var(--s-24);
+  padding: var(--s-12) var(--s-20);
   border-top: 1px solid var(--gray-200);
+  background: var(--white);
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
   gap: var(--s-12);
 }
 
 .asset-selected-name {
-  flex: 1;
-  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--gray-700);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.875rem;
-  color: var(--gray-600);
+  letter-spacing: -0.01em;
 }
 
-.asset-footer-buttons {
+.asset-footer-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-16);
+}
+
+/* Secondary actions - Small circular icon buttons */
+.asset-secondary-actions {
   display: flex;
   gap: var(--s-8);
-  flex-shrink: 0;
 }
 
-.asset-footer button {
-  padding: var(--s-12) var(--s-24);
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gray-300);
+  background: var(--white);
+  color: var(--gray-600);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.icon-btn:hover {
+  border-color: var(--gray-400);
+  background: var(--gray-100);
+  color: var(--gray-800);
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
+}
+
+.icon-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Danger icon button (delete) */
+.icon-btn-danger:hover {
+  border-color: #f8d7da;
+  background: #fff5f5;
+  color: #dc3545;
+}
+
+/* Primary action - Large pill button */
+.primary-action-btn {
+  min-width: 110px;
+  height: 48px;
+  padding: 0 var(--s-20);
   background: var(--red);
   border: none;
-  border-radius: var(--r-12);
+  border-radius: 26px;
   color: var(--white);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1rem;
+  letter-spacing: 0.02em;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-8);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 14px var(--red-glow);
+}
+
+.primary-action-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 20px var(--red-glow);
+}
+
+.primary-action-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.primary-action-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.primary-action-btn:hover svg {
+  transform: translateX(3px);
+}
+
+/* Main actions container (edit + insert) */
+.asset-main-actions {
+  display: flex;
+  gap: var(--s-8);
+  align-items: center;
+}
+
+/* Ghost button (edit) - Secondary text action */
+.ghost-btn {
+  height: 48px;
+  padding: 0 var(--s-20);
+  background: transparent;
+  border: 2px solid var(--gray-300);
+  border-radius: 24px;
+  color: var(--gray-700);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-6);
   transition: all 0.2s ease;
-  white-space: nowrap;
 }
 
-.asset-footer button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px var(--red-glow);
+.ghost-btn:hover {
+  border-color: var(--gray-500);
+  background: var(--gray-100);
+  color: var(--gray-900);
 }
 
-#editAssetButton {
-  background: var(--gray-600);
+.ghost-btn:active {
+  transform: scale(0.97);
 }
 
-#editAssetButton:hover {
-  background: var(--gray-700);
+.ghost-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
-/* Mobile asset footer */
+/* Mobile adjustments */
 @media (max-width: 480px) {
   .asset-footer {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--s-12);
     padding: var(--s-12) var(--s-16);
+    gap: var(--s-10);
   }
 
   .asset-selected-name {
+    font-size: 0.75rem;
     text-align: center;
-    font-size: 0.8125rem;
   }
 
-  .asset-footer-buttons {
-    justify-content: center;
+  .icon-btn {
+    width: 40px;
+    height: 40px;
   }
 
-  .asset-footer button {
+  .icon-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .asset-main-actions {
     flex: 1;
-    padding: var(--s-12) var(--s-12);
-    font-size: 0.8125rem;
+    justify-content: flex-end;
+  }
+
+  .ghost-btn {
+    height: 44px;
+    padding: 0 var(--s-16);
+    font-size: 0.875rem;
+  }
+
+  .primary-action-btn {
+    height: 44px;
+    padding: 0 var(--s-20);
+    font-size: 0.875rem;
+    min-width: 100px;
+    max-width: none;
   }
 }
 

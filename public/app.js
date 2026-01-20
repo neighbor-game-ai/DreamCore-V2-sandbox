@@ -136,6 +136,8 @@ class GameCreatorApp {
     this.selectedAssetInfo = document.getElementById('selectedAssetInfo');
     this.insertAssetButton = document.getElementById('insertAssetButton');
     this.editAssetButton = document.getElementById('editAssetButton');
+    this.publishAssetButton = document.getElementById('publishAssetButton'); // Hidden for now
+    this.deleteAssetButton = document.getElementById('deleteAssetButton');
 
     // Image Editor elements
     this.imageEditorModal = document.getElementById('imageEditorModal');
@@ -3086,6 +3088,12 @@ class GameCreatorApp {
 
     // Edit asset
     this.editAssetButton?.addEventListener('click', () => this.openImageEditor());
+
+    // Publish asset
+    this.publishAssetButton?.addEventListener('click', () => this.toggleSelectedAssetPublic());
+
+    // Delete asset
+    this.deleteAssetButton?.addEventListener('click', () => this.deleteSelectedAssets());
   }
 
   openAssetModal() {
@@ -3244,18 +3252,13 @@ class GameCreatorApp {
   renderAssetItems(assets, showActions) {
     return assets.map(asset => {
       const projectId = asset.projects && asset.projects.length > 0 ? asset.projects[0].id : '';
+      const isOwner = asset.isOwner !== false;
       return `
-      <div class="asset-item ${asset.isPublic ? 'public-badge' : ''}" data-id="${asset.id}" data-url="${asset.url}" data-name="${asset.filename}" data-mimetype="${asset.mimeType || ''}" data-projectid="${projectId}">
+      <div class="asset-item ${asset.isPublic ? 'public-badge' : ''}" data-id="${asset.id}" data-url="${asset.url}" data-name="${asset.filename}" data-mimetype="${asset.mimeType || ''}" data-projectid="${projectId}" data-ispublic="${asset.isPublic || false}" data-isowner="${isOwner}">
         <div class="asset-thumb">
           ${this.getAssetThumb(asset)}
         </div>
         <div class="asset-name" title="${asset.filename}">${asset.filename}</div>
-        ${showActions && asset.isOwner !== false ? `
-          <div class="asset-actions">
-            <button onclick="app.toggleAssetPublic('${asset.id}', ${!asset.isPublic})">${asset.isPublic ? '🔒' : '🌐'}</button>
-            <button onclick="app.deleteAsset('${asset.id}')">🗑️</button>
-          </div>
-        ` : ''}
       </div>
     `}).join('');
   }
@@ -3273,18 +3276,13 @@ class GameCreatorApp {
 
     container.innerHTML = assets.map(asset => {
       const projectId = asset.projects && asset.projects.length > 0 ? asset.projects[0].id : '';
+      const isOwner = asset.isOwner !== false;
       return `
-      <div class="asset-item ${asset.isPublic ? 'public-badge' : ''}" data-id="${asset.id}" data-url="${asset.url}" data-name="${asset.filename}" data-mimetype="${asset.mimeType || ''}" data-projectid="${projectId}">
+      <div class="asset-item ${asset.isPublic ? 'public-badge' : ''}" data-id="${asset.id}" data-url="${asset.url}" data-name="${asset.filename}" data-mimetype="${asset.mimeType || ''}" data-projectid="${projectId}" data-ispublic="${asset.isPublic || false}" data-isowner="${isOwner}">
         <div class="asset-thumb">
           ${this.getAssetThumb(asset)}
         </div>
         <div class="asset-name" title="${asset.filename}">${asset.filename}</div>
-        ${showActions && asset.isOwner !== false ? `
-          <div class="asset-actions">
-            <button onclick="app.toggleAssetPublic('${asset.id}', ${!asset.isPublic})">${asset.isPublic ? '🔒' : '🌐'}</button>
-            <button onclick="app.deleteAsset('${asset.id}')">🗑️</button>
-          </div>
-        ` : ''}
       </div>
     `}).join('');
 
@@ -3316,7 +3314,9 @@ class GameCreatorApp {
       url: item.dataset.url,
       name: item.dataset.name,
       mimeType: item.dataset.mimetype,
-      projectId: item.dataset.projectid || ''
+      projectId: item.dataset.projectid || '',
+      isPublic: item.dataset.ispublic === 'true',
+      isOwner: item.dataset.isowner === 'true'
     };
 
     // Toggle selection
@@ -3336,34 +3336,64 @@ class GameCreatorApp {
 
   updateAssetFooter() {
     const count = this.selectedAssets?.length || 0;
+    const allOwned = this.selectedAssets?.every(a => a.isOwner) || false;
+    const arrowIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
 
     if (count === 0) {
       this.selectedAssetInfo.textContent = '';
       this.selectedAssetInfo.title = '';
       this.insertAssetButton.classList.add('hidden');
       this.editAssetButton?.classList.add('hidden');
+      this.publishAssetButton?.classList.add('hidden');
+      this.deleteAssetButton?.classList.add('hidden');
     } else if (count === 1) {
       const asset = this.selectedAssets[0];
       this.selectedAssetInfo.textContent = asset.name;
       this.selectedAssetInfo.title = asset.name;
-      this.insertAssetButton.textContent = '挿入';
+      this.insertAssetButton.innerHTML = `挿入 ${arrowIcon}`;
       this.insertAssetButton.classList.remove('hidden');
 
-      // Show edit button only for single image
-      if (asset.mimeType?.startsWith('image/')) {
+      // Show edit button only for single image owned by user
+      if (asset.mimeType?.startsWith('image/') && asset.isOwner) {
         this.editAssetButton?.classList.remove('hidden');
       } else {
         this.editAssetButton?.classList.add('hidden');
       }
+
+      // Show publish/delete only for owned assets
+      if (asset.isOwner) {
+        // Update publish button icon based on state
+        const publishIcon = asset.isPublic
+          ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
+          : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
+        this.publishAssetButton.innerHTML = publishIcon;
+        this.publishAssetButton.title = asset.isPublic ? '非公開にする' : '公開する';
+        this.publishAssetButton?.classList.remove('hidden');
+        this.deleteAssetButton?.classList.remove('hidden');
+      } else {
+        this.publishAssetButton?.classList.add('hidden');
+        this.deleteAssetButton?.classList.add('hidden');
+      }
+
       // Keep selectedAsset for backward compatibility (edit)
       this.selectedAsset = asset;
     } else {
       this.selectedAssetInfo.textContent = `${count}件選択中`;
       this.selectedAssetInfo.title = this.selectedAssets.map(a => a.name).join('\n');
-      this.insertAssetButton.textContent = `挿入 (${count})`;
+      this.insertAssetButton.innerHTML = `挿入 (${count}) ${arrowIcon}`;
       this.insertAssetButton.classList.remove('hidden');
-      // Hide edit button for multiple selection
+
+      // Hide edit/publish for multiple selection
       this.editAssetButton?.classList.add('hidden');
+      this.publishAssetButton?.classList.add('hidden');
+
+      // Show delete only if all assets are owned
+      if (allOwned) {
+        this.deleteAssetButton?.classList.remove('hidden');
+      } else {
+        this.deleteAssetButton?.classList.add('hidden');
+      }
+
       this.selectedAsset = null;
     }
   }
@@ -3564,6 +3594,63 @@ class GameCreatorApp {
       this.loadAssets();
     } catch (error) {
       console.error('Error deleting asset:', error);
+    }
+  }
+
+  async toggleSelectedAssetPublic() {
+    if (!this.selectedAsset) return;
+    const newPublicState = !this.selectedAsset.isPublic;
+
+    try {
+      await fetch(`/api/assets/${this.selectedAsset.id}/publish`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visitorId: this.visitorId, isPublic: newPublicState })
+      });
+
+      // Update local state without clearing selection
+      this.selectedAsset.isPublic = newPublicState;
+      if (this.selectedAssets?.length > 0) {
+        const asset = this.selectedAssets.find(a => a.id === this.selectedAsset.id);
+        if (asset) asset.isPublic = newPublicState;
+      }
+
+      // Update the item's public badge in the grid
+      const item = this.assetModal.querySelector(`.asset-item[data-id="${this.selectedAsset.id}"]`);
+      if (item) {
+        item.dataset.ispublic = newPublicState.toString();
+        item.classList.toggle('public-badge', newPublicState);
+      }
+
+      // Update footer to reflect new icon
+      this.updateAssetFooter();
+    } catch (error) {
+      console.error('Error toggling public:', error);
+    }
+  }
+
+  async deleteSelectedAssets() {
+    const assets = this.selectedAssets || [];
+    if (assets.length === 0) return;
+
+    const message = assets.length === 1
+      ? 'このアセットを削除しますか？'
+      : `${assets.length}件のアセットを削除しますか？`;
+
+    if (!confirm(message)) return;
+
+    try {
+      for (const asset of assets) {
+        await fetch(`/api/assets/${asset.id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ visitorId: this.visitorId })
+        });
+      }
+      this.clearSelection();
+      this.loadAssets();
+    } catch (error) {
+      console.error('Error deleting assets:', error);
     }
   }
 
