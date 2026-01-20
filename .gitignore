@@ -12,11 +12,10 @@ users/
 # User assets (reference-based storage)
 assets/
 
-# Database
-data/
-*.db
+# Database (track main db, ignore temp files)
 *.db-wal
 *.db-shm
+!data/gamecreator.db
 
 # OS files
 .DS_Store
