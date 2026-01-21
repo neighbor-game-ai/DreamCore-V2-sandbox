@@ -190,14 +190,19 @@ const getProjects = (visitorId) => {
   if (!user) return [];
 
   const projects = db.getProjectsByUserId(user.id);
-  return projects.map(p => ({
-    id: p.id,
-    name: p.name,
-    isPublic: !!p.is_public,
-    remixedFrom: p.remixed_from,
-    createdAt: p.created_at,
-    updatedAt: p.updated_at
-  }));
+  return projects.map(p => {
+    // Get description from publish_draft if available
+    const draft = db.getPublishDraft(p.id);
+    return {
+      id: p.id,
+      name: p.name,
+      description: draft?.description || '',
+      isPublic: !!p.is_public,
+      remixedFrom: p.remixed_from,
+      createdAt: p.created_at,
+      updatedAt: p.updated_at
+    };
+  });
 };
 
 const createProject = (visitorId, name = 'New Game') => {
