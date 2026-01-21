@@ -9,7 +9,7 @@
 </head>
 <body data-page="mypage">
   <div class="mypage-view" id="mypageView">
-    <!-- Header (minimal) -->
+    <!-- Floating Header -->
     <header class="mypage-header">
       <button class="mypage-back-btn" id="backBtn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -17,31 +17,50 @@
           <polyline points="12 19 5 12 12 5"></polyline>
         </svg>
       </button>
+      <div class="mypage-header-title">マイページ</div>
+      <div class="mypage-header-spacer"></div>
     </header>
 
-    <!-- Profile Section (centered) -->
-    <div class="mypage-profile">
-      <div class="mypage-avatar">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-          <circle cx="12" cy="7" r="4"></circle>
+    <!-- Profile Card -->
+    <div class="mypage-profile-card">
+      <div class="mypage-avatar-ring">
+        <div class="mypage-avatar">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+      </div>
+      <div class="mypage-profile-info">
+        <div class="mypage-name" id="displayName">-</div>
+        <div class="mypage-bio" id="bio"></div>
+      </div>
+      <button class="mypage-edit-btn" id="editBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
         </svg>
-      </div>
-      <div class="mypage-name" id="displayName">-</div>
-      <div class="mypage-count" id="gameCount">0</div>
-      <div class="mypage-count-label">games</div>
-      <div class="mypage-bio" id="bio"></div>
-      <button class="mypage-edit-btn" id="editBtn">プロフィールを編集</button>
+      </button>
     </div>
 
-    <!-- Games Grid -->
-    <div class="mypage-games-section">
-      <div class="mypage-games-grid" id="gamesGrid">
+    <!-- Collection Counter -->
+    <div class="mypage-collection">
+      <div class="mypage-collection-label">MY COLLECTION</div>
+      <div class="mypage-collection-count">
+        <span class="mypage-count-number" id="gameCount">0</span>
+        <span class="mypage-count-unit">games</span>
+      </div>
+    </div>
+
+    <!-- Showcase Grid -->
+    <div class="mypage-showcase">
+      <div class="mypage-showcase-grid" id="gamesGrid">
         <!-- Games will be loaded here -->
+        <!-- Empty slots will be added by JS -->
       </div>
     </div>
 
-    <!-- Footer Actions -->
+    <!-- Footer -->
     <div class="mypage-footer">
       <button class="mypage-logout-btn" id="logoutBtn">ログアウト</button>
     </div>

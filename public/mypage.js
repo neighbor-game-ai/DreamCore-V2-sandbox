@@ -135,26 +135,48 @@ class MyPageApp {
   renderGamesGrid() {
     if (!this.gamesGridEl) return;
 
-    if (this.projects.length === 0) {
-      this.gamesGridEl.innerHTML = `
-        <div class="mypage-games-empty">
-          <p>まだゲームがありません</p>
-        </div>
-      `;
-      return;
-    }
+    // Calculate minimum slots to show (at least 9, or next multiple of 3)
+    const minSlots = 9;
+    const gameCount = this.projects.length;
+    const totalSlots = Math.max(minSlots, Math.ceil(gameCount / 3) * 3 + 3);
+    const emptySlots = totalSlots - gameCount;
 
-    this.gamesGridEl.innerHTML = this.projects.map(game => {
+    // Render game cards
+    const gameCards = this.projects.map((game, index) => {
+      const thumbnailUrl = game.thumbnailUrl || null;
+      const thumbnailHtml = thumbnailUrl
+        ? `<img src="${thumbnailUrl}" alt="${this.escapeHtml(game.name)}" loading="lazy">`
+        : `<div class="mypage-game-placeholder">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+          </div>`;
+
       return `
-        <div class="mypage-game-card" data-project-id="${game.id}">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-            <line x1="8" y1="21" x2="16" y2="21"></line>
-            <line x1="12" y1="17" x2="12" y2="21"></line>
-          </svg>
+        <div class="mypage-game-card" data-project-id="${game.id}" style="animation-delay: ${index * 0.05}s">
+          ${thumbnailHtml}
         </div>
       `;
     }).join('');
+
+    // Render empty slots with enticing "add" design
+    const emptySlotCards = Array(emptySlots).fill(null).map((_, index) => {
+      return `
+        <div class="mypage-empty-slot" style="animation-delay: ${(gameCount + index) * 0.05}s">
+          <div class="mypage-empty-slot-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </div>
+          <span class="mypage-empty-slot-text">つくる</span>
+        </div>
+      `;
+    }).join('');
+
+    this.gamesGridEl.innerHTML = gameCards + emptySlotCards;
 
     // Add click handlers - play game
     this.gamesGridEl.querySelectorAll('.mypage-game-card').forEach(card => {
@@ -163,6 +185,13 @@ class MyPageApp {
         if (projectId) {
           window.location.href = `/game/${this.visitorId}/${projectId}/`;
         }
+      });
+    });
+
+    // Add click handlers - empty slots go to create page
+    this.gamesGridEl.querySelectorAll('.mypage-empty-slot').forEach(slot => {
+      slot.addEventListener('click', () => {
+        window.location.href = '/create';
       });
     });
   }
