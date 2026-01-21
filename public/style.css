@@ -264,7 +264,7 @@ body::before {
 /* Hero Create Button (Floating) */
 .create-hero {
   position: fixed;
-  top: 64px;
+  top: 80px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 90;
@@ -376,7 +376,7 @@ body::before {
 .games-section {
   flex: 1;
   padding: 0 var(--s-32) var(--s-64);
-  margin-top: 256px;
+  margin-top: 240px;
 }
 
 /* Games Filter Bar - Nintendo × Kashiwa Sato Style */
@@ -2112,7 +2112,7 @@ body::before {
   }
 
   .create-hero {
-    top: 52px;
+    top: 64px;
     padding: var(--s-16) var(--s-16);
   }
 
@@ -2150,7 +2150,7 @@ body::before {
 
   .games-section {
     padding: 0 var(--s-16) var(--s-32);
-    margin-top: 200px;
+    margin-top: 180px;
   }
 
   .project-grid {
