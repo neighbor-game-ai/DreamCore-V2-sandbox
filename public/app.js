@@ -3807,29 +3807,61 @@ class GameCreatorApp {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
+        // Check if image has transparency (PNG)
+        const isPng = file.type === 'image/png';
+        let hasTransparency = false;
+        if (isPng) {
+          const imageData = ctx.getImageData(0, 0, width, height);
+          const data = imageData.data;
+          for (let i = 3; i < data.length; i += 4) {
+            if (data[i] < 255) {
+              hasTransparency = true;
+              break;
+            }
+          }
+        }
+
         // Compress with decreasing quality until under maxSize
-        const compress = (quality) => {
-          canvas.toBlob(
+        const compress = (quality, dimension) => {
+          // For transparent PNGs, resize further if needed instead of quality reduction
+          let targetCanvas = canvas;
+          if (hasTransparency && dimension < maxDimension) {
+            const scale = dimension / Math.max(width, height);
+            const newW = Math.round(width * scale);
+            const newH = Math.round(height * scale);
+            targetCanvas = document.createElement('canvas');
+            targetCanvas.width = newW;
+            targetCanvas.height = newH;
+            targetCanvas.getContext('2d').drawImage(img, 0, 0, newW, newH);
+          }
+
+          const outputType = hasTransparency ? 'image/png' : 'image/jpeg';
+          const ext = hasTransparency ? '.png' : '.jpg';
+
+          targetCanvas.toBlob(
             (blob) => {
-              if (blob.size <= maxSize || quality <= 0.1) {
+              if (blob.size <= maxSize || (hasTransparency && dimension <= 256) || (!hasTransparency && quality <= 0.1)) {
                 // Create new file with compressed data
-                const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
-                  type: 'image/jpeg',
+                const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, ext), {
+                  type: outputType,
                   lastModified: Date.now()
                 });
                 console.log(`Compressed ${file.name}: ${(file.size / 1024).toFixed(1)}KB → ${(blob.size / 1024).toFixed(1)}KB`);
                 resolve(compressedFile);
+              } else if (hasTransparency) {
+                // For PNG with transparency, reduce dimensions
+                compress(quality, Math.round(dimension * 0.8));
               } else {
-                // Try lower quality
-                compress(quality - 0.1);
+                // For JPEG, reduce quality
+                compress(quality - 0.1, dimension);
               }
             },
-            'image/jpeg',
-            quality
+            outputType,
+            hasTransparency ? undefined : quality
           );
         };
 
-        compress(0.9);
+        compress(0.9, Math.max(width, height));
       };
 
       img.onerror = () => {
@@ -4385,9 +4417,18 @@ class GameCreatorApp {
       const ext = this.editingAssetName.includes('.png') || this.imageEditor.hasTransparency ? '.png' : '.jpg';
       const newName = `${baseName}_edited${ext}`;
 
+      // Convert blob to File for compression
+      const file = new File([blob], newName, {
+        type: ext === '.png' ? 'image/png' : 'image/jpeg',
+        lastModified: Date.now()
+      });
+
+      // Compress image before upload
+      const compressedFile = await this.compressImage(file);
+
       // Upload as new asset
       const formData = new FormData();
-      formData.append('file', blob, newName);
+      formData.append('file', compressedFile);
       formData.append('visitorId', this.visitorId);
       formData.append('originalName', newName);
       // Save to current project
