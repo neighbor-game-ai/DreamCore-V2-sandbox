@@ -170,6 +170,120 @@ body[data-page="publish"] {
   border-color: var(--gray-400);
 }
 
+/* Movie Section */
+.movie-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-12);
+  margin-top: var(--s-24);
+}
+
+.movie-section .section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin: 0;
+}
+
+.movie-preview {
+  aspect-ratio: 9 / 16;
+  max-height: 300px;
+  background: var(--gray-900);
+  border-radius: var(--r-16);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.movie-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-12);
+  color: var(--gray-400);
+}
+
+.movie-placeholder svg {
+  opacity: 0.5;
+}
+
+.movie-placeholder span {
+  font-size: 0.875rem;
+}
+
+#movieVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.movie-actions {
+  display: flex;
+  gap: var(--s-8);
+}
+
+.movie-actions .primary-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-8);
+  padding: var(--s-12);
+  background: var(--red);
+  border: none;
+  border-radius: var(--r-8);
+  color: var(--white);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration) var(--ease-out);
+}
+
+.movie-actions .primary-btn:hover {
+  background: var(--red-dark, #e02020);
+}
+
+.movie-actions .primary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Movie generating state */
+.movie-preview.generating {
+  position: relative;
+}
+
+.movie-preview.generating::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gray-900);
+  border-radius: var(--r-16);
+  z-index: 10;
+}
+
+.movie-preview.generating::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 14px;
+  z-index: 11;
+  background:
+    radial-gradient(circle at 7px 7px, var(--red) 6px, transparent 6px),
+    radial-gradient(circle at 30px 7px, var(--red) 6px, transparent 6px),
+    radial-gradient(circle at 53px 7px, var(--red) 6px, transparent 6px);
+  background-size: 60px 14px;
+  animation: nintendoDots 1.2s ease-in-out infinite;
+}
+
+.movie-preview.generating .movie-placeholder {
+  opacity: 0;
+}
+
 /* Form Section */
 .form-section {
   display: flex;

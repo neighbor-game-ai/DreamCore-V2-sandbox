@@ -1804,6 +1804,329 @@ app.get('/api/projects/:projectId/thumbnail', (req, res) => {
   }
 });
 
+// ==================== Game Movie Generation ====================
+
+// Generate game demo movie using Remotion + AI
+// AI reads the game code and generates a Remotion component that recreates the gameplay
+app.post('/api/projects/:projectId/generate-movie', async (req, res) => {
+  const { projectId } = req.params;
+  const { visitorId } = req.body;
+
+  if (!visitorId) {
+    return res.status(400).json({ error: 'visitorId required' });
+  }
+
+  try {
+    const project = db.getProjectById(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const projectDir = userManager.getProjectDir(visitorId, projectId);
+    const gameVideoDir = path.join(__dirname, '..', 'game-video');
+
+    // Read the game code
+    const indexPath = path.join(projectDir, 'index.html');
+    if (!fs.existsSync(indexPath)) {
+      return res.status(404).json({ error: 'Game code not found' });
+    }
+    const gameCode = fs.readFileSync(indexPath, 'utf-8');
+
+    // Read the game spec
+    let specContent = '';
+    const specPaths = [
+      path.join(projectDir, 'specs', 'game.md'),
+      path.join(projectDir, 'spec.md')
+    ];
+    for (const specPath of specPaths) {
+      if (fs.existsSync(specPath)) {
+        specContent = fs.readFileSync(specPath, 'utf-8');
+        break;
+      }
+    }
+
+    // Gather assets and copy to Remotion public directory
+    const projectAssets = db.getProjectAssets(projectId);
+    const remotionPublicDir = path.join(gameVideoDir, 'public');
+
+    // Ensure public directory exists
+    if (!fs.existsSync(remotionPublicDir)) {
+      fs.mkdirSync(remotionPublicDir, { recursive: true });
+    }
+
+    // Clear old assets
+    const existingFiles = fs.readdirSync(remotionPublicDir);
+    existingFiles.forEach(file => {
+      if (file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.webp')) {
+        fs.unlinkSync(path.join(remotionPublicDir, file));
+      }
+    });
+
+    // Copy assets to Remotion public dir
+    const assetInfo = [];
+    projectAssets
+      .filter(a => !a.is_deleted && a.mime_type?.startsWith('image/'))
+      .forEach((a, index) => {
+        if (a.storage_path && fs.existsSync(a.storage_path)) {
+          const ext = path.extname(a.storage_path);
+          const newName = `asset${index}${ext}`;
+          fs.copyFileSync(a.storage_path, path.join(remotionPublicDir, newName));
+          assetInfo.push({
+            name: a.original_name,
+            staticName: newName,
+            description: a.ai_description || ''
+          });
+        }
+      });
+
+    console.log('[Movie] Generating demo for project:', projectId);
+    console.log('[Movie] Assets copied:', assetInfo.length);
+
+    // Generate Remotion component using Claude
+    const { spawn } = require('child_process');
+
+    const prompt = `あなたはRemotionの専門家です。以下のゲーム情報を読んで、そのゲームのデモプレイ動画を再現するRemotionコンポーネントを生成してください。
+
+## ゲーム仕様書
+${specContent ? specContent.slice(0, 5000) : '（仕様書なし）'}
+
+**重要**: 仕様書に記載されている仮想解像度（virtualWidth/virtualHeight）とキャラクターサイズを必ず確認し、実際のゲーム画面と同じ比率・サイズ感で再現してください。
+
+## ゲームコード
+\`\`\`html
+${gameCode.slice(0, 12000)}
+\`\`\`
+
+## 利用可能なアセット画像
+${assetInfo.map(a => `- ${a.staticName}: ${a.name}${a.description ? ` (${a.description})` : ''}`).join('\n') || 'なし'}
+
+## 要件
+- 7秒間（210フレーム、30fps）のデモ動画を4つのシーンで構成
+- **各シーンは視覚的に明確に区別できるようにする**（カット割りが分かるように）
+
+### シーン構成（各シーンで異なるカメラワーク・演出を使う）
+1. **シーン1 (0-45f)**: イントロ
+   - 画面全体を引きで見せる（scale: 0.8〜0.9）
+   - タイトルが大きくフェードイン
+   - ゲーム要素は静止または軽い動き
+
+2. **シーン2 (45-105f)**: メインプレイ
+   - 通常のゲーム画面（scale: 1.0）
+   - プレイヤーと敵が活発に動く
+   - タイトルは小さく隅に移動または非表示
+
+3. **シーン3 (105-165f)**: クライマックス・フォーカス
+   - **ズームイン演出（scale: 1.3〜1.5）**
+   - **ビネット効果（画面端を暗く）**
+   - 激しいアクション（敵撃破、爆発など）
+
+4. **シーン4 (165-210f)**: フィニッシュ
+   - フラッシュ効果で場面転換を強調
+   - 引きの画面に戻る
+   - タイトルが再度大きく表示
+   - 「PLAY NOW」的なCTA演出
+
+### 技術要件
+- アセット画像は staticFile() で読み込む（例: staticFile("asset0.png")）
+- ゲームタイトル「${project.name}」を表示
+- interpolate() でシーンごとにscale/opacity/positionを変化させる
+- ビネット効果: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.8) 100%)
+- ゲームの雰囲気が伝わる魅力的なデモ
+
+### サイズ計算（重要）
+- 動画サイズ: 1080x1920 (9:16)
+- 仕様書の仮想解像度を読み、実際のゲームと同じ比率でキャラクターを描画
+- 例: 仮想解像度が 390x700 でプレイヤーサイズが 50px なら、動画では 50 * (1080/390) ≈ 138px
+- **キャラクターが小さすぎないように注意** - 実際のゲーム画面を見た時と同じサイズ感にする
+
+## 出力形式
+以下の形式でRemotionコンポーネントのみを出力してください（説明不要）:
+
+\`\`\`tsx
+import React from "react";
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Img, staticFile } from "remotion";
+
+export const GameDemo: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps, width, height } = useVideoConfig();
+
+  // アセット画像の読み込み例
+  // const playerImg = staticFile("asset0.png");
+  // <Img src={playerImg} ... />
+
+  return (
+    <AbsoluteFill style={{ backgroundColor: "#000" }}>
+      {/* ゲーム要素のアニメーション */}
+    </AbsoluteFill>
+  );
+};
+\`\`\``;
+
+    const claude = spawn('claude', [
+      '--print',
+      '--model', 'sonnet',
+      '--dangerously-skip-permissions'
+    ], {
+      cwd: process.cwd(),
+      env: { ...process.env }
+    });
+
+    claude.stdin.write(prompt);
+    claude.stdin.end();
+
+    let claudeOutput = '';
+    claude.stdout.on('data', (data) => {
+      claudeOutput += data.toString();
+    });
+
+    claude.stderr.on('data', (data) => {
+      console.log('[Movie] Claude stderr:', data.toString());
+    });
+
+    claude.on('close', async (claudeCode) => {
+      if (claudeCode !== 0) {
+        console.error('[Movie] Claude failed:', claudeCode);
+        return res.status(500).json({ error: 'Failed to generate demo component' });
+      }
+
+      // Extract TSX code from Claude's output
+      const tsxMatch = claudeOutput.match(/```tsx\n([\s\S]*?)```/);
+      if (!tsxMatch) {
+        console.error('[Movie] No TSX code found in Claude output');
+        console.log('[Movie] Claude output:', claudeOutput.slice(0, 500));
+        return res.status(500).json({ error: 'Failed to extract component code' });
+      }
+
+      const componentCode = tsxMatch[1];
+      console.log('[Movie] Generated component code length:', componentCode.length);
+
+      // Write the generated component
+      const demoPath = path.join(gameVideoDir, 'src', 'GameDemo.tsx');
+      fs.writeFileSync(demoPath, componentCode);
+
+      // Update Root.tsx to use GameDemo
+      const rootCode = `import { Composition } from "remotion";
+import { GameDemo } from "./GameDemo";
+
+export const RemotionRoot = () => {
+  return (
+    <Composition
+      id="GameVideo"
+      component={GameDemo}
+      durationInFrames={210}
+      fps={30}
+      width={1080}
+      height={1920}
+    />
+  );
+};
+`;
+      fs.writeFileSync(path.join(gameVideoDir, 'src', 'Root.tsx'), rootCode);
+
+      // Render the video
+      const outputPath = path.join(projectDir, 'movie.mp4');
+
+      console.log('[Movie] Starting Remotion render...');
+
+      const remotion = spawn('npx', [
+        'remotion', 'render',
+        'GameVideo',
+        outputPath
+      ], {
+        cwd: gameVideoDir,
+        env: { ...process.env }
+      });
+
+      let renderOutput = '';
+      remotion.stdout.on('data', (data) => {
+        renderOutput += data.toString();
+        console.log('[Movie] Render:', data.toString().trim());
+      });
+
+      remotion.stderr.on('data', (data) => {
+        renderOutput += data.toString();
+        console.log('[Movie] Render stderr:', data.toString().trim());
+      });
+
+      remotion.on('close', (renderCode) => {
+        if (renderCode === 0 && fs.existsSync(outputPath)) {
+          console.log('[Movie] Render successful!');
+
+          // Git commit (non-blocking)
+          const { exec } = require('child_process');
+          exec('git add -A && git commit -m "Generate demo movie" --allow-empty', {
+            cwd: projectDir
+          });
+
+          const movieUrl = `/api/projects/${projectId}/movie?t=${Date.now()}`;
+          res.json({ success: true, movieUrl, duration: 7 });
+        } else {
+          console.error('[Movie] Render failed:', renderCode);
+          console.error('[Movie] Output:', renderOutput.slice(-1000));
+          res.status(500).json({ error: 'Failed to render video', output: renderOutput.slice(-500) });
+        }
+      });
+
+      remotion.on('error', (error) => {
+        console.error('[Movie] Render spawn error:', error);
+        res.status(500).json({ error: error.message });
+      });
+    });
+
+    claude.on('error', (error) => {
+      console.error('[Movie] Claude spawn error:', error);
+      res.status(500).json({ error: error.message });
+    });
+
+  } catch (error) {
+    console.error('Error generating movie:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Serve movie file
+app.get('/api/projects/:projectId/movie', (req, res) => {
+  const { projectId } = req.params;
+  const visitorId = req.query.visitorId || req.headers['x-visitor-id'];
+
+  try {
+    const project = db.getProjectById(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Try to find project dir
+    let projectDir = null;
+    const usersDir = path.join(__dirname, '..', 'users');
+
+    if (fs.existsSync(usersDir)) {
+      const visitors = fs.readdirSync(usersDir);
+      for (const visitor of visitors) {
+        const possibleDir = path.join(usersDir, visitor, projectId);
+        if (fs.existsSync(possibleDir)) {
+          projectDir = possibleDir;
+          break;
+        }
+      }
+    }
+
+    if (!projectDir) {
+      return res.status(404).json({ error: 'Project directory not found' });
+    }
+
+    const moviePath = path.join(projectDir, 'movie.mp4');
+
+    if (fs.existsSync(moviePath)) {
+      res.type('video/mp4').sendFile(moviePath);
+    } else {
+      res.status(404).send('Movie not found');
+    }
+  } catch (error) {
+    console.error('Error serving movie:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== My Page Route ====================
 
 app.get('/mypage', (req, res) => {

@@ -60,6 +60,28 @@
         </div>
       </section>
 
+      <!-- Movie Preview -->
+      <section class="movie-section">
+        <h3 class="section-title">プロモーション動画</h3>
+        <div class="movie-preview" id="moviePreview">
+          <div class="movie-placeholder">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <span id="moviePlaceholderText">動画を生成</span>
+          </div>
+          <video id="movieVideo" class="hidden" controls></video>
+        </div>
+        <div class="movie-actions">
+          <button id="generateMovie" class="primary-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            動画を生成
+          </button>
+        </div>
+      </section>
+
       <!-- Right: Form -->
       <section class="form-section">
         <!-- Title -->

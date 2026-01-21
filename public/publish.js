@@ -19,6 +19,7 @@ class PublishPage {
     this.saveTimeout = null;
     this.isDirty = false;
     this.isGenerating = false;
+    this.isGeneratingMovie = false;
 
     if (!this.projectId) {
       alert('プロジェクトが指定されていません');
@@ -54,6 +55,12 @@ class PublishPage {
     this.thumbnailImage = document.getElementById('thumbnailImage');
     this.regenerateThumbnailBtn = document.getElementById('regenerateThumbnail');
     this.uploadThumbnailBtn = document.getElementById('uploadThumbnail');
+
+    // Movie
+    this.moviePreview = document.getElementById('moviePreview');
+    this.movieVideo = document.getElementById('movieVideo');
+    this.moviePlaceholderText = document.getElementById('moviePlaceholderText');
+    this.generateMovieBtn = document.getElementById('generateMovie');
 
     // Form
     this.titleInput = document.getElementById('gameTitle');
@@ -141,6 +148,7 @@ class PublishPage {
     this.regenerateTagsBtn.addEventListener('click', () => this.regenerateTags());
     this.regenerateThumbnailBtn.addEventListener('click', () => this.regenerateThumbnail());
     this.uploadThumbnailBtn.addEventListener('click', () => this.uploadThumbnail());
+    this.generateMovieBtn.addEventListener('click', () => this.generateMovie());
 
     // Publish
     this.publishButton.addEventListener('click', () => this.publish());
@@ -487,6 +495,64 @@ class PublishPage {
     }
 
     await this.generateThumbnail();
+  }
+
+  async generateMovie() {
+    if (this.isGeneratingMovie) return;
+    this.isGeneratingMovie = true;
+
+    const placeholder = this.moviePreview.querySelector('.movie-placeholder');
+    this.movieVideo.classList.add('hidden');
+    this.moviePreview.classList.add('generating');
+    this.generateMovieBtn.disabled = true;
+
+    if (placeholder) {
+      placeholder.classList.remove('hidden');
+    }
+    if (this.moviePlaceholderText) {
+      this.moviePlaceholderText.textContent = '動画を生成中...';
+    }
+
+    try {
+      const response = await fetch(`/api/projects/${this.projectId}/generate-movie`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visitorId: this.visitorId
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.movieUrl) {
+        this.movieVideo.src = data.movieUrl;
+        this.movieVideo.classList.remove('hidden');
+        if (placeholder) {
+          placeholder.classList.add('hidden');
+        }
+        this.generateMovieBtn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+          </svg>
+          再生成
+        `;
+      } else {
+        console.error('Failed to generate movie:', data.error);
+        if (this.moviePlaceholderText) {
+          this.moviePlaceholderText.textContent = '生成に失敗しました';
+        }
+      }
+    } catch (error) {
+      console.error('Error generating movie:', error);
+      if (this.moviePlaceholderText) {
+        this.moviePlaceholderText.textContent = 'エラーが発生しました';
+      }
+    } finally {
+      this.isGeneratingMovie = false;
+      this.moviePreview.classList.remove('generating');
+      this.generateMovieBtn.disabled = false;
+    }
   }
 
   // 画像エディタの初期化
