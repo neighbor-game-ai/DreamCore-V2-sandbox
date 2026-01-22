@@ -82,7 +82,9 @@ app.get('/api/health', (req, res) => {
 // NOTE: /api/auth/* routes removed - use Supabase Auth instead
 
 // Public config endpoint (for frontend Supabase client)
+// Cache for 1 hour (config rarely changes)
 app.get('/api/config', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=3600');
   res.json({
     supabaseUrl: SUPABASE_URL,
     supabaseAnonKey: SUPABASE_ANON_KEY
@@ -672,6 +674,7 @@ const ERROR_DETECTION_SCRIPT = `
 `;
 
 // Serve project game files (supports nested paths: js/, css/, assets/)
+// Authentication required - owner-only access (Phase 1 policy)
 app.get('/game/:userId/:projectId/*', authenticate, async (req, res) => {
   const { userId, projectId } = req.params;
   const filename = req.params[0] || 'index.html';
@@ -686,13 +689,10 @@ app.get('/game/:userId/:projectId/*', authenticate, async (req, res) => {
     return res.status(403).json({ error: 'Access denied' });
   }
 
-  // Verify project exists and belongs to user
-  const project = await db.getProjectById(req.supabase, projectId);
-  if (!project) {
+  // Filesystem check (no DB query needed - ownership verified above)
+  const projectDir = getProjectPath(userId, projectId);
+  if (!fs.existsSync(projectDir)) {
     return res.status(404).json({ error: 'Project not found' });
-  }
-  if (project.user_id !== req.user.id) {
-    return res.status(403).json({ error: 'Access denied' });
   }
 
   const ext = path.extname(filename).toLowerCase();
@@ -720,7 +720,7 @@ app.get('/game/:userId/:projectId/*', authenticate, async (req, res) => {
   const binaryExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.mp3', '.wav', '.ogg', '.woff', '.woff2', '.ttf'];
   const isBinary = binaryExtensions.includes(ext);
 
-  const projectDir = getProjectPath(userId, projectId);
+  // projectDir is already defined above for existence check
   const filePath = path.join(projectDir, filename);
 
   // Path traversal protection
@@ -2046,4 +2046,11 @@ app.get('/project/:id', (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Game Creator MVP running at http://localhost:${PORT}`);
+
+  // Preload skill metadata in background (non-blocking)
+  claudeRunner.preloadSkillMetadata().then(() => {
+    console.log('Skill metadata preloaded in background');
+  }).catch(err => {
+    console.error('Failed to preload skill metadata:', err.message);
+  });
 });

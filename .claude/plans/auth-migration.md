@@ -268,9 +268,9 @@ if (!resolved.startsWith(baseDir + '/') && resolved !== baseDir) return 403;
 | A-5 | 起動時チェック呼び出し | `index.js` | config.jsのチェックを呼ぶだけ |
 | A-6 | cookie-parser追加 | `index.js` | |
 
-**検証:**
-- [ ] Supabase未設定で起動 → エラー終了
-- [ ] Supabase設定済みで起動 → 正常起動
+**検証:** ✅完了
+- [x] Supabase未設定で起動 → エラー終了
+- [x] Supabase設定済みで起動 → 正常起動
 
 ### Phase B: ルーティング認可
 
@@ -289,14 +289,14 @@ if (!resolved.startsWith(baseDir + '/') && resolved !== baseDir) return 403;
 | B-9 | /play/:projectId を owner-only に変更 | `index.js` | プレビュー用途として継続 |
 | B-10 | /discover を静的ページ配信に維持 | `index.js`, `public/discover.html` | フロントで空状態表示 |
 
-**検証:**
-- [ ] 未認証でAPI呼び出し → 401
-- [ ] 他ユーザーのリソースアクセス → 403
-- [ ] パストラバーサル攻撃 → 403
-- [ ] public-games系APIが404
-- [ ] /api/auth/* が404
-- [ ] /play/:projectId が他ユーザーのプロジェクトで403
-- [ ] /discover が静的ページを返し、フロントで空状態表示
+**検証:** ✅完了
+- [x] 未認証でAPI呼び出し → 401
+- [x] 他ユーザーのリソースアクセス → 403
+- [x] パストラバーサル攻撃 → 403
+- [x] public-games系APIが404
+- [x] /api/auth/* が404
+- [x] /play/:projectId が他ユーザーのプロジェクトで403
+- [x] /discover が静的ページを返し、フロントで空状態表示
 
 ### Phase C: 関数シグネチャ統一
 
@@ -317,9 +317,9 @@ getUserByVisitorId(x) → getUserById(x)
 db.getUserByVisitorId → db.getUserById
 ```
 
-**検証:**
-- [ ] grep "visitorId" server/ → 0件
-- [ ] 全機能の動作確認
+**検証:** ✅完了
+- [x] grep "visitorId" server/ → 0件
+- [x] 全機能の動作確認
 
 ### Phase D: フロントエンド
 
@@ -349,13 +349,13 @@ async function apiCall(path, options = {}) {
 }
 ```
 
-**検証:**
-- [ ] Googleログイン → 成功
-- [ ] プロジェクト作成 → 成功
-- [ ] プレビュー表示 → 成功
-- [ ] アセットアップロード → 成功
+**検証:** ✅完了
+- [x] Googleログイン → 成功
+- [x] プロジェクト作成 → 成功
+- [x] プレビュー表示 → 成功
+- [x] アセットアップロード → 成功
 
-### Phase E: クリーンアップ
+### Phase E: クリーンアップ ✅完了
 
 | ID | タスク |
 |----|--------|
@@ -474,3 +474,4 @@ CREATE TABLE IF NOT EXISTS users (
 | 2026-01-22 | 専門家レビュー2反映: /api/auth/*削除追加、REST APIとWebSocket操作の区別明確化、/play(owner-only)と/discover(空リスト)のPhase1動作追加 |
 | 2026-01-22 | 専門家レビュー3反映: res.render→静的ページ+フロント空状態表示、/api/projects表構造修正、db.getProject→db.getProjectById |
 | 2026-01-22 | 専門家レビュー4反映: /discover UI責務明確化、WebSocket操作を独立見出し+表形式に変更 |
+| 2026-01-22 | **Phase 1 完了**: 全フェーズ(A-E)実装・検証完了。全テスト(RLS, WebSocket, Assets, Project CRUD)成功。 |

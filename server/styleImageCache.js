@@ -23,10 +23,16 @@ function findStyleImage(dimension, styleId) {
     return fs.statSync(fPath).isDirectory();
   });
 
-  // Search all folders for the style image
+  // Search all folders for the style image (prefer WebP)
   for (const folder of folders) {
-    const imagePath = path.join(dimPath, folder, `${styleId}.png`);
-    if (fs.existsSync(imagePath)) {
+    // Try WebP first
+    const webpPath = path.join(dimPath, folder, `${styleId}.webp`);
+    if (fs.existsSync(webpPath)) {
+      return `/images/styles/${dimension}/${folder}/${styleId}.webp`;
+    }
+    // Fallback to PNG
+    const pngPath = path.join(dimPath, folder, `${styleId}.png`);
+    if (fs.existsSync(pngPath)) {
       return `/images/styles/${dimension}/${folder}/${styleId}.png`;
     }
   }
@@ -74,7 +80,7 @@ function getAvailableImages(dimension) {
   for (const folder of folders) {
     const folderPath = path.join(dimPath, folder);
     if (fs.statSync(folderPath).isDirectory()) {
-      const files = fs.readdirSync(folderPath).filter(f => f.endsWith('.png'));
+      const files = fs.readdirSync(folderPath).filter(f => f.endsWith('.webp') || f.endsWith('.png'));
       for (const file of files) {
         results.push({
           dimension,

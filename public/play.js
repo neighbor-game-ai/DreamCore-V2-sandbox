@@ -1,11 +1,13 @@
 /**
  * Play Screen - Game Creator
+ * Updated for Supabase Auth
  */
 
 class PlayApp {
   constructor() {
     this.projectId = null;
     this.gameData = null;
+    this.accessToken = null;
 
     // DOM elements
     this.gameFrame = document.getElementById('gameFrame');
@@ -40,6 +42,12 @@ class PlayApp {
       return;
     }
 
+    // Get session for authenticated access
+    const session = await DreamCoreAuth.getSession();
+    if (session) {
+      this.accessToken = session.access_token;
+    }
+
     await this.loadGameData();
     this.loadGame();
     this.setupListeners();
@@ -47,44 +55,30 @@ class PlayApp {
 
   async loadGameData() {
     try {
-      // Try public API first
-      const response = await fetch(`/api/public/games/${this.projectId}`);
-      if (response.ok) {
-        this.gameData = await response.json();
-        this.updateUI();
-        return;
-      }
-
-      // Fallback: try authenticated API for own games
-      const sessionId = localStorage.getItem('sessionId');
-      if (sessionId) {
-        const meResponse = await fetch(`/api/auth/me?sessionId=${sessionId}`);
-        if (meResponse.ok) {
-          const meData = await meResponse.json();
-          const visitorId = meData.user?.visitorId;
-
-          if (visitorId) {
-            const projectsResponse = await fetch(`/api/projects?visitorId=${visitorId}`);
-            if (projectsResponse.ok) {
-              const projectsData = await projectsResponse.json();
-              const project = projectsData.projects?.find(p => p.id === this.projectId);
-
-              if (project) {
-                this.gameData = {
-                  id: project.id,
-                  title: project.name,
-                  description: project.description || '',
-                  creatorId: visitorId,
-                  creatorName: meData.user?.displayName || meData.user?.username || '自分',
-                  likes: 0,
-                  tags: []
-                };
-                this.updateUI();
-              }
-            }
-          }
+      // For Phase 1, only owner can access - use authenticated API
+      if (this.accessToken) {
+        const response = await DreamCoreAuth.authFetch(`/api/projects/${this.projectId}`);
+        if (response.ok) {
+          const project = await response.json();
+          const session = await DreamCoreAuth.getSession();
+          this.gameData = {
+            id: project.id,
+            title: project.name,
+            description: project.description || '',
+            creatorId: session.user.id,
+            creatorName: session.user.user_metadata?.full_name ||
+                         session.user.email?.split('@')[0] ||
+                         '自分',
+            likes: 0,
+            tags: []
+          };
+          this.updateUI();
+          return;
         }
       }
+
+      // If not authenticated or not owner, show error
+      console.error('Unable to load game data - authentication required');
     } catch (e) {
       console.error('Failed to load game data:', e);
     }
@@ -118,17 +112,13 @@ class PlayApp {
   }
 
   loadGame() {
-    if (!this.gameData || !this.gameData.creatorId) {
-      // Fallback: try to load with visitorId from localStorage
-      const visitorId = localStorage.getItem('visitorId');
-      if (visitorId) {
-        const gameUrl = `/api/projects/${this.projectId}/preview?visitorId=${visitorId}`;
-        this.gameFrame.src = gameUrl;
-      }
+    if (!this.gameData || !this.gameData.creatorId || !this.accessToken) {
+      console.error('Cannot load game: missing creatorId or accessToken');
       return;
     }
 
-    const gameUrl = `/api/projects/${this.projectId}/preview?visitorId=${this.gameData.creatorId}`;
+    // Load game with access_token for authentication
+    const gameUrl = `/game/${this.gameData.creatorId}/${this.projectId}/index.html?access_token=${encodeURIComponent(this.accessToken)}`;
     this.gameFrame.src = gameUrl;
   }
 
@@ -151,8 +141,10 @@ class PlayApp {
     // Info button
     this.infoBtn?.addEventListener('click', () => this.openSheet('info'));
 
-    // Zapping button
-    this.zappingBtn?.addEventListener('click', () => this.goToNextGame());
+    // Zapping button (disabled in Phase 1)
+    this.zappingBtn?.addEventListener('click', () => {
+      alert('ランダム再生機能はPhase 2で提供予定です');
+    });
 
     // Create button
     this.createBtn?.addEventListener('click', () => {
@@ -228,20 +220,6 @@ class PlayApp {
     } else {
       this.likeBtn?.classList.add('liked');
       if (this.likeCount) this.likeCount.textContent = currentLikes + 1;
-    }
-  }
-
-  async goToNextGame() {
-    try {
-      const response = await fetch('/api/public/games/random');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.id && data.id !== this.projectId) {
-          window.location.href = `/play/${data.id}`;
-        }
-      }
-    } catch (e) {
-      console.error('Failed to get next game:', e);
     }
   }
 

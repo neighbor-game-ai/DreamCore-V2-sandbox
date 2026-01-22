@@ -113,21 +113,43 @@ USING (owner_id = auth.uid() AND is_deleted = FALSE)
 
 ## Phase 1 完了ステータス
 
-### 確認済み項目
+**最終検証日: 2026-01-22**
+
+### バックエンド ✅
 
 - [x] public系エンドポイント削除（`/api/public-games`等）
 - [x] `/play/:projectId` owner-only
 - [x] `/api/assets/search` owner限定
 - [x] 起動時envバリデーション（config.js）
-- [x] Supabase Auth一本化（database-supabase.js使用中、database.js は未使用）
+- [x] Supabase Auth一本化（database-supabase.js使用中）
+- [x] RLSポリシー検証済み（test-rls.js）
+- [x] WebSocket権限検証済み（test-ws-permissions-final.js）
+- [x] プロジェクトCRUD検証済み（test-ws-project-operations.js）
+- [x] アセットAPI検証済み（test-assets-api.js）
 
-### 技術的負債
+### フロントエンド ✅
+
+- [x] Supabase Auth SDK導入（public/auth.js）
+- [x] Google Sign-In実装
+- [x] authFetch APIラッパー実装
+- [x] WebSocket認証（access_token）
+- [x] プレビューiframe認証（access_token query param）
+
+### 技術的負債（解消済み）
 
 - ~~`database.js`~~ - 削除済み
 - ~~`initLoginUsers.js`~~ - 削除済み
 - ~~`assets.is_deleted`~~ - マイグレーション実行済み（2026-01-22）
+- ~~`visitorId`言及~~ - serverディレクトリから完全削除（2026-01-22）
 
 ## 開発方針
+
+### 計画駆動の開発
+
+- 実装前に必ず計画を立てる（`.claude/plans/` 参照）
+- ユーザーは非エンジニアのため、計画から外れた指示をすることがある
+- その場合は**遠慮なく指摘**し、計画との整合性を確認すること
+- 「この指示は〇〇の計画と矛盾しますが、進めてよいですか？」のように確認する
 
 ### サブエージェント並列実行
 

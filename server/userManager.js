@@ -5,8 +5,7 @@
  *
  * V2 Changes:
  * - Uses config.js for path configuration
- * - userId (Supabase Auth UUID) replaces visitorId
- * - Backwards compatible with legacy visitorId
+ * - userId (Supabase Auth UUID) for all user identification
  *
  * Path Structure:
  * - Production: /data/projects/{userId}/{projectId}/
@@ -47,7 +46,7 @@ const execGit = (cmd, cwd) => {
 
 /**
  * Get project directory path
- * @param {string} userId - User ID (Supabase Auth UUID or legacy visitorId)
+ * @param {string} userId - User ID (Supabase Auth UUID)
  * @param {string} projectId - Project ID
  * @returns {string} Absolute path to project directory
  */
@@ -57,7 +56,7 @@ const getProjectDir = (userId, projectId) => {
 
 /**
  * Ensure project directory exists with git initialization
- * @param {string} userId - User ID (Supabase Auth UUID or legacy visitorId)
+ * @param {string} userId - User ID (Supabase Auth UUID)
  * @param {string} projectId - Project ID
  * @returns {string} Absolute path to project directory
  */
@@ -207,7 +206,6 @@ const getOrCreateUserFromAuth = async () => {
 
 /**
  * @deprecated Use Supabase Auth directly
- * Legacy visitorId system is no longer supported
  */
 const getOrCreateUser = async () => {
   throw new Error('getOrCreateUser is deprecated - use Supabase Auth');

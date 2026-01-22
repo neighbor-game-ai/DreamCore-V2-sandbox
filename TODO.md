@@ -32,8 +32,12 @@
 - [x] フロントエンドSupabase Auth対応（Google Sign-In）
 - [x] API呼び出しをauthFetch化（Authorization Bearer）
 - [x] `profiles` → `users` テーブル修正（FK制約対応）
+- [x] プレビューiframe認証（access_token query param）
+- [x] visitorId言及をserverディレクトリから完全削除
+- [x] Phase 1 全テスト検証完了（RLS, WebSocket, Assets, Project CRUD）
 
 ---
 
 最終更新: 2026-01-22
+**Phase 1 完了**
 詳細は `CLAUDE.md` および `.claude/plans/` を参照

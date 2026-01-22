@@ -1,10 +1,10 @@
 /**
  * Notifications Page - Game Creator
+ * Updated for Supabase Auth
  */
 
 class NotificationsApp {
   constructor() {
-    this.sessionId = localStorage.getItem('sessionId');
     this.currentUser = null;
     this.visitorId = null;
     this.notifications = [];
@@ -20,34 +20,18 @@ class NotificationsApp {
   }
 
   async init() {
-    // Check authentication
-    if (!this.sessionId) {
+    // Check authentication using Supabase Auth
+    const session = await DreamCoreAuth.getSession();
+    if (!session) {
       this.redirectToLogin();
       return;
     }
 
-    const isValid = await this.checkSession();
-    if (!isValid) {
-      this.redirectToLogin();
-      return;
-    }
+    this.currentUser = session.user;
+    this.visitorId = session.user.id;
 
     this.setupListeners();
     await this.loadNotifications();
-  }
-
-  async checkSession() {
-    try {
-      const response = await fetch(`/api/auth/me?sessionId=${this.sessionId}`);
-      if (!response.ok) return false;
-      const data = await response.json();
-      this.currentUser = data.user;
-      this.visitorId = data.user.visitorId;
-      return true;
-    } catch (e) {
-      console.error('Session check failed:', e);
-      return false;
-    }
   }
 
   redirectToLogin() {
@@ -111,7 +95,7 @@ class NotificationsApp {
 
   async loadNotifications() {
     try {
-      const response = await fetch(`/api/notifications?visitorId=${this.visitorId}`);
+      const response = await DreamCoreAuth.authFetch('/api/notifications');
       if (response.ok) {
         const data = await response.json();
         this.notifications = data.notifications || [];
@@ -329,12 +313,8 @@ class NotificationsApp {
 
       // Call API to mark as read (if exists)
       try {
-        await fetch(`/api/notifications/${id}/read`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-session-id': this.sessionId
-          }
+        await DreamCoreAuth.authFetch(`/api/notifications/${id}/read`, {
+          method: 'POST'
         });
       } catch (e) {
         // Ignore API errors for demo
@@ -354,13 +334,8 @@ class NotificationsApp {
 
     // Call API (if exists)
     try {
-      await fetch('/api/notifications/read-all', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-session-id': this.sessionId
-        },
-        body: JSON.stringify({ visitorId: this.visitorId })
+      await DreamCoreAuth.authFetch('/api/notifications/read-all', {
+        method: 'POST'
       });
     } catch (e) {
       // Ignore API errors for demo

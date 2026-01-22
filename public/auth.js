@@ -2,61 +2,108 @@
  * Supabase Auth Client for DreamCore V2
  *
  * Provides authentication utilities using Supabase Auth with Google OAuth.
+ * Optimized with localStorage caching to minimize Supabase API calls.
  */
 
 // Global auth state
 let supabaseClient = null;
 let currentSession = null;
 let authStateListeners = [];
+let sessionPromise = null; // Prevent duplicate getSession calls
+
+// Session cache config
+const SESSION_CACHE_KEY = 'dreamcore_session_cache';
+const SESSION_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Get cached session from localStorage
+ * @returns {Object|null} Cached session or null if expired/missing
+ */
+function getCachedSession() {
+  try {
+    const cached = localStorage.getItem(SESSION_CACHE_KEY);
+    if (!cached) return null;
+
+    const { session, timestamp } = JSON.parse(cached);
+    if (Date.now() - timestamp > SESSION_CACHE_TTL) {
+      localStorage.removeItem(SESSION_CACHE_KEY);
+      return null;
+    }
+    return session;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Save session to localStorage cache
+ * @param {Object|null} session - Session to cache
+ */
+function setCachedSession(session) {
+  try {
+    if (session) {
+      localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify({
+        session,
+        timestamp: Date.now()
+      }));
+    } else {
+      localStorage.removeItem(SESSION_CACHE_KEY);
+    }
+  } catch (e) {
+    // Ignore storage errors
+  }
+}
 
 /**
  * Initialize Supabase client
  * Must be called before any auth operations
+ *
+ * Optimization: Uses inline config (window.__SUPABASE__) when available
+ * Session is loaded from cache first, then validated in background
  */
 async function initAuth() {
   if (supabaseClient) return supabaseClient;
 
-  // Fetch config from server
-  const response = await fetch('/api/config');
-  const config = await response.json();
-
-  // Load Supabase JS from CDN if not already loaded
+  // Require Supabase SDK to be loaded via static script tag
   if (!window.supabase) {
-    await loadSupabaseScript();
+    throw new Error('[Auth] Supabase SDK not loaded. Please include the Supabase script tag before auth.js');
   }
 
-  supabaseClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+  // Get config: prefer inline, fallback to API
+  let config;
+  if (window.__SUPABASE__) {
+    config = window.__SUPABASE__;
+  } else {
+    // Fallback: fetch from API (slower path)
+    const response = await fetch('/api/config');
+    const data = await response.json();
+    config = { url: data.supabaseUrl, anonKey: data.supabaseAnonKey };
+  }
+
+  supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+
+  // Load cached session immediately (no network)
+  const cachedSession = getCachedSession();
+  if (cachedSession) {
+    currentSession = cachedSession;
+  }
 
   // Listen for auth state changes
   supabaseClient.auth.onAuthStateChange((event, session) => {
     console.log('[Auth] State changed:', event);
     currentSession = session;
+    setCachedSession(session);
     authStateListeners.forEach(listener => listener(event, session));
   });
 
-  // Get initial session
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  currentSession = session;
+  // If no cached session, fetch from Supabase (this is slow)
+  if (!currentSession) {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    currentSession = session;
+    setCachedSession(session);
+  }
 
   return supabaseClient;
-}
-
-/**
- * Load Supabase JS library from CDN
- */
-function loadSupabaseScript() {
-  return new Promise((resolve, reject) => {
-    if (window.supabase) {
-      resolve();
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
 }
 
 /**
@@ -92,7 +139,9 @@ async function signOut() {
     throw error;
   }
 
-  // Clear local storage
+  // Clear all caches
+  currentSession = null;
+  setCachedSession(null);
   localStorage.removeItem('visitorId');
   localStorage.removeItem('sessionId');
 
@@ -102,16 +151,29 @@ async function signOut() {
 
 /**
  * Get current session
+ * Optimized: Uses memory cache, then localStorage cache, then Supabase
  * @returns {Object|null} Current session or null if not authenticated
  */
 async function getSession() {
-  if (!supabaseClient) await initAuth();
-
+  // Return memory cache if available
   if (currentSession) return currentSession;
 
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  currentSession = session;
-  return session;
+  // Check localStorage cache before initializing
+  const cachedSession = getCachedSession();
+  if (cachedSession) {
+    currentSession = cachedSession;
+    // Initialize in background if not done yet
+    if (!supabaseClient) {
+      initAuth().catch(console.error);
+    }
+    return cachedSession;
+  }
+
+  // No cache - need full initialization
+  if (!supabaseClient) await initAuth();
+
+  // If still no session after init, return null
+  return currentSession;
 }
 
 /**

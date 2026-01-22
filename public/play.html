@@ -6,6 +6,15 @@
   <title>プレイ - ゲームクリエイター</title>
   <link rel="stylesheet" href="/style.css">
   <meta name="description" content="ゲームをプレイ">
+  <!-- Supabase SDK (static load) -->
+  <script src="/lib/supabase.min.js" defer></script>
+  <!-- Supabase config (anon key is public) -->
+  <script>
+    window.__SUPABASE__ = {
+      url: 'https://tcynrijrovktirsvwiqb.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjeW5yaWpyb3ZrdGlyc3Z3aXFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjY5OTAsImV4cCI6MjA4NDYwMjk5MH0.y-_E-vuQg84t8BGISdPL18oaYcayS8ip1OLJsZwM3hI'
+    };
+  </script>
 </head>
 <body data-page="play">
   <div class="play-view" id="playView">
@@ -98,6 +107,7 @@
     </div>
   </div>
 
-  <script src="/play.js"></script>
+  <script src="/auth.js" defer></script>
+  <script src="/play.js" defer></script>
 </body>
 </html>

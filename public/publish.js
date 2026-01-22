@@ -1,12 +1,14 @@
 // ============================================
 // Publish Page JavaScript
+// Updated for Supabase Auth
 // ============================================
 
 class PublishPage {
   constructor() {
     this.projectId = new URLSearchParams(window.location.search).get('id');
     this.projectData = null;
-    this.visitorId = localStorage.getItem('visitorId');
+    this.visitorId = null;
+    this.accessToken = null;
     this.publishData = {
       title: '',
       description: '',
@@ -27,16 +29,21 @@ class PublishPage {
       return;
     }
 
-    if (!this.visitorId) {
+    this.init();
+  }
+
+  async init() {
+    // Check authentication using Supabase Auth
+    const session = await DreamCoreAuth.getSession();
+    if (!session) {
       alert('ログインが必要です');
       window.location.href = '/';
       return;
     }
 
-    this.init();
-  }
+    this.visitorId = session.user.id;
+    this.accessToken = session.access_token;
 
-  async init() {
     this.bindElements();
     this.bindEvents();
     await this.loadProjectData();
@@ -165,7 +172,7 @@ class PublishPage {
 
   async loadProjectData() {
     try {
-      const response = await fetch(`/api/projects/${this.projectId}`);
+      const response = await DreamCoreAuth.authFetch(`/api/projects/${this.projectId}`);
       if (!response.ok) throw new Error('Failed to load project');
       this.projectData = await response.json();
     } catch (error) {
@@ -177,7 +184,7 @@ class PublishPage {
 
   async loadPublishData() {
     try {
-      const response = await fetch(`/api/projects/${this.projectId}/publish-draft`);
+      const response = await DreamCoreAuth.authFetch(`/api/projects/${this.projectId}/publish-draft`);
       if (response.ok) {
         const draft = await response.json();
         if (draft) {
@@ -199,10 +206,10 @@ class PublishPage {
 
     try {
       // Generate title, description, tags with AI
-      const response = await fetch(`/api/projects/${this.projectId}/generate-publish-info`, {
+      const response = await DreamCoreAuth.authFetch(`/api/projects/${this.projectId}/generate-publish-info`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ visitorId: this.visitorId })
+        body: JSON.stringify({})
       });
 
       if (response.ok) {
@@ -246,11 +253,10 @@ class PublishPage {
     }
 
     try {
-      const response = await fetch(`/api/projects/${this.projectId}/generate-thumbnail`, {
+      const response = await DreamCoreAuth.authFetch(`/api/projects/${this.projectId}/generate-thumbnail`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          visitorId: this.visitorId,
           title: this.publishData.title
         })
       });
@@ -365,7 +371,7 @@ class PublishPage {
 
   async savePublishData() {
     try {
-      const response = await fetch(`/api/projects/${this.projectId}/publish-draft`, {
+      const response = await DreamCoreAuth.authFetch(`/api/projects/${this.projectId}/publish-draft`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(this.publishData)
@@ -389,10 +395,10 @@ class PublishPage {
     this.setFieldGenerating(fieldName, true);
 
     try {
-      const response = await fetch(`/api/projects/${this.projectId}/generate-publish-info`, {
+      const response = await DreamCoreAuth.authFetch(`/api/projects/${this.projectId}/generate-publish-info`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ visitorId: this.visitorId, field: fieldName })
+        body: JSON.stringify({ field: fieldName })
       });
 
       if (response.ok) {
@@ -543,12 +549,10 @@ class PublishPage {
     }
 
     try {
-      const response = await fetch(`/api/projects/${this.projectId}/generate-movie`, {
+      const response = await DreamCoreAuth.authFetch(`/api/projects/${this.projectId}/generate-movie`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          visitorId: this.visitorId
-        })
+        body: JSON.stringify({})
       });
 
       const data = await response.json();
@@ -672,9 +676,8 @@ class PublishPage {
 
       const formData = new FormData();
       formData.append('thumbnail', file);
-      formData.append('visitorId', this.visitorId);
 
-      const response = await fetch(`/api/projects/${this.projectId}/upload-thumbnail`, {
+      const response = await DreamCoreAuth.authFetch(`/api/projects/${this.projectId}/upload-thumbnail`, {
         method: 'POST',
         body: formData
       });
@@ -724,7 +727,7 @@ class PublishPage {
     this.showLoading('登録しています...');
 
     try {
-      const response = await fetch(`/api/projects/${this.projectId}/publish`, {
+      const response = await DreamCoreAuth.authFetch(`/api/projects/${this.projectId}/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(this.publishData)

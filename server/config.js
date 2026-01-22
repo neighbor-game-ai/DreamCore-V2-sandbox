@@ -57,7 +57,7 @@ const ensureDirectories = () => {
 
 /**
  * Get the project directory path
- * @param {string} userId - User ID (Supabase Auth UUID or legacy visitorId)
+ * @param {string} userId - User ID (Supabase Auth UUID)
  * @param {string} projectId - Project ID
  * @returns {string} Absolute path to project directory
  */
@@ -184,9 +184,6 @@ const FEATURES = {
   // Backup
   gcsBackup: USE_GCS_BACKUP
 };
-
-// NOTE: legacyAuth (visitorId) has been removed.
-// All authentication now requires Supabase Auth.
 
 // ==================== Export ====================
 

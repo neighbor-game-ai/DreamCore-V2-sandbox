@@ -6,6 +6,15 @@
   <title>通知 - ゲームクリエイター</title>
   <link rel="stylesheet" href="/style.css">
   <meta name="description" content="ゲームクリエイター - 通知">
+  <!-- Supabase SDK (static load) -->
+  <script src="/lib/supabase.min.js" defer></script>
+  <!-- Supabase config (anon key is public) -->
+  <script>
+    window.__SUPABASE__ = {
+      url: 'https://tcynrijrovktirsvwiqb.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjeW5yaWpyb3ZrdGlyc3Z3aXFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjY5OTAsImV4cCI6MjA4NDYwMjk5MH0.y-_E-vuQg84t8BGISdPL18oaYcayS8ip1OLJsZwM3hI'
+    };
+  </script>
 </head>
 <body data-page="notifications">
   <div class="notifications-view" id="notificationsView">
@@ -94,6 +103,7 @@
     </button>
   </nav>
 
-  <script src="/notifications.js"></script>
+  <script src="/auth.js" defer></script>
+  <script src="/notifications.js" defer></script>
 </body>
 </html>

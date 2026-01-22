@@ -1,12 +1,13 @@
 /**
  * My Page - Game Creator (Nintendo × Kashiwa Sato Style)
+ * Updated for Supabase Auth
  */
 
 class MyPageApp {
   constructor() {
-    this.sessionId = localStorage.getItem('sessionId');
     this.currentUser = null;
     this.visitorId = null;
+    this.accessToken = null;
     this.projects = [];
 
     // DOM elements
@@ -20,33 +21,19 @@ class MyPageApp {
   }
 
   async init() {
-    if (!this.sessionId) {
+    // Check authentication using Supabase Auth
+    const session = await DreamCoreAuth.getSession();
+    if (!session) {
       this.redirectToLogin();
       return;
     }
 
-    const isValid = await this.checkSession();
-    if (!isValid) {
-      this.redirectToLogin();
-      return;
-    }
+    this.currentUser = session.user;
+    this.visitorId = session.user.id;
+    this.accessToken = session.access_token;
 
     this.setupListeners();
     await this.loadData();
-  }
-
-  async checkSession() {
-    try {
-      const response = await fetch(`/api/auth/me?sessionId=${this.sessionId}`);
-      if (!response.ok) return false;
-      const data = await response.json();
-      this.currentUser = data.user;
-      this.visitorId = data.user.visitorId;
-      return true;
-    } catch (e) {
-      console.error('Session check failed:', e);
-      return false;
-    }
   }
 
   redirectToLogin() {
@@ -59,7 +46,6 @@ class MyPageApp {
     });
 
     this.editBtn?.addEventListener('click', () => {
-      // TODO: Open edit profile modal
       alert('プロフィール編集機能は準備中です');
     });
 
@@ -103,12 +89,14 @@ class MyPageApp {
     if (!this.currentUser) return;
 
     if (this.displayNameEl) {
-      this.displayNameEl.textContent = this.currentUser.displayName || this.currentUser.username;
+      this.displayNameEl.textContent = this.currentUser.user_metadata?.full_name ||
+                                        this.currentUser.email?.split('@')[0] ||
+                                        'ユーザー';
     }
 
     // Bio (placeholder for now)
     if (this.bioEl) {
-      const bio = this.currentUser.bio || '';
+      const bio = this.currentUser.user_metadata?.bio || '';
       this.bioEl.textContent = bio;
       this.bioEl.style.display = bio ? 'block' : 'none';
     }
@@ -116,7 +104,7 @@ class MyPageApp {
 
   async loadProjects() {
     try {
-      const response = await fetch(`/api/projects?visitorId=${this.visitorId}`);
+      const response = await DreamCoreAuth.authFetch('/api/projects');
       if (response.ok) {
         const data = await response.json();
         this.projects = data.projects || [];
@@ -141,8 +129,8 @@ class MyPageApp {
 
     // Render game cases (physical package style)
     const gameCases = this.projects.map((game, index) => {
-      // Build thumbnail URL from project ID
-      const thumbnailUrl = `/api/projects/${game.id}/thumbnail`;
+      // Build thumbnail URL from project ID (with access_token for img src auth)
+      const thumbnailUrl = `/api/projects/${game.id}/thumbnail?access_token=${encodeURIComponent(this.accessToken)}`;
       const gameName = this.escapeHtml(game.name);
       const gameDesc = this.escapeHtml(game.description || '');
 
@@ -185,7 +173,7 @@ class MyPageApp {
       card.addEventListener('click', () => {
         const projectId = card.dataset.projectId;
         if (projectId) {
-          const thumbnailUrl = `/api/projects/${projectId}/thumbnail`;
+          const thumbnailUrl = `/api/projects/${projectId}/thumbnail?access_token=${encodeURIComponent(this.accessToken)}`;
           this.playCardInsertAnimation(projectId, thumbnailUrl);
         }
       });
@@ -259,21 +247,7 @@ class MyPageApp {
   }
 
   async logout() {
-    try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-session-id': this.sessionId
-        }
-      });
-    } catch (e) {
-      console.error('Logout error:', e);
-    }
-
-    localStorage.removeItem('sessionId');
-    localStorage.removeItem('visitorId');
-    localStorage.removeItem('loginUsername');
+    await DreamCoreAuth.signOut();
     window.location.href = '/';
   }
 }

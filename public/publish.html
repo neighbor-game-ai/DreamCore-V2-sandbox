@@ -7,6 +7,15 @@
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/publish.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+  <!-- Supabase SDK (static load) -->
+  <script src="/lib/supabase.min.js" defer></script>
+  <!-- Supabase config (anon key is public) -->
+  <script>
+    window.__SUPABASE__ = {
+      url: 'https://tcynrijrovktirsvwiqb.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjeW5yaWpyb3ZrdGlyc3Z3aXFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjY5OTAsImV4cCI6MjA4NDYwMjk5MH0.y-_E-vuQg84t8BGISdPL18oaYcayS8ip1OLJsZwM3hI'
+    };
+  </script>
 </head>
 <body data-page="publish">
   <div class="publish-container">
@@ -268,6 +277,7 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
-  <script src="/publish.js"></script>
+  <script src="/auth.js" defer></script>
+  <script src="/publish.js" defer></script>
 </body>
 </html>

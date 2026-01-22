@@ -225,47 +225,95 @@ class GameCreatorApp {
     // Check authentication for protected pages
     const protectedPages = ['discover', 'create', 'editor', 'mypage', 'notifications'];
     if (protectedPages.includes(this.currentPage)) {
-      try {
-        // Initialize Supabase Auth and check session
-        await DreamCoreAuth.initAuth();
-        const session = await DreamCoreAuth.getSession();
+      // Non-blocking UI pattern: Show UI immediately, auth in background
+      // Step 1: Initialize UI immediately (no waiting)
+      this.initPageUI();
 
-        if (!session) {
-          // Not logged in, redirect to login
-          window.location.href = '/';
-          return;
-        }
+      // Step 2: Auth check in background
+      this.checkAuthAndConnect();
+    }
+  }
 
-        // Set auth state
-        this.accessToken = session.access_token;
-        this.currentUser = session.user;
-        this.visitorId = session.user.id; // For backward compatibility
-        this.isAuthenticated = true;
+  /**
+   * Initialize page UI immediately (non-blocking)
+   * This runs before auth is confirmed
+   */
+  initPageUI() {
+    // Setup event listeners and UI that don't require auth
+    this.setupBottomNavListeners();
 
-        // Initialize the app for this page
-        this.initPage();
-      } catch (error) {
-        console.error('[Auth] Init error:', error);
+    // Page-specific UI initialization (without data)
+    switch (this.currentPage) {
+      case 'discover':
+        // Discover page UI setup
+        break;
+      case 'create':
+        this.initCreatePage();
+        break;
+      case 'editor':
+        this.initEditorPage();
+        break;
+    }
+  }
+
+  /**
+   * Check auth and connect WebSocket (background, non-blocking)
+   */
+  async checkAuthAndConnect() {
+    try {
+      // Get session (uses localStorage cache for speed)
+      const session = await DreamCoreAuth.getSession();
+
+      if (!session) {
+        // Not logged in, redirect to login
         window.location.href = '/';
+        return;
       }
+
+      // Set auth state
+      this.accessToken = session.access_token;
+      this.currentUser = session.user;
+      this.visitorId = session.user.id;
+      this.isAuthenticated = true;
+
+      // Update UI with user info
+      if (this.currentUser && this.userDisplayName) {
+        this.userDisplayName.textContent = this.currentUser.user_metadata?.full_name ||
+                                           this.currentUser.user_metadata?.name ||
+                                           this.currentUser.email?.split('@')[0] || '';
+      }
+
+      // Now connect WebSocket (requires auth token)
+      this.connectWebSocket();
+
+      // Load page-specific data
+      this.loadPageData();
+    } catch (error) {
+      console.error('[Auth] Init error:', error);
+      window.location.href = '/';
+    }
+  }
+
+  /**
+   * Load page-specific data after auth
+   */
+  loadPageData() {
+    switch (this.currentPage) {
+      case 'discover':
+        this.initDiscoverPage();
+        break;
+      // create/editor data is loaded via WebSocket
     }
   }
 
   initPage() {
-    // Show user display name if element exists
-    if (this.currentUser && this.userDisplayName) {
-      this.userDisplayName.textContent = this.currentUser.displayName || this.currentUser.username;
-    } else if (this.userDisplayName) {
-      const username = localStorage.getItem('loginUsername');
-      if (username) {
-        this.userDisplayName.textContent = username;
-      }
-    }
+    // DEPRECATED: Use initPageUI() + checkAuthAndConnect() instead
+    // This method is kept for backward compatibility
+    console.warn('[App] initPage() is deprecated, use non-blocking pattern');
+  }
 
-    // Initialize based on current page
-    this.connectWebSocket();
-    this.setupBottomNavListeners();
-
+  _legacyInitPage() {
+    // Legacy method - not used in new non-blocking pattern
     switch (this.currentPage) {
       case 'discover':
         this.initDiscoverPage();
@@ -697,7 +745,7 @@ class GameCreatorApp {
             </div>
           ` : ''}
           <img
-            src="/api/projects/${project.id}/thumbnail"
+            src="/api/projects/${project.id}/thumbnail?access_token=${encodeURIComponent(this.accessToken)}"
             alt="${this.escapeHtml(project.name)}"
             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
             onload="this.style.display='block'; this.nextElementSibling.style.display='none';"
@@ -1614,7 +1662,7 @@ class GameCreatorApp {
         break;
 
       case 'init':
-        this.visitorId = data.visitorId;
+        this.visitorId = data.userId;  // Server sends userId, not visitorId
         localStorage.setItem('gameCreatorVisitorId', this.visitorId);
         this.projects = data.projects || [];
 

@@ -22,7 +22,40 @@ class ClaudeRunner {
   constructor() {
     this.runningProcesses = new Map();
     this.skillsDir = path.join(__dirname, '..', '.claude', 'skills');
-    this.skillMetadata = this.collectSkillMetadata();
+    // Lazy initialization - don't block server startup
+    this._skillMetadata = null;
+    this._skillMetadataPromise = null;
+  }
+
+  // Lazy getter for skill metadata - loads on first access
+  async getSkillMetadata() {
+    // Return cached data if available
+    if (this._skillMetadata !== null) {
+      return this._skillMetadata;
+    }
+
+    // If already loading, wait for the existing promise
+    if (this._skillMetadataPromise) {
+      return this._skillMetadataPromise;
+    }
+
+    // Start loading asynchronously
+    this._skillMetadataPromise = this.collectSkillMetadataAsync();
+    this._skillMetadata = await this._skillMetadataPromise;
+    this._skillMetadataPromise = null;
+    return this._skillMetadata;
+  }
+
+  // Preload skill metadata in background (call after server starts)
+  preloadSkillMetadata() {
+    if (this._skillMetadata === null && !this._skillMetadataPromise) {
+      this._skillMetadataPromise = this.collectSkillMetadataAsync().then(metadata => {
+        this._skillMetadata = metadata;
+        this._skillMetadataPromise = null;
+        return metadata;
+      });
+    }
+    return this._skillMetadataPromise || Promise.resolve(this._skillMetadata);
   }
 
   /**
@@ -59,26 +92,39 @@ class ClaudeRunner {
     }
   }
 
-  // Collect skill metadata from all SKILL.md files (name + description)
-  collectSkillMetadata() {
+  // Collect skill metadata from all SKILL.md files (name + description) - async version
+  async collectSkillMetadataAsync() {
     const metadata = [];
+    const fsPromises = require('fs').promises;
 
     try {
-      if (!fs.existsSync(this.skillsDir)) {
+      try {
+        await fsPromises.access(this.skillsDir);
+      } catch {
         console.log('Skills directory not found:', this.skillsDir);
         return metadata;
       }
 
-      const skillFolders = fs.readdirSync(this.skillsDir).filter(f => {
-        if (EXCLUDED_SKILLS.includes(f)) return false;
-        const skillPath = path.join(this.skillsDir, f, 'SKILL.md');
-        return fs.existsSync(skillPath);
-      });
+      const entries = await fsPromises.readdir(this.skillsDir, { withFileTypes: true });
+      const skillFolders = [];
 
-      for (const folder of skillFolders) {
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        if (EXCLUDED_SKILLS.includes(entry.name)) continue;
+        const skillPath = path.join(this.skillsDir, entry.name, 'SKILL.md');
+        try {
+          await fsPromises.access(skillPath);
+          skillFolders.push(entry.name);
+        } catch {
+          // SKILL.md doesn't exist, skip
+        }
+      }
+
+      // Read all skill files in parallel for better performance
+      const readPromises = skillFolders.map(async (folder) => {
         const skillPath = path.join(this.skillsDir, folder, 'SKILL.md');
         try {
-          const content = fs.readFileSync(skillPath, 'utf-8');
+          const content = await fsPromises.readFile(skillPath, 'utf-8');
           // Extract frontmatter
           const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
           if (frontmatterMatch) {
@@ -86,16 +132,22 @@ class ClaudeRunner {
             const nameMatch = frontmatter.match(/name:\s*(.+)/);
             const descMatch = frontmatter.match(/description:\s*(.+)/);
 
-            metadata.push({
+            return {
               name: nameMatch ? nameMatch[1].trim() : folder,
               description: descMatch ? descMatch[1].trim() : folder
-            });
+            };
           } else {
-            metadata.push({ name: folder, description: folder });
+            return { name: folder, description: folder };
           }
         } catch (e) {
           console.error(`Failed to read skill ${folder}:`, e.message);
+          return null;
         }
+      });
+
+      const results = await Promise.all(readPromises);
+      for (const result of results) {
+        if (result) metadata.push(result);
       }
 
       console.log(`Loaded ${metadata.length} skill(s): ${metadata.map(s => s.name).join(', ')}`);
@@ -106,9 +158,10 @@ class ClaudeRunner {
     }
   }
 
-  // Get available skill names (for compatibility)
-  get availableSkills() {
-    return new Set(this.skillMetadata.map(s => s.name));
+  // Get available skill names (async method)
+  async getAvailableSkills() {
+    const metadata = await this.getSkillMetadata();
+    return new Set(metadata.map(s => s.name));
   }
 
   // Use Claude CLI to detect user intent (restore, chat, or edit)
@@ -420,8 +473,9 @@ ${movementContext ? `## コードパターン\n${movementContext}\n` : ''}
   // AI-driven skill detection using Claude CLI
   // Returns a list of relevant skill names based on context analysis
   async detectSkillsWithAI(userMessage, currentCode = null, isNewProject = false, gameSpec = null, dimension = null) {
-    // Build skill list for prompt
-    const skillList = this.skillMetadata.map(s => `- ${s.name}: ${s.description}`).join('\n');
+    // Build skill list for prompt (lazy loaded)
+    const metadata = await this.getSkillMetadata();
+    const skillList = metadata.map(s => `- ${s.name}: ${s.description}`).join('\n');
 
     // Detect framework from current code
     const framework = this.detectFrameworkFromCode(currentCode);
@@ -493,8 +547,9 @@ ${specSummary ? `現在のゲーム仕様:\n${specSummary}` : ''}
           const jsonMatch = output.match(/\[[\s\S]*?\]/);
           if (jsonMatch) {
             const skills = JSON.parse(jsonMatch[0]);
-            // Filter to only available skills
-            const validSkills = skills.filter(s => this.availableSkills.has(s));
+            // Filter to only available skills (use cached metadata from earlier in this method)
+            const availableSkillNames = new Set(metadata.map(s => s.name));
+            const validSkills = skills.filter(s => availableSkillNames.has(s));
             console.log('AI selected skills:', validSkills.join(', ') || 'none');
             resolve(validSkills);
             return;
@@ -522,8 +577,8 @@ ${specSummary ? `現在のゲーム仕様:\n${specSummary}` : ''}
     });
   }
 
-  // Sync version for backward compatibility (uses simple heuristics)
-  detectSkills(userMessage, conversationHistory = [], isNewProject = false) {
+  // Heuristic-based skill detection (async, uses simple heuristics)
+  async detectSkills(userMessage, conversationHistory = [], isNewProject = false) {
     const messageLower = userMessage.toLowerCase();
 
     // Simple heuristic detection (fallback when async not available)
@@ -553,8 +608,9 @@ ${specSummary ? `現在のゲーム仕様:\n${specSummary}` : ''}
     if (/アニメーション|animation|gsap/i.test(messageLower)) skills.push('tween-animation');
     if (/ai|敵|enemy|追いかけ|逃げる/i.test(messageLower)) skills.push('game-ai');
 
-    const validSkills = skills.filter(s => this.availableSkills.has(s)).slice(0, 10);
-    console.log('Detected skills (sync):', validSkills.join(', ') || 'none');
+    const availableSkillSet = await this.getAvailableSkills();
+    const validSkills = skills.filter(s => availableSkillSet.has(s)).slice(0, 10);
+    console.log('Detected skills (heuristic):', validSkills.join(', ') || 'none');
     return validSkills;
   }
 
@@ -594,9 +650,10 @@ ${skillPaths}
     return contents.join('\n\n');
   }
 
-  // Get skill descriptions (from metadata)
-  getSkillDescriptions() {
-    return this.skillMetadata.map(s => `- ${s.name}: ${s.description}`).join('\n');
+  // Get skill descriptions (from metadata) - async
+  async getSkillDescriptions() {
+    const metadata = await this.getSkillMetadata();
+    return metadata.map(s => `- ${s.name}: ${s.description}`).join('\n');
   }
 
   // Get skill content for Gemini (prioritized, granular skills)
@@ -657,7 +714,7 @@ ${skillPaths}
       }
     }
 
-    const detectedSkills = this.detectSkills(userMessage, history, isNewProject);
+    const detectedSkills = await this.detectSkills(userMessage, history, isNewProject);
     const skillInstructions = this.getSkillInstructions(detectedSkills);
 
     // Directive prompt - require Claude to read and apply skills
