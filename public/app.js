@@ -1779,9 +1779,14 @@ class GameCreatorApp {
         } else {
           // Show welcome message for new/empty projects
           this.showWelcomeMessage();
+          // Hide iframe for new projects (no game yet)
+          if (this.gamePreview) {
+            this.updatePreviewVisibility(false);
+          }
         }
 
-        if (this.gamePreview) {
+        // Show preview only if project has history (game generated)
+        if (this.gamePreview && data.history && data.history.length > 0) {
           this.refreshPreview();
           this.updatePreviewVisibility(true);
         }
@@ -1879,6 +1884,7 @@ class GameCreatorApp {
       case 'gameUpdated':
         this.currentVersionId = null; // Reset to latest version
         this.refreshPreview();
+        this.updatePreviewVisibility(true); // Show iframe (game now exists)
         // Don't auto-switch to preview on mobile - let user read AI response first
         // User can tap "ゲームを遊ぶ" button when ready
 
