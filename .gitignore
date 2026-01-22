@@ -55,4 +55,5 @@ analyze_classification.js
 # AI Agent caches
 .codex/
 .cursor/
-.claude/
+.claude/*
+!.claude/plans/
