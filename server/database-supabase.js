@@ -19,12 +19,11 @@ const { supabaseAdmin, createUserClient } = require('./supabaseClient');
 // ==================== Profile Operations ====================
 
 /**
- * Get user/profile by ID
- * Note: In Supabase version, users table = profiles table
+ * Get user by ID
  */
 const getUserById = async (client, userId) => {
   const { data, error } = await client
-    .from('profiles')
+    .from('users')
     .select('*')
     .eq('id', userId)
     .single();
@@ -38,11 +37,11 @@ const getUserById = async (client, userId) => {
 };
 
 /**
- * Get user/profile by email
+ * Get user by email
  */
 const getUserByEmail = async (client, email) => {
   const { data, error } = await client
-    .from('profiles')
+    .from('users')
     .select('*')
     .eq('email', email)
     .single();
@@ -57,22 +56,22 @@ const getUserByEmail = async (client, email) => {
 
 /**
  * Get or create user from Supabase Auth
- * Note: Profile is auto-created by trigger, this just ensures it exists
+ * Note: User is auto-created by trigger, this just ensures it exists
  */
 const getOrCreateUserFromAuth = async (authUser) => {
-  // First try to get existing profile using admin (no RLS)
-  let { data: profile, error } = await supabaseAdmin
-    .from('profiles')
+  // First try to get existing user using admin (no RLS)
+  let { data: user, error } = await supabaseAdmin
+    .from('users')
     .select('*')
     .eq('id', authUser.id)
     .single();
 
-  if (profile) return profile;
+  if (user) return user;
 
-  // Profile doesn't exist (trigger may have failed), create it
+  // User doesn't exist (trigger may have failed), create it
   const metadata = authUser.user_metadata || {};
-  const { data: newProfile, error: insertError } = await supabaseAdmin
-    .from('profiles')
+  const { data: newUser, error: insertError } = await supabaseAdmin
+    .from('users')
     .insert({
       id: authUser.id,
       email: authUser.email,
@@ -85,8 +84,8 @@ const getOrCreateUserFromAuth = async (authUser) => {
   if (insertError) {
     console.error('[DB] getOrCreateUserFromAuth insert error:', insertError.message);
     // Try to get again (race condition)
-    const { data: retryProfile, error: retryError } = await supabaseAdmin
-      .from('profiles')
+    const { data: retryUser, error: retryError } = await supabaseAdmin
+      .from('users')
       .select('*')
       .eq('id', authUser.id)
       .single();
@@ -94,14 +93,14 @@ const getOrCreateUserFromAuth = async (authUser) => {
       console.error('[DB] getOrCreateUserFromAuth retry error:', retryError.message);
       return null;
     }
-    if (!retryProfile) {
+    if (!retryUser) {
       console.error('[DB] getOrCreateUserFromAuth retry returned null for user:', authUser.id);
     }
-    return retryProfile;
+    return retryUser;
   }
 
-  console.log('[DB] Created profile for user:', authUser.id);
-  return newProfile;
+  console.log('[DB] Created user:', authUser.id);
+  return newUser;
 };
 
 // Aliases for compatibility
@@ -230,7 +229,7 @@ const setProjectPublic = async (client, projectId, isPublic) => {
 const getPublicProjects = async (limit = 50) => {
   const { data, error } = await supabaseAdmin
     .from('projects')
-    .select('*, profiles!projects_user_id_fkey(display_name)')
+    .select('*, users!projects_user_id_fkey(display_name)')
     .eq('is_public', true)
     .order('updated_at', { ascending: false })
     .limit(limit);
