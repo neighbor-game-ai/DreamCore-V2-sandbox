@@ -8,12 +8,14 @@ AI-powered browser game creation platform.
 
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
 ## 禁止事項
 
 - `/api/auth/*` は廃止 - Supabase Authで代替済み
 - `visitorId` の新規利用禁止 - すべて `userId` (Supabase Auth) を使用
 - `db.getProject()` は使用禁止 - `db.getProjectById()` を使用
+- Cookie認証は使用しない - localStorage + Authorization ヘッダー方式を採用
 
 ## 認証ルール
 

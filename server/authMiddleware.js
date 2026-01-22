@@ -9,28 +9,24 @@ const { verifyToken } = require('./supabaseClient');
 
 /**
  * Extract access token from request
- * Supports multiple methods:
- * 1. Authorization header (Bearer token)
- * 2. Cookie (sb-access-token)
- * 3. Query parameter (access_token) - for WebSocket connections
+ * Supports:
+ * 1. Authorization header (Bearer token) - standard for API calls
+ * 2. Query parameter (access_token) - for WebSocket connections
+ *
+ * NOTE: Cookie authentication is not used. Supabase Auth uses localStorage
+ * on the client side, and tokens are sent via Authorization header.
  *
  * @param {Request} req - Express request object
  * @returns {string|null} Access token or null
  */
 const extractToken = (req) => {
-  // 1. Authorization header
+  // 1. Authorization header (standard)
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7);
   }
 
-  // 2. Cookie
-  const cookies = req.cookies || {};
-  if (cookies['sb-access-token']) {
-    return cookies['sb-access-token'];
-  }
-
-  // 3. Query parameter (for WebSocket upgrade)
+  // 2. Query parameter (for WebSocket upgrade)
   if (req.query && req.query.access_token) {
     return req.query.access_token;
   }

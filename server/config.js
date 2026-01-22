@@ -2,7 +2,7 @@
  * Configuration for DreamCore V2
  *
  * Centralizes all configuration settings and path definitions.
- * Supports both development (legacy visitorId) and production (Supabase Auth) modes.
+ * Authentication: Supabase Auth only (Google OAuth).
  */
 
 const path = require('path');
@@ -23,7 +23,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 /**
  * V2 uses a new directory structure for projects:
  * Production: /data/projects/{userId}/{projectId}/
- * Development: ./users/{userId}/{projectId}/ (backwards compatible with visitorId)
+ * Development: ./users/{userId}/{projectId}/
  */
 
 // Base data directory
@@ -126,6 +126,7 @@ const validateEnvironment = () => {
 
   if (!SUPABASE_URL) missing.push('SUPABASE_URL');
   if (!SUPABASE_ANON_KEY) missing.push('SUPABASE_ANON_KEY');
+  if (!SUPABASE_SERVICE_ROLE_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY');
 
   if (missing.length > 0) {
     console.error('='.repeat(60));
