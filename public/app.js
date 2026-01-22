@@ -1734,13 +1734,12 @@ class GameCreatorApp {
         this.currentJobId = null;
         this.stopButton?.classList.add('hidden');
 
-        // Clear and reload history
-        if (this.chatMessages) this.chatMessages.innerHTML = '';
-
         // Get versions with edits from server response
         const versions = data.versions || [];
 
         if (data.history && data.history.length > 0) {
+          // Clear only when we have history to show
+          if (this.chatMessages) this.chatMessages.innerHTML = '';
           // Find the last assistant message index for play button
           let lastAssistantIndex = -1;
           for (let i = data.history.length - 1; i >= 0; i--) {
