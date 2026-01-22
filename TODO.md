@@ -2,14 +2,11 @@
 
 ## 優先度高（技術的負債）
 
-- [ ] `assets.is_deleted` に NOT NULL + DEFAULT FALSE 制約追加
-  ```sql
-  UPDATE assets SET is_deleted = FALSE WHERE is_deleted IS NULL;
-  ALTER TABLE assets ALTER COLUMN is_deleted SET NOT NULL;
-  ALTER TABLE assets ALTER COLUMN is_deleted SET DEFAULT FALSE;
-  ```
-- [ ] `database.js`（SQLite版レガシー）削除
-- [ ] `initLoginUsers.js` 削除（Supabase Auth移行済み）
+- [x] `assets.is_deleted` に NOT NULL + DEFAULT FALSE 制約追加
+  - マイグレーション: `supabase/migrations/002_assets_is_deleted_not_null.sql`
+  - Supabase Dashboardで実行が必要
+- [x] `database.js`（SQLite版レガシー）削除
+- [x] `initLoginUsers.js` 削除（Supabase Auth移行済み）
 
 ## Phase 2 準備
 

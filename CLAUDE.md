@@ -110,9 +110,9 @@ USING (owner_id = auth.uid() AND is_deleted = FALSE)
 
 ### 技術的負債
 
-- `database.js` - SQLite版レガシー。削除可能
-- `initLoginUsers.js` - Supabase Auth移行後に削除
-- `assets.is_deleted` - NOT NULL + default false なし。NULL混在の可能性あり
+- ~~`database.js`~~ - 削除済み
+- ~~`initLoginUsers.js`~~ - 削除済み
+- `assets.is_deleted` - マイグレーション作成済み（`supabase/migrations/002_*`）、Supabaseで実行が必要
 
 ## 開発ガイドライン
 
