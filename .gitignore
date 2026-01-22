@@ -57,3 +57,4 @@ analyze_classification.js
 .cursor/
 .claude/*
 !.claude/plans/
+!.claude/skills/
