@@ -1,15 +1,30 @@
+/**
+ * User Manager for DreamCore V2
+ *
+ * Handles user data, projects, and file operations.
+ *
+ * V2 Changes:
+ * - Uses config.js for path configuration
+ * - userId (Supabase Auth UUID) replaces visitorId
+ * - Backwards compatible with legacy visitorId
+ *
+ * Path Structure:
+ * - Production: /data/projects/{userId}/{projectId}/
+ * - Development: ./users/{userId}/{projectId}/
+ */
+
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const db = require('./database');
+const config = require('./config');
 
 // Base directory for user files (game code, assets)
-const USERS_DIR = path.join(__dirname, '..', 'users');
+const PROJECTS_DIR = config.PROJECTS_DIR;
+const ASSETS_DIR = config.ASSETS_DIR;
 
-// Ensure users directory exists
-if (!fs.existsSync(USERS_DIR)) {
-  fs.mkdirSync(USERS_DIR, { recursive: true });
-}
+// Ensure directories exist
+config.ensureDirectories();
 
 // Note: Users directory git has been replaced with DB activity_log table
 // initUsersGit() is no longer needed - activity is logged to SQLite instead
@@ -37,14 +52,24 @@ const execGit = (cmd, cwd) => {
   }
 };
 
-// Get project directory path
-const getProjectDir = (visitorId, projectId) => {
-  return path.join(USERS_DIR, visitorId, projectId);
+/**
+ * Get project directory path
+ * @param {string} userId - User ID (Supabase Auth UUID or legacy visitorId)
+ * @param {string} projectId - Project ID
+ * @returns {string} Absolute path to project directory
+ */
+const getProjectDir = (userId, projectId) => {
+  return config.getProjectPath(userId, projectId);
 };
 
-// Ensure project directory exists with git
-const ensureProjectDir = (visitorId, projectId) => {
-  const projectDir = getProjectDir(visitorId, projectId);
+/**
+ * Ensure project directory exists with git initialization
+ * @param {string} userId - User ID (Supabase Auth UUID or legacy visitorId)
+ * @param {string} projectId - Project ID
+ * @returns {string} Absolute path to project directory
+ */
+const ensureProjectDir = (userId, projectId) => {
+  const projectDir = getProjectDir(userId, projectId);
 
   if (!fs.existsSync(projectDir)) {
     fs.mkdirSync(projectDir, { recursive: true });
@@ -164,23 +189,46 @@ const commitToProject = (projectDir, message) => {
 
 // ==================== User Operations ====================
 
+/**
+ * Get or create user from Supabase Auth data (V2)
+ * @param {Object} authUser - Supabase Auth user object
+ * @returns {Object} User record with id
+ */
+const getOrCreateUserFromAuth = (authUser) => {
+  const user = db.getOrCreateUserFromAuth(authUser);
+
+  // Ensure user directory exists
+  const userDir = config.getUserPath(user.id);
+  if (!fs.existsSync(userDir)) {
+    fs.mkdirSync(userDir, { recursive: true });
+    logActivity('create', 'user', user.id);
+  }
+
+  return user;
+};
+
+/**
+ * Legacy: Get or create user from visitorId (backwards compatibility)
+ * @param {string} visitorId - Browser fingerprint / legacy ID
+ * @returns {string} User ID (same as visitorId for legacy users)
+ */
 const getOrCreateUser = (visitorId) => {
   // Generate new UUID if visitorId is null or undefined
   if (!visitorId) {
     visitorId = require('uuid').v4();
-    console.log('Generated new visitorId:', visitorId);
+    console.log('Generated new userId:', visitorId);
   }
 
   const user = db.getOrCreateUser(visitorId);
 
-  // Ensure visitor directory exists
-  const visitorDir = path.join(USERS_DIR, visitorId);
-  if (!fs.existsSync(visitorDir)) {
-    fs.mkdirSync(visitorDir, { recursive: true });
-    logActivity('create', 'user', visitorId);
+  // Ensure user directory exists
+  const userDir = config.getUserPath(user.id);
+  if (!fs.existsSync(userDir)) {
+    fs.mkdirSync(userDir, { recursive: true });
+    logActivity('create', 'user', user.id);
   }
 
-  return user.visitor_id;
+  return user.id;
 };
 
 // ==================== Project Operations ====================
@@ -332,12 +380,13 @@ const writeProjectFile = (visitorId, projectId, filename, content) => {
   return filePath;
 };
 
-// Central assets directory (outside of project folders)
-const ASSETS_DIR = path.join(__dirname, '..', 'assets');
-
-// Ensure user's assets directory exists
-const ensureUserAssetsDir = (visitorId) => {
-  const userAssetsDir = path.join(ASSETS_DIR, visitorId);
+/**
+ * Ensure user's assets directory exists
+ * @param {string} userId - User ID
+ * @returns {string} Path to user's assets directory
+ */
+const ensureUserAssetsDir = (userId) => {
+  const userAssetsDir = config.getUserAssetsPath(userId);
   if (!fs.existsSync(userAssetsDir)) {
     fs.mkdirSync(userAssetsDir, { recursive: true });
   }
@@ -779,7 +828,8 @@ module.exports = {
   ensureProjectDir,
 
   // User operations
-  getOrCreateUser,
+  getOrCreateUserFromAuth,  // V2: Supabase Auth
+  getOrCreateUser,          // Legacy: visitorId
 
   // Project operations
   getProjects,

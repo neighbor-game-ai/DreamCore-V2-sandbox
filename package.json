@@ -1,7 +1,7 @@
 {
-  "name": "game-creator-mvp",
-  "version": "1.0.0",
-  "description": "Browser game creation platform MVP",
+  "name": "dreamcore-v2",
+  "version": "2.0.0",
+  "description": "DreamCore V2 - AI-powered browser game creation platform",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
@@ -14,8 +14,10 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
+    "@supabase/supabase-js": "^2.47.0",
     "archiver": "^7.0.1",
     "better-sqlite3": "^12.5.0",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.3",
     "express": "^4.18.2",
     "multer": "^2.0.2",

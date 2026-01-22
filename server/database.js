@@ -1,11 +1,32 @@
+/**
+ * Database Module for DreamCore V2
+ *
+ * V2 Authentication Flow:
+ * - Production: Supabase Auth (user.id = UUID)
+ * - Development: Legacy visitorId support for backwards compatibility
+ *
+ * The users table stores user profiles, with id as the primary key.
+ * In V2, this id comes from Supabase Auth (auth.users.id).
+ */
+
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
+// Import config (with fallback for initial setup)
+let config;
+try {
+  config = require('./config');
+} catch (e) {
+  config = {
+    DB_DIR: path.join(__dirname, '..', 'data')
+  };
+}
+
 // Database file location
-const DB_DIR = path.join(__dirname, '..', 'data');
-const DB_PATH = path.join(DB_DIR, 'gamecreator.db');
+const DB_DIR = config.DB_DIR || path.join(__dirname, '..', 'data');
+const DB_PATH = path.join(DB_DIR, 'dreamcore-v2.db');
 
 // Ensure data directory exists
 if (!fs.existsSync(DB_DIR)) {
@@ -20,10 +41,17 @@ db.pragma('foreign_keys = ON');
 // Create tables
 const initSchema = () => {
   db.exec(`
-    -- Users table
+    -- Users table (V2: Supabase Auth compatible)
+    -- id: Supabase Auth user.id (UUID) or legacy visitorId
+    -- email: From Supabase Auth (nullable for legacy users)
+    -- display_name: User's display name
+    -- avatar_url: Profile picture URL
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
-      visitor_id TEXT UNIQUE NOT NULL,
+      email TEXT UNIQUE,
+      display_name TEXT,
+      avatar_url TEXT,
+      visitor_id TEXT UNIQUE,
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -205,28 +233,104 @@ migrateAssetsTable();
 // ==================== User Operations ====================
 
 const userQueries = {
-  findByVisitorId: db.prepare('SELECT * FROM users WHERE visitor_id = ?'),
-  create: db.prepare('INSERT INTO users (id, visitor_id) VALUES (?, ?)'),
   findById: db.prepare('SELECT * FROM users WHERE id = ?'),
+  findByEmail: db.prepare('SELECT * FROM users WHERE email = ?'),
+  findByVisitorId: db.prepare('SELECT * FROM users WHERE visitor_id = ?'),
+  create: db.prepare('INSERT INTO users (id, email, display_name, avatar_url, visitor_id) VALUES (?, ?, ?, ?, ?)'),
+  update: db.prepare("UPDATE users SET email = ?, display_name = ?, avatar_url = ? WHERE id = ?"),
 };
 
+/**
+ * Get or create user from Supabase Auth data
+ * @param {Object} authUser - Supabase Auth user object
+ * @param {string} authUser.id - User ID (UUID)
+ * @param {string} authUser.email - User email
+ * @param {Object} authUser.user_metadata - User metadata (display_name, avatar_url, etc.)
+ * @returns {Object} User record
+ */
+const getOrCreateUserFromAuth = (authUser) => {
+  let user = userQueries.findById.get(authUser.id);
+
+  if (!user) {
+    // Create new user from Supabase Auth data
+    const metadata = authUser.user_metadata || {};
+    userQueries.create.run(
+      authUser.id,
+      authUser.email,
+      metadata.full_name || metadata.name || authUser.email?.split('@')[0],
+      metadata.avatar_url || metadata.picture || null,
+      null  // No legacy visitorId for new V2 users
+    );
+    user = userQueries.findById.get(authUser.id);
+    console.log('Created new V2 user:', authUser.id);
+  } else {
+    // Update user metadata if changed
+    const metadata = authUser.user_metadata || {};
+    const newDisplayName = metadata.full_name || metadata.name;
+    const newAvatarUrl = metadata.avatar_url || metadata.picture;
+
+    if (newDisplayName !== user.display_name || newAvatarUrl !== user.avatar_url) {
+      userQueries.update.run(
+        authUser.email,
+        newDisplayName || user.display_name,
+        newAvatarUrl || user.avatar_url,
+        authUser.id
+      );
+      user = userQueries.findById.get(authUser.id);
+    }
+  }
+
+  return user;
+};
+
+/**
+ * Legacy: Get or create user from visitorId (backwards compatibility)
+ * @param {string} visitorId - Browser fingerprint / legacy ID
+ * @returns {Object} User record
+ */
 const getOrCreateUser = (visitorId) => {
+  // First check if this visitorId is already associated with a user
   let user = userQueries.findByVisitorId.get(visitorId);
   if (!user) {
-    const id = uuidv4();
-    userQueries.create.run(id, visitorId);
+    // For legacy users, use visitorId as the id
+    const id = visitorId;
+    userQueries.create.run(id, null, null, null, visitorId);
     user = userQueries.findById.get(id);
-    console.log('Created new user:', id);
+    console.log('Created legacy user:', id);
   }
   return user;
 };
 
-const getUserByVisitorId = (visitorId) => {
-  return userQueries.findByVisitorId.get(visitorId);
-};
-
+/**
+ * Get user by ID (primary lookup method for V2)
+ * @param {string} id - User ID (Supabase Auth UUID or legacy visitorId)
+ * @returns {Object|null} User record
+ */
 const getUserById = (id) => {
   return userQueries.findById.get(id);
+};
+
+/**
+ * Get user by email
+ * @param {string} email - User email
+ * @returns {Object|null} User record
+ */
+const getUserByEmail = (email) => {
+  return userQueries.findByEmail.get(email);
+};
+
+/**
+ * Legacy: Get user by visitorId (backwards compatibility)
+ * @param {string} visitorId - Browser fingerprint
+ * @returns {Object|null} User record
+ */
+const getUserByVisitorId = (visitorId) => {
+  // First try visitor_id column
+  let user = userQueries.findByVisitorId.get(visitorId);
+  if (user) return user;
+
+  // Fallback: check if visitorId is actually the id (legacy users)
+  return userQueries.findById.get(visitorId);
 };
 
 // ==================== Project Operations ====================
@@ -732,9 +836,11 @@ module.exports = {
   db,
 
   // User operations
-  getOrCreateUser,
-  getUserByVisitorId,
-  getUserById,
+  getOrCreateUserFromAuth,  // V2: Create user from Supabase Auth
+  getOrCreateUser,          // Legacy: Create user from visitorId
+  getUserById,              // Primary lookup for V2
+  getUserByEmail,           // Lookup by email
+  getUserByVisitorId,       // Legacy compatibility
 
   // Project operations
   getProjectsByUserId,

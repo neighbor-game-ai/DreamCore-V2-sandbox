@@ -58,6 +58,15 @@ app.use(express.json({ limit: '50mb' }));
 // Serve static files
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// ==================== Health Check ====================
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 // ==================== Authentication API Endpoints ====================
 
 // Login with username only (invite-only)

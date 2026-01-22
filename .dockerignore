@@ -1,0 +1,41 @@
+# Dependencies (will be installed in container)
+node_modules
+game-video/node_modules
+.claude/skills/*/.venv
+
+# Git
+.git
+.gitignore
+
+# Development files
+*.log
+.DS_Store
+Thumbs.db
+
+# User data (mounted as volume)
+users/
+data/
+
+# Environment files (passed via docker-compose)
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Test & build artifacts
+coverage/
+dist/
+*.tsbuildinfo
+
+# Documentation
+*.md
+!README.md
+
+# Docker files (no need to copy themselves)
+Dockerfile
+docker-compose*.yml

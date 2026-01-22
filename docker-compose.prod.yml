@@ -1,0 +1,34 @@
+# Production overrides for GCE deployment
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  app:
+    # Use pre-built image from registry (faster deploys)
+    # image: gcr.io/dreamcore-472900/gamecreator:latest
+
+    # Or build locally on server
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # Production resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+          cpus: '2'
+        reservations:
+          memory: 2G
+          cpus: '1'
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Always restart in production
+    restart: always

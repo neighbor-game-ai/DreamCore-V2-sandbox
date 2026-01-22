@@ -1,20 +1,37 @@
-# GameCreatorMVP-v2
+# DreamCore V2
 
 AI-powered browser game creation platform. Create 2D/3D games through natural language chat.
 
+**Domain:** v2.dreamcore.gg (planned)
+
 ## Overview
 
-A chat-based game creation platform where users describe what they want, and AI (Gemini Flash 2.0 / Claude Code CLI) automatically generates playable browser games with real-time preview.
+DreamCore V2 is the next-generation game creation platform that allows anyone to create browser games simply by chatting with AI.
 
-### Key Features
+> "Programming knowledge zero - just talk about your ideas and your game is complete"
 
-- **Chat-based Interface**: Describe your game in natural language
-- **Real-time Preview**: See changes instantly in the browser
-- **2D/3D Support**: Automatic detection or user selection (P5.js for 2D, Three.js for 3D)
-- **AI Image Generation**: Generate game assets with Gemini Nano Banana
-- **Version Control**: Git-based history for each project
-- **Multi-project Management**: Create and manage multiple games
-- **SQLite Database**: Persistent storage for chat history and project data
+### What's New in V2
+
+| Feature | V1 | V2 |
+|---------|----|----|
+| AI Engine | Gemini API | Claude CLI (higher quality) |
+| Version Control | None | Git (per-project) |
+| Sandbox Isolation | None | AI-generated code runs in isolated iframe |
+| Authentication | Anonymous | Supabase Auth (Google OAuth) |
+| Scalability | Limited | Container-based (future) |
+
+### Phase 1: Creator (Current)
+
+- Game creation (Claude CLI)
+- Preview (sandbox iframe)
+- Project save/load (GCE persistent disk)
+- **No publishing** - "Publishing coming soon" message
+
+### Phase 2: Player Sandbox (Planned)
+
+- Game publishing (play.v2.dreamcore.gg)
+- Game gallery
+- Player Sandbox (CSP, separate domain)
 
 ## Tech Stack
 
@@ -22,8 +39,10 @@ A chat-based game creation platform where users describe what they want, and AI 
 |-------|------------|
 | Frontend | Vanilla JS, WebSocket, HTML5 |
 | Backend | Node.js, Express |
-| AI | Gemini Flash 2.0, Claude Code CLI |
-| Database | SQLite (better-sqlite3) |
+| AI | Claude CLI, Gemini Flash 2.0 |
+| Authentication | Supabase Auth (Google OAuth) |
+| Database | SQLite (local) / Supabase PostgreSQL (production) |
+| Storage | GCE Persistent Disk (primary) / GCS (backup) |
 | Image Processing | Sharp |
 | Version Control | Git (per-project) |
 
@@ -33,15 +52,15 @@ A chat-based game creation platform where users describe what they want, and AI 
 
 - Node.js >= 18
 - Git
-- Gemini API Key (required)
-- Claude Code CLI (optional, for advanced generation)
+- Claude CLI installed and configured
+- Supabase project (for production)
+- Gemini API Key
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd GameCreatorMVP-v2
+cd DreamCore-V2
 
 # Install dependencies
 npm install
@@ -62,44 +81,106 @@ Open http://localhost:3000 in your browser.
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GEMINI_API_KEY` | Yes | Google Gemini API key for AI generation |
-| `REPLICATE_API_TOKEN` | No | Replicate API token (for alternative image generation) |
+| `SUPABASE_URL` | Yes* | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Yes* | Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes* | Supabase service role key (server only) |
+| `GEMINI_API_KEY` | Yes | Google Gemini API key |
+| `GCS_PROJECT_ID` | No | GCP project ID (for backup) |
+| `REPLICATE_API_TOKEN` | No | Replicate API token (for background removal) |
+
+*Required for production. Development mode uses legacy visitorId authentication.
 
 ## Project Structure
 
 ```
-GameCreatorMVP-v2/
+DreamCore-V2/
 ├── server/                    # Backend
 │   ├── index.js              # Main server (Express + WebSocket)
-│   ├── claudeRunner.js       # AI processing core (Claude CLI + Gemini)
+│   ├── config.js             # Configuration (NEW)
+│   ├── supabaseClient.js     # Supabase client (NEW)
+│   ├── authMiddleware.js     # Auth middleware (NEW)
+│   ├── claudeRunner.js       # AI processing core
 │   ├── geminiClient.js       # Gemini API client
 │   ├── database.js           # SQLite management
 │   ├── userManager.js        # User/project/Git management
 │   ├── jobManager.js         # Async job management
 │   └── prompts/              # Prompt templates
-│       ├── createPrompt.js   # New game creation prompts
-│       ├── updatePrompt.js   # Update prompts
-│       └── baseRules.js      # Common rules
 ├── public/                   # Frontend
 │   ├── index.html            # Landing page
 │   ├── create.html           # Game creation page
 │   ├── editor.html           # Game editor
 │   ├── app.js                # Client-side logic
 │   └── style.css             # Styles
-├── users/                    # User data (gitignored)
-│   └── {visitorId}/
+├── supabase/                 # Supabase config (NEW)
+│   └── migrations/           # SQL migrations
+│       └── 001_initial_schema.sql
+├── users/                    # User data (dev mode)
+│   └── {userId}/
 │       └── {projectId}/
 │           ├── index.html    # Generated game
 │           ├── specs/        # Game specifications
 │           └── assets/       # Generated images
 ├── data/                     # Database (gitignored)
-│   └── gamecreator.db        # SQLite database
+│   └── dreamcore-v2.db       # SQLite database
 ├── assets/                   # Uploaded assets (gitignored)
-├── docs/                     # Additional documentation
+├── .claude/                  # Claude Code configuration
+│   └── plans/
+│       └── sandbox-architecture.md  # V2 Architecture Design
 ├── ARCHITECTURE.md           # System architecture details
-├── DESIGN_GUIDELINE.md       # Design guidelines
 └── SPECIFICATION.md          # Full specification
 ```
+
+## Authentication Flow
+
+### Production (Supabase Auth)
+
+```
+1. User visits v2.dreamcore.gg
+2. Click "Sign in with Google"
+3. Supabase Auth handles OAuth flow
+4. JWT stored in browser
+5. All API requests include JWT
+6. Server validates JWT via Supabase
+```
+
+### Development (Legacy Mode)
+
+```
+1. No Supabase credentials in .env
+2. System uses visitorId (browser fingerprint)
+3. Backwards compatible with existing data
+```
+
+## Storage Architecture
+
+### File Paths
+
+| Environment | Path Structure |
+|-------------|---------------|
+| Development | `./users/{userId}/{projectId}/` |
+| Production | `/data/projects/{userId}/{projectId}/` |
+
+### Backup Strategy
+
+```
+GCE Persistent Disk (Primary)
+         │
+         ▼ (async backup)
+    GCS Bucket (Backup)
+```
+
+- Normal reads: GCE Persistent Disk only
+- GCS is backup-only, not read during normal operation
+- Disaster recovery: Manual restore from GCS
+
+## Supabase Setup
+
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Go to Authentication > Providers > Google
+3. Enable Google OAuth and configure credentials
+4. Run the migration SQL in SQL Editor:
+   - `supabase/migrations/001_initial_schema.sql`
+5. Copy credentials to `.env`
 
 ## NPM Scripts
 
@@ -107,123 +188,121 @@ GameCreatorMVP-v2/
 |---------|-------------|
 | `npm start` | Start production server |
 | `npm run dev` | Start with auto-reload (--watch) |
-| `npm run classify:html` | Generate game classification report (HTML) |
-| `npm run classify:json` | Generate game classification report (JSON) |
-| `npm run classify:csv` | Generate game classification report (CSV) |
-| `npm run classify:all` | Generate all report formats |
 
 ## API Endpoints
 
-### WebSocket Events
-
-| Event | Direction | Description |
-|-------|-----------|-------------|
-| `user_message` | Client → Server | Send chat message |
-| `ai_chunk` | Server → Client | Streaming AI response |
-| `game_updated` | Server → Client | Game code updated |
-| `error` | Server → Client | Error notification |
-
-### HTTP Endpoints
+### Authentication
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/` | Landing page |
-| GET | `/create` | Game creation page |
-| GET | `/editor` | Game editor |
-| GET | `/game/:visitorId/:projectId/*` | Serve game files |
-| POST | `/api/upload` | Upload asset files |
-| GET | `/api/assets/:visitorId/:projectId` | List project assets |
+| POST | `/api/auth/callback` | OAuth callback |
+| GET | `/api/auth/me` | Get current user |
+| POST | `/api/auth/logout` | Logout |
+
+### Projects
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/projects` | List user's projects |
+| POST | `/api/projects` | Create new project |
+| GET | `/api/projects/:id` | Get project details |
+| DELETE | `/api/projects/:id` | Delete project |
+
+### Game Files
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/game/:userId/:projectId/*` | Serve game files |
+| GET | `/api/projects/:id/code` | Get project HTML |
 
 ## Architecture
 
 ```
 Browser ←→ WebSocket ←→ Express Server
-                            │
-            ┌───────────────┼───────────────┐
-            ▼               ▼               ▼
-       claudeRunner    userManager      database
-       (Gemini/CLI)    (Git ops)        (SQLite)
-            │               │               │
-            ▼               ▼               ▼
-       External API    users/{id}/     data/*.db
+    │                        │
+    │                   ┌────┴────┐
+    │                   ▼         ▼
+    │              authMiddleware supabaseClient
+    │                   │
+    ▼                   ▼
+ localStorage      Supabase Auth
+ (JWT)                 │
+                       ▼
+            ┌──────────┼──────────┐
+            ▼          ▼          ▼
+       claudeRunner  userManager  database
+       (Claude CLI)  (Git ops)    (SQLite)
+            │          │          │
+            ▼          ▼          ▼
+      Anthropic   /data/projects  data/*.db
+        API
 ```
 
-For detailed architecture, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+## Security
+
+### Preview Sandbox
+
+```html
+<iframe
+  srcdoc="..."
+  sandbox="allow-scripts"
+></iframe>
+```
+
+- `allow-same-origin` NOT set → No access to parent's cookies/localStorage
+- Only user's own code runs in their preview
+
+### Path Traversal Protection
+
+All file paths are validated:
+1. UUID format check
+2. `path.resolve` normalization
+3. `startsWith` base directory check
+
+## Migration from V1
+
+V2 is completely independent from V1:
+- Separate Supabase instance
+- Separate storage
+- Same Google account can access both
+- No data migration needed
 
 ## Development
 
-### File Watching
+### Local Development
 
 ```bash
+# Without Supabase (legacy mode)
+npm run dev
+
+# With Supabase (full auth)
+# Set SUPABASE_* variables in .env
 npm run dev
 ```
 
-This uses Node.js `--watch` flag for automatic restarts.
-
 ### Database
 
-SQLite database is created automatically at `data/gamecreator.db` on first run.
+SQLite database is created automatically at `data/dreamcore-v2.db` on first run.
 
 ### Git Versioning
 
-- Each project has its own Git repository in `users/{visitorId}/{projectId}/.git`
-- Global activity log in `users/.git`
+Each project has its own Git repository for version history.
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Detailed system architecture |
-| [DESIGN_GUIDELINE.md](./DESIGN_GUIDELINE.md) | UI/UX design guidelines |
-| [SPECIFICATION.md](./SPECIFICATION.md) | Full product specification |
-
-## Codex / AI Agent Notes
-
-### Important Files for Context
-
-1. **Entry Points**
-   - `server/index.js` - Main server, WebSocket handling
-   - `public/app.js` - Client-side logic
-
-2. **Core Logic**
-   - `server/claudeRunner.js` - AI generation logic (largest file, ~96KB)
-   - `server/geminiClient.js` - Gemini API integration
-   - `server/userManager.js` - User/project management
-
-3. **Data Layer**
-   - `server/database.js` - SQLite operations
-   - `server/prompts/` - AI prompt templates
-
-### Code Style
-
-- ES Modules (`import`/`export`)
-- Async/await for async operations
-- JSDoc comments for functions
-- Japanese comments in some places (bilingual codebase)
-
-### Testing
-
-No automated tests currently. Manual testing via browser.
-
-### Common Tasks
-
-| Task | Files to Modify |
-|------|-----------------|
-| Add new AI feature | `server/claudeRunner.js`, `server/prompts/` |
-| Modify UI | `public/*.html`, `public/app.js`, `public/style.css` |
-| Add API endpoint | `server/index.js` |
-| Database schema change | `server/database.js` |
-| User/project logic | `server/userManager.js` |
-
-## License
-
-Private / Proprietary
-
----
+| [Architecture Design](./.claude/plans/sandbox-architecture.md) | V2 Architecture (detailed) |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | System architecture overview |
+| [SPECIFICATION.md](./SPECIFICATION.md) | Product specification |
 
 ## Troubleshooting
 
 ### Common Issues
+
+**Supabase connection failed**
+- Verify `SUPABASE_URL` and keys in `.env`
+- Check Supabase project status
 
 **Port 3000 already in use**
 ```bash
@@ -235,10 +314,14 @@ kill -9 <PID>
 - Ensure only one server instance is running
 - Check for zombie processes
 
-**Gemini API errors**
-- Verify `GEMINI_API_KEY` in `.env`
-- Check API quota limits
+**Claude CLI not working**
+- Ensure Claude CLI is installed: `claude --version`
+- Check API key configuration
 
-**Git operations failing**
-- Ensure Git is installed: `git --version`
-- Check file permissions in `users/` directory
+## License
+
+Private / Proprietary
+
+---
+
+*DreamCore V2 - Making game creation accessible to everyone*
