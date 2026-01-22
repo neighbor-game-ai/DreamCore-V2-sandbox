@@ -2500,6 +2500,9 @@ class GameCreatorApp {
   }
 
   showWelcomeMessage() {
+    // Remove static welcome if present (from HTML)
+    this.hideWelcomeMessage();
+
     // All possible game suggestions
     const allSuggestions = [
       { label: '宇宙シューティング', prompt: '宇宙を飛ぶシューティングゲームを作って' },

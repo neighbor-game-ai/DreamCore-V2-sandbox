@@ -75,7 +75,21 @@
       </div>
 
       <div class="chat-messages" id="chatMessages">
-        <!-- Welcome message will be inserted here when empty -->
+        <!-- Static welcome (shows instantly, replaced by JS) -->
+        <div class="welcome-message" id="staticWelcome">
+          <div class="welcome-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+          </div>
+          <h3>ようこそ！</h3>
+          <p>どんなゲームを作りたいですか？<br>自由に話しかけてください。</p>
+          <div class="welcome-examples">
+            <span class="example-label">接続中...</span>
+          </div>
+        </div>
       </div>
 
       <!-- Streaming Output Display -->
