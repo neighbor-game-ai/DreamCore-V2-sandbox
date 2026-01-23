@@ -2,7 +2,7 @@
 
 ## 現在の状況
 
-003_sync_schema.sql の本番適用が完了。Phase 1 基盤整備は一段落。
+Asset Architecture V2 実装完了。エイリアスベースURLにより「Zero Replacement」を実現。
 
 ---
 
@@ -25,6 +25,28 @@
 ---
 
 ## 作業履歴
+
+### 2026-01-23: Asset Architecture V2 実装完了
+
+**詳細:** `.claude/logs/2026-01-23-asset-architecture-v2.md`
+
+**実施内容:**
+- 005_asset_v2.sql 作成・本番適用（alias, hash, is_global等）
+- 新エンドポイント `/user-assets/:userId/:alias`, `/global-assets/:category/:alias`
+- AI生成画像のV2対応（saveGeneratedImage更新）
+- フロントエンドURL形式変更
+
+**専門家レビュー対応:**
+- P0: aliasExists()のis_deleted条件削除（UNIQUE衝突回避）
+- P1: filenameサニタイズ追加
+- P1: DB失敗時の孤児ファイル削除
+- 運用: alias競合ログ追加
+
+**テスト完了:**
+- 同名画像自動採番 ✅
+- DB失敗時ファイルクリーンアップ ✅
+
+---
 
 ### 2026-01-23: 003_sync_schema.sql 本番適用完了
 
@@ -74,4 +96,4 @@
 
 ---
 
-最終更新: 2026-01-23
+最終更新: 2026-01-23 (Asset Architecture V2)
