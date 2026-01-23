@@ -34,6 +34,26 @@
 
 ## 作業履歴
 
+### 2026-01-23: 統一パス構造リファクタリング
+
+**詳細:** `.claude/logs/2026-01-23-unified-path-structure.md`
+
+**実施内容:**
+- `getProjectPath` を統一構造 `users/{userId}/projects/{projectId}` に変更
+- `getProjectPathV2`, `getUserAssetsPathV2` を削除（統合）
+- `PROJECTS_DIR`, `ASSETS_DIR` 定数を削除
+- 古いMVPドキュメント（ARCHITECTURE.md, SPECIFICATION.md）を削除
+- README.md, CLAUDE.md を更新
+
+**新パス構造:**
+```
+/data/users/{userId}/projects/{projectId}/  - プロジェクト
+/data/users/{userId}/assets/                - アセット
+/data/assets/global/                        - グローバル
+```
+
+---
+
 ### 2026-01-23: 画像読み込み問題の調査
 
 **詳細:** `.claude/logs/2026-01-23-image-loading-investigation.md`
@@ -164,4 +184,4 @@
 
 ---
 
-最終更新: 2026-01-23 (アーキテクチャ設計レビュー)
+最終更新: 2026-01-23 (統一パス構造リファクタリング)
