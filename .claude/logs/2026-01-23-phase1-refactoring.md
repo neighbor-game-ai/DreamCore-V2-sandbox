@@ -107,6 +107,46 @@ Claude CLI の spawn 呼び出しに同時実行制限がなく、サーバー�
 
 ---
 
+### P3: exec系の完全排除
+
+**問題:**
+`index.js`, `claudeChat.js`, `claudeRunner.js` に `exec`/`execSync` が残存。
+ユーザー入力は入っていないが、将来の保守性のため統一。
+
+**修正:**
+1. `index.js` に `gitCommitAsync` ヘルパー追加（4箇所の `exec` を置換）
+2. `claudeChat.js` の `execSync` → `execFileSync`（3箇所）
+3. `claudeRunner.js` の `execSync` → `execFileSync`（1箇所）
+
+**結果:**
+シェル経由の exec が完全排除され、レビュー基準が明確化。
+
+---
+
+### P4: 公開用インデックス追加
+
+**背景:**
+V1で既に7,000件以上の公開ゲームが存在。月間約1,000件の成長見込み。
+
+**修正:**
+`007_public_indexes.sql` マイグレーション作成:
+- `idx_projects_public` - 公開プロジェクト一覧の高速化
+- `idx_assets_public_active` - 公開アセット取得の高速化（`is_deleted = FALSE` 条件付き）
+
+**作成ファイル:**
+- `supabase/migrations/007_public_indexes.sql`
+
+---
+
+## 設定変更履歴
+
+| 設定 | 変更前 | 変更後 | 理由 |
+|------|--------|--------|------|
+| `maxConcurrentTotal` | 10 | 50 | V1実績（7,000件超）を考慮 |
+| `timeout` | 5分 | 10分 | ゲーム生成に5分以上かかるケースに対応 |
+
+---
+
 ## 変更ファイル一覧
 
 | ファイル | 変更内容 |
@@ -114,23 +154,40 @@ Claude CLI の spawn 呼び出しに同時実行制限がなく、サーバー�
 | `server/config.js` | `isValidGitHash()`, `RATE_LIMIT` 設定 |
 | `server/userManager.js` | `execGitSafe()`, 改行サニタイズ |
 | `server/jobManager.js` | スロット管理 |
-| `server/claudeRunner.js` | スロット制御統合, タイムアウト |
-| `server/index.js` | versionId検証, エラー統一 |
+| `server/claudeRunner.js` | スロット制御統合, タイムアウト, execFileSync化 |
+| `server/claudeChat.js` | execFileSync化 |
+| `server/index.js` | versionId検証, エラー統一, gitCommitAsyncヘルパー |
 | `server/errorResponse.js` | 新規作成 |
 | `supabase/migrations/006_sync_rls.sql` | 新規作成 |
+| `supabase/migrations/007_public_indexes.sql` | 新規作成 |
+| `CLAUDE.md` | 同時実行制御の設定値をドキュメント化 |
 
 ---
 
-## コミット
+## コミット履歴
 
 ```
 8a1b55a security: Phase 1 リファクタリング（セキュリティ・安定性改善）
+9f0443b docs: Phase 1 リファクタリング作業ログ追加
+9c37427 security: exec系をexecFile系に完全移行（P3）
+05f8ca3 perf: Phase 2 公開アクセス用インデックス追加
+dc163fc docs: 同時実行制御の設定値をドキュメント化（50/global）
 ```
+
+---
+
+## 完了状況
+
+- [x] P0: コマンドインジェクション修正
+- [x] P1: 同時実行制御（1/user, 50/global, 10分タイムアウト）
+- [x] P1: RLSポリシー統合 → Supabase適用済み
+- [x] P2: エラーレスポンス統一（ヘルパー作成）
+- [x] P3: exec完全排除
+- [x] P4: 公開用インデックス → Supabase適用済み
 
 ---
 
 ## 次のステップ
 
-- [ ] `006_sync_rls.sql` を Supabase に適用
 - [ ] Phase 2 公開機能の実装開始
 - [ ] P2 エラー統一の段階的移行（約80箇所）
