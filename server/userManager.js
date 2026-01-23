@@ -14,6 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { execSync } = require('child_process');
 const db = require('./database-supabase');
 const { supabaseAdmin } = require('./supabaseClient');
@@ -425,22 +426,30 @@ const ensureUserAssetsDir = (userId) => {
 const saveGeneratedImage = async (client, userId, projectId, filename, base64Data) => {
   const c = getClient(client);
 
-  // Ensure user's assets directory exists
-  const userAssetsDir = ensureUserAssetsDir(userId);
-
-  // Generate unique asset ID
-  const assetId = require('uuid').v4();
-  const ext = path.extname(filename) || '.png';
-  const storageName = `${assetId}${ext}`;
-  const storagePath = path.join(userAssetsDir, storageName);
+  // V2: Use new assets directory structure
+  const userAssetsDir = config.getUserAssetsPathV2(userId);
+  if (!fs.existsSync(userAssetsDir)) {
+    fs.mkdirSync(userAssetsDir, { recursive: true });
+  }
 
   // Extract base64 data (remove data:image/png;base64, prefix if present)
   const base64Content = base64Data.includes(',')
     ? base64Data.split(',')[1]
     : base64Data;
 
-  // Convert base64 to buffer and save
+  // Convert base64 to buffer
   const buffer = Buffer.from(base64Content, 'base64');
+
+  // V2: Calculate SHA256 hash for deduplication
+  const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+
+  // V2: Generate unique filename with hash prefix
+  const ext = path.extname(filename) || '.png';
+  const baseName = path.basename(filename, ext);
+  const storageName = `${hash.substring(0, 8)}_${baseName}${ext}`;
+  const storagePath = path.join(userAssetsDir, storageName);
+
+  // Save file
   fs.writeFileSync(storagePath, buffer);
 
   // Determine MIME type from extension
@@ -453,19 +462,32 @@ const saveGeneratedImage = async (client, userId, projectId, filename, base64Dat
   };
   const mimeType = mimeTypes[ext.toLowerCase()] || 'image/png';
 
-  // Create asset record in database
-  const asset = await db.createAsset(
-    c,
-    userId,
-    storageName,
-    filename,
-    storagePath,
-    mimeType,
-    buffer.length,
-    false,  // isPublic
-    null,   // tags
-    null    // description
-  );
+  // V2: Generate alias with collision avoidance
+  let alias = `${baseName}${ext}`;
+  let counter = 1;
+  while (await db.aliasExists(userId, alias)) {
+    alias = `${baseName}_${counter}${ext}`;
+    counter++;
+  }
+
+  // V2: Create asset record with new fields
+  const asset = await db.createAssetV2(c, {
+    owner_id: userId,
+    alias: alias,
+    filename: storageName,
+    original_name: filename,
+    storage_path: storagePath,
+    mime_type: mimeType,
+    size: buffer.length,
+    hash: hash,
+    created_in_project_id: projectId,
+    is_public: true,  // V2: Public by default for game assets
+    is_remix_allowed: false,
+    is_global: false,
+    category: null,
+    tags: null,
+    description: null
+  });
 
   // Link asset to project
   await db.linkAssetToProject(c, projectId, asset.id, 'image');
@@ -473,10 +495,11 @@ const saveGeneratedImage = async (client, userId, projectId, filename, base64Dat
   // Update project timestamp
   await db.touchProject(c, projectId);
 
-  console.log(`Saved generated image: ${filename} -> /api/assets/${asset.id}`);
+  // V2: Return alias-based URL
+  const assetUrl = `/user-assets/${userId}/${alias}`;
+  console.log(`Saved generated image: ${filename} -> ${assetUrl}`);
 
-  // Return API path for use in HTML (reference-based)
-  return `/api/assets/${asset.id}`;
+  return assetUrl;
 };
 
 // ==================== Chat History Operations ====================
