@@ -122,10 +122,10 @@ DreamCore-V2/
 ├── data/                     # Database (gitignored)
 │   └── dreamcore-v2.db       # SQLite database
 ├── .claude/                  # Claude Code configuration
-│   └── plans/
-│       └── sandbox-architecture.md  # V2 Architecture Design
-├── ARCHITECTURE.md           # System architecture details
-└── SPECIFICATION.md          # Full specification
+│   ├── plans/                # Design documents
+│   ├── logs/                 # Work logs
+│   └── docs/                 # Technical documentation
+└── CLAUDE.md                 # Project rules and guidelines
 ```
 
 ## Authentication Flow
