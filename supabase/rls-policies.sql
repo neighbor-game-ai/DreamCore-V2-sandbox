@@ -8,7 +8,8 @@
 -- =============================================
 -- ENABLE RLS ON ALL TABLES
 -- =============================================
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+-- NOTE: profiles テーブルは削除済み（004_schema_improvements.sql）
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.assets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.project_assets ENABLE ROW LEVEL SECURITY;
@@ -18,17 +19,18 @@ ALTER TABLE public.publish_drafts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activity_log ENABLE ROW LEVEL SECURITY;
 
 -- =============================================
--- PROFILES POLICIES
+-- USERS POLICIES
 -- =============================================
-DROP POLICY IF EXISTS "Users can read own profile" ON public.profiles;
-CREATE POLICY "Users can read own profile"
-  ON public.profiles FOR SELECT
-  USING (auth.uid() = id);
+DROP POLICY IF EXISTS "users_read_own" ON public.users;
+CREATE POLICY "users_read_own"
+  ON public.users FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = id);
 
-DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
-CREATE POLICY "Users can update own profile"
-  ON public.profiles FOR UPDATE
-  USING (auth.uid() = id);
+DROP POLICY IF EXISTS "users_update_own" ON public.users;
+CREATE POLICY "users_update_own"
+  ON public.users FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = id)
+  WITH CHECK ((SELECT auth.uid()) = id);
 
 -- =============================================
 -- PROJECTS POLICIES (Owner-only for Phase 1)

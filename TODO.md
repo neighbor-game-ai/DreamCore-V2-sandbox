@@ -2,7 +2,7 @@
 
 ## 現在の状況
 
-Asset Architecture V2 実装完了。エイリアスベースURLにより「Zero Replacement」を実現。
+PostgreSQL Table Design レビュー完了。スキーマがベストプラクティスに準拠。
 
 ---
 
@@ -10,7 +10,7 @@ Asset Architecture V2 実装完了。エイリアスベースURLにより「Zero
 
 ### 低優先度（運用後に判断）
 
-- [ ] profiles テーブル削除（レガシー、コードで未参照）
+- [x] profiles テーブル削除 ✅ 2026-01-23
 - [ ] インデックス冗長整理（`pg_stat_user_indexes` で確認後）
 - [ ] 本番 Redirect URLs に本番URL追加（デプロイ時）
 
@@ -25,6 +25,25 @@ Asset Architecture V2 実装完了。エイリアスベースURLにより「Zero
 ---
 
 ## 作業履歴
+
+### 2026-01-23: PostgreSQL Table Design レビュー対応
+
+**詳細:** `.claude/logs/2026-01-23-postgresql-table-design-review.md`
+
+**実施内容:**
+- wshobson/agents postgresql-table-design スキルでレビュー
+- 004_schema_improvements.sql 作成・本番適用
+- profiles テーブル削除（技術的負債除去）
+- NOT NULL 制約追加、INTEGER → BIGINT
+- users.updated_at 追加
+- games FK インデックス追加
+- rls-policies.sql 更新
+
+**適用結果:**
+- テーブル数 9個（設計通り）
+- profiles 参照完全削除確認
+
+---
 
 ### 2026-01-23: Asset Architecture V2 実装完了
 
@@ -96,4 +115,4 @@ Asset Architecture V2 実装完了。エイリアスベースURLにより「Zero
 
 ---
 
-最終更新: 2026-01-23 (Asset Architecture V2)
+最終更新: 2026-01-23 (PostgreSQL Table Design レビュー)

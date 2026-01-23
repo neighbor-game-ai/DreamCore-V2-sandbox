@@ -54,8 +54,8 @@ auth.users (Supabase管理)
 | email | TEXT NOT NULL | Google OAuth から取得 |
 | display_name | TEXT | 表示名（OAuth の `full_name` or `name`） |
 | avatar_url | TEXT | プロフィール画像URL |
-| created_at | TIMESTAMPTZ | |
-| updated_at | TIMESTAMPTZ | |
+| created_at | TIMESTAMPTZ NOT NULL | |
+| updated_at | TIMESTAMPTZ NOT NULL | 自動更新（トリガー） |
 
 **設計理由:**
 - `auth.users` は Supabase 管理下で直接クエリしづらい
@@ -75,10 +75,10 @@ auth.users (Supabase管理)
 | id | UUID (PK) | |
 | user_id | UUID (FK→users) | 所有者 |
 | name | TEXT | プロジェクト名（デフォルト: "New Game"） |
-| is_public | BOOLEAN | Phase 2 で使用予定 |
+| is_public | BOOLEAN NOT NULL | Phase 2 で使用予定（デフォルト: FALSE） |
 | remixed_from | UUID (FK→projects) | リミックス元（Phase 2） |
-| created_at | TIMESTAMPTZ | |
-| updated_at | TIMESTAMPTZ | |
+| created_at | TIMESTAMPTZ NOT NULL | |
+| updated_at | TIMESTAMPTZ NOT NULL | 自動更新（トリガー） |
 
 **設計理由:**
 - `is_public` は Phase 1 では未使用（全て owner-only）
@@ -107,15 +107,15 @@ auth.users (Supabase管理)
 | original_name | TEXT | アップロード時の元ファイル名 |
 | storage_path | TEXT | ファイルシステム上のパス |
 | mime_type | TEXT | Content-Type |
-| size | INTEGER | ファイルサイズ (bytes) |
-| is_public | BOOLEAN | Phase 2 で使用予定 |
-| is_deleted | BOOLEAN | ソフトデリートフラグ |
+| size | BIGINT | ファイルサイズ (bytes)、2GB超対応 |
+| is_public | BOOLEAN NOT NULL | Phase 2 で使用予定（デフォルト: FALSE） |
+| is_deleted | BOOLEAN NOT NULL | ソフトデリートフラグ（デフォルト: FALSE） |
 | available_from | TIMESTAMPTZ | 公開開始日（予約公開） |
 | available_until | TIMESTAMPTZ | 公開終了日 |
 | tags | TEXT | 検索用タグ（JSON or CSV） |
 | description | TEXT | 説明 |
-| created_at | TIMESTAMPTZ | |
-| updated_at | TIMESTAMPTZ | |
+| created_at | TIMESTAMPTZ NOT NULL | |
+| updated_at | TIMESTAMPTZ NOT NULL | 自動更新（トリガー） |
 
 **設計理由:**
 - **ソフトデリート (`is_deleted`)**: 復元可能性、監査対応、参照整合性維持のため
@@ -271,10 +271,16 @@ auth.users (Supabase管理)
 | description | TEXT | 説明 |
 | game_url | TEXT | 公開URL |
 | thumbnail_url | TEXT | サムネイル |
-| play_count | INTEGER | プレイ数 |
-| like_count | INTEGER | いいね数 |
-| visibility | TEXT | public/unlisted/private |
-| created_at | TIMESTAMPTZ | |
+| play_count | BIGINT NOT NULL | プレイ数（デフォルト: 0） |
+| like_count | BIGINT NOT NULL | いいね数（デフォルト: 0） |
+| visibility | TEXT NOT NULL | public/unlisted/private |
+| created_at | TIMESTAMPTZ NOT NULL | |
+
+**インデックス:**
+- `idx_games_user_id` - ユーザー別ゲーム一覧
+- `idx_games_project_id` - プロジェクト参照（FK）
+- `idx_games_visibility` - 公開ゲーム検索
+- `idx_games_created_at` - 新着順ソート
 
 **設計理由:**
 - `project_id ON DELETE SET NULL`: プロジェクト削除後も公開ゲームは残す
@@ -379,7 +385,7 @@ CREATE TRIGGER on_auth_user_created
 | `001_initial_schema.sql` | 初期スキーマ |
 | `002_assets_is_deleted_not_null.sql` | assets.is_deleted NOT NULL 化 |
 | `003_sync_schema.sql` | RLS最適化、TO authenticated、WITH CHECK追加、FKインデックス |
-| `004_rls_optimization.sql` | （予備） |
+| `004_schema_improvements.sql` | NOT NULL追加、INTEGER→BIGINT、users.updated_at、gamesインデックス |
 
 ---
 
@@ -408,6 +414,7 @@ CREATE TRIGGER on_auth_user_created
 | 日付 | 変更内容 |
 |------|----------|
 | 2026-01-23 | 初版作成（Phase 1完了時点のスキーマを文書化） |
+| 2026-01-23 | 004_schema_improvements.sql追加（PostgreSQLベストプラクティス対応） |
 
 <!--
 更新時の記載ルール:
