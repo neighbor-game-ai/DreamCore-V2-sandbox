@@ -88,8 +88,6 @@ Open http://localhost:3000 in your browser.
 | `GCS_PROJECT_ID` | No | GCP project ID (for backup) |
 | `REPLICATE_API_TOKEN` | No | Replicate API token (for background removal) |
 
-*Required for production. Development mode uses legacy visitorId authentication.
-
 ## Project Structure
 
 ```
@@ -114,15 +112,15 @@ DreamCore-V2/
 ├── supabase/                 # Supabase config (NEW)
 │   └── migrations/           # SQL migrations
 │       └── 001_initial_schema.sql
-├── users/                    # User data (dev mode)
+├── users/                    # User data
 │   └── {userId}/
-│       └── {projectId}/
-│           ├── index.html    # Generated game
-│           ├── specs/        # Game specifications
-│           └── assets/       # Generated images
+│       ├── projects/
+│       │   └── {projectId}/
+│       │       ├── index.html    # Generated game
+│       │       └── specs/        # Game specifications
+│       └── assets/               # User assets
 ├── data/                     # Database (gitignored)
 │   └── dreamcore-v2.db       # SQLite database
-├── assets/                   # Uploaded assets (gitignored)
 ├── .claude/                  # Claude Code configuration
 │   └── plans/
 │       └── sandbox-architecture.md  # V2 Architecture Design
@@ -143,22 +141,15 @@ DreamCore-V2/
 6. Server validates JWT via Supabase
 ```
 
-### Development (Legacy Mode)
-
-```
-1. No Supabase credentials in .env
-2. System uses visitorId (browser fingerprint)
-3. Backwards compatible with existing data
-```
-
 ## Storage Architecture
 
-### File Paths
+### Unified Path Structure
 
-| Environment | Path Structure |
-|-------------|---------------|
-| Development | `./users/{userId}/{projectId}/` |
-| Production | `/data/projects/{userId}/{projectId}/` |
+```
+/data/users/{userId}/projects/{projectId}/  - Project files
+/data/users/{userId}/assets/                - User assets
+/data/assets/global/                        - Global assets
+```
 
 ### Backup Strategy
 
@@ -234,7 +225,7 @@ Browser ←→ WebSocket ←→ Express Server
        (Claude CLI)  (Git ops)    (SQLite)
             │          │          │
             ▼          ▼          ▼
-      Anthropic   /data/projects  data/*.db
+      Anthropic   /data/users     data/*.db
         API
 ```
 
@@ -293,8 +284,8 @@ Each project has its own Git repository for version history.
 | Document | Description |
 |----------|-------------|
 | [Architecture Design](./.claude/plans/sandbox-architecture.md) | V2 Architecture (detailed) |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | System architecture overview |
-| [SPECIFICATION.md](./SPECIFICATION.md) | Product specification |
+| [Database Schema](./.claude/docs/database-schema.md) | Database design |
+| [Auth Migration](./.claude/plans/auth-migration.md) | Authentication documentation |
 
 ## Troubleshooting
 

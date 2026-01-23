@@ -2,14 +2,12 @@
  * User Manager for DreamCore V2
  *
  * Handles user data, projects, and file operations.
+ * Uses config.js for path configuration.
+ * userId (Supabase Auth UUID) for all user identification.
  *
- * V2 Changes:
- * - Uses config.js for path configuration
- * - userId (Supabase Auth UUID) for all user identification
- *
- * Path Structure:
- * - Production: /data/projects/{userId}/{projectId}/
- * - Development: ./users/{userId}/{projectId}/
+ * Unified Path Structure:
+ * - /data/users/{userId}/projects/{projectId}/  - Project files
+ * - /data/users/{userId}/assets/                - User assets
  */
 
 const fs = require('fs');
@@ -22,10 +20,6 @@ const config = require('./config');
 
 // Helper: get client or fallback to admin (for background job context)
 const getClient = (client) => client || supabaseAdmin;
-
-// Base directory for user files (game code, assets)
-const PROJECTS_DIR = config.PROJECTS_DIR;
-const ASSETS_DIR = config.ASSETS_DIR;
 
 // Ensure directories exist
 config.ensureDirectories();
@@ -426,8 +420,8 @@ const ensureUserAssetsDir = (userId) => {
 const saveGeneratedImage = async (client, userId, projectId, filename, base64Data) => {
   const c = getClient(client);
 
-  // V2: Use new assets directory structure
-  const userAssetsDir = config.getUserAssetsPathV2(userId);
+  // Use unified assets directory structure
+  const userAssetsDir = config.getUserAssetsPath(userId);
   if (!fs.existsSync(userAssetsDir)) {
     fs.mkdirSync(userAssetsDir, { recursive: true });
   }

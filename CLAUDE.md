@@ -142,6 +142,15 @@ USING (owner_id = auth.uid() AND is_deleted = FALSE)
 - ~~`initLoginUsers.js`~~ - 削除済み
 - ~~`assets.is_deleted`~~ - マイグレーション実行済み（2026-01-22）
 - ~~`visitorId`言及~~ - server/public両方から完全削除（2026-01-23）
+- ~~`PROJECTS_DIR`/`getProjectPathV2`~~ - 統一パス構造に移行済み（2026-01-23）
+
+### 統一パス構造
+
+```
+/data/users/{userId}/projects/{projectId}/  - プロジェクトファイル
+/data/users/{userId}/assets/                - ユーザーアセット
+/data/assets/global/                        - グローバルアセット
+```
 
 ## 開発方針
 

@@ -26,9 +26,10 @@ const HOST = process.env.HOST || '0.0.0.0';
 // ==================== Storage Paths ====================
 
 /**
- * V2 uses a new directory structure for projects:
- * Production: /data/projects/{userId}/{projectId}/
- * Development: ./users/{userId}/{projectId}/
+ * Unified directory structure:
+ * /data/users/{userId}/projects/{projectId}/  - Project files
+ * /data/users/{userId}/assets/                - User assets
+ * /data/assets/global/                        - Global assets
  */
 
 // Base data directory
@@ -36,18 +37,10 @@ const DATA_DIR = IS_PRODUCTION
   ? process.env.DATA_DIR || '/data'
   : path.join(__dirname, '..');
 
-// Projects directory (game code, SPEC.md, etc.)
-const PROJECTS_DIR = IS_PRODUCTION
-  ? path.join(DATA_DIR, 'projects')
-  : path.join(DATA_DIR, 'users');  // Legacy compatibility
-
-// Assets directory (legacy - flat structure)
-const ASSETS_DIR = path.join(DATA_DIR, 'assets');
-
-// V2: Users directory (user assets + projects)
+// Users directory (contains projects and assets per user)
 const USERS_DIR = path.join(DATA_DIR, 'users');
 
-// V2: Global assets directory
+// Global assets directory
 const GLOBAL_ASSETS_DIR = path.join(DATA_DIR, 'assets', 'global');
 
 // Database directory (SQLite files)
@@ -55,7 +48,7 @@ const DB_DIR = path.join(DATA_DIR, 'data');
 
 // Ensure directories exist
 const ensureDirectories = () => {
-  const dirs = [PROJECTS_DIR, ASSETS_DIR, USERS_DIR, GLOBAL_ASSETS_DIR, DB_DIR];
+  const dirs = [USERS_DIR, GLOBAL_ASSETS_DIR, DB_DIR];
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -73,7 +66,7 @@ const ensureDirectories = () => {
  * @returns {string} Absolute path to project directory
  */
 const getProjectPath = (userId, projectId) => {
-  return path.join(PROJECTS_DIR, userId, projectId);
+  return path.join(USERS_DIR, userId, 'projects', projectId);
 };
 
 /**
@@ -82,40 +75,20 @@ const getProjectPath = (userId, projectId) => {
  * @returns {string} Absolute path to user directory
  */
 const getUserPath = (userId) => {
-  return path.join(PROJECTS_DIR, userId);
+  return path.join(USERS_DIR, userId);
 };
 
 /**
- * Get the assets directory path for a user (legacy - flat structure)
+ * Get the assets directory path for a user
  * @param {string} userId - User ID
  * @returns {string} Absolute path to user's assets directory
- * @deprecated Use getUserAssetsPathV2 instead
  */
 const getUserAssetsPath = (userId) => {
-  return path.join(ASSETS_DIR, userId);
-};
-
-/**
- * V2: Get the assets directory path for a user
- * @param {string} userId - User ID
- * @returns {string} Absolute path to user's assets directory
- */
-const getUserAssetsPathV2 = (userId) => {
   return path.join(USERS_DIR, userId, 'assets');
 };
 
 /**
- * V2: Get the project directory path for a user
- * @param {string} userId - User ID
- * @param {string} projectId - Project ID
- * @returns {string} Absolute path to project directory
- */
-const getProjectPathV2 = (userId, projectId) => {
-  return path.join(USERS_DIR, userId, 'projects', projectId);
-};
-
-/**
- * V2: Get the global assets directory path for a category
+ * Get the global assets directory path for a category
  * @param {string} category - Category (e.g., 'seasonal', 'characters')
  * @returns {string} Absolute path to global assets category directory
  */
@@ -238,8 +211,6 @@ module.exports = {
 
   // Paths
   DATA_DIR,
-  PROJECTS_DIR,
-  ASSETS_DIR,
   USERS_DIR,
   GLOBAL_ASSETS_DIR,
   DB_DIR,
@@ -247,8 +218,6 @@ module.exports = {
   getProjectPath,
   getUserPath,
   getUserAssetsPath,
-  getUserAssetsPathV2,
-  getProjectPathV2,
   getGlobalAssetsPath,
   isPathSafe,
   isValidUUID,

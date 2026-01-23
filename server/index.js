@@ -20,7 +20,7 @@ const { getStyleById } = require('./stylePresets');
 const { getStyleOptionsWithImages } = require('./styleImageCache');
 const { generateVisualGuide, formatGuideForCodeGeneration } = require('./visualGuideGenerator');
 const { authenticate, optionalAuth, verifyWebSocketAuth } = require('./authMiddleware');
-const { isValidUUID, isPathSafe, getProjectPath, getUserAssetsPathV2, getGlobalAssetsPath, USERS_DIR, GLOBAL_ASSETS_DIR, SUPABASE_URL, SUPABASE_ANON_KEY } = require('./config');
+const { isValidUUID, isPathSafe, getProjectPath, getUserAssetsPath, getGlobalAssetsPath, USERS_DIR, GLOBAL_ASSETS_DIR, SUPABASE_URL, SUPABASE_ANON_KEY } = require('./config');
 const crypto = require('crypto');
 const { supabaseAdmin } = require('./supabaseClient');
 
@@ -30,16 +30,16 @@ const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 3000;
 
-// Ensure assets directory exists
-const ASSETS_DIR = path.join(__dirname, '..', 'assets');
-if (!fs.existsSync(ASSETS_DIR)) {
-  fs.mkdirSync(ASSETS_DIR, { recursive: true });
+// Temporary upload directory (files are moved to user-specific directories after processing)
+const UPLOAD_TEMP_DIR = path.join(__dirname, '..', 'uploads_temp');
+if (!fs.existsSync(UPLOAD_TEMP_DIR)) {
+  fs.mkdirSync(UPLOAD_TEMP_DIR, { recursive: true });
 }
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, ASSETS_DIR);
+    cb(null, UPLOAD_TEMP_DIR);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -468,8 +468,8 @@ app.post('/api/assets/upload', authenticate, upload.single('file'), async (req, 
     const aliasBase = path.basename(alias, ext);
     const filename = `${aliasBase}_${hashShort}${ext}`;
 
-    // V2: Move to user assets directory
-    const userAssetsDir = getUserAssetsPathV2(userId);
+    // Move to user assets directory
+    const userAssetsDir = getUserAssetsPath(userId);
     if (!fs.existsSync(userAssetsDir)) {
       fs.mkdirSync(userAssetsDir, { recursive: true });
     }
