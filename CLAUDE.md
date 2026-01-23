@@ -43,6 +43,18 @@ AI-powered browser game creation platform.
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 ```
 
+## 同時実行制御
+
+Claude CLI の実行は以下の制限あり（`server/config.js` の `RATE_LIMIT.cli`）:
+
+| 設定 | 値 | 説明 |
+|------|-----|------|
+| `maxConcurrentPerUser` | 1 | ユーザーあたり同時実行数 |
+| `maxConcurrentTotal` | 50 | システム全体の同時実行数 |
+| `timeout` | 10分 | 1ジョブの最大実行時間 |
+
+**変更履歴**: 2026-01-23 に全体上限を 10 → 50 に変更（V1で7,000件超の実績を考慮）
+
 ## コマンド
 
 - `npm run dev` - 開発サーバー起動（ファイル変更で自動再起動）
