@@ -1,0 +1,48 @@
+{
+  "network": {
+    "allowedDomains": [
+      "api.anthropic.com",
+      "*.anthropic.com",
+      "registry.npmjs.org",
+      "cdn.jsdelivr.net",
+      "cdnjs.cloudflare.com",
+      "fonts.googleapis.com",
+      "fonts.gstatic.com",
+      "unpkg.com",
+      "esm.sh"
+    ],
+    "deniedDomains": [],
+    "allowLocalBinding": false,
+    "httpProxyPort": 8080,
+    "socksProxyPort": 8081
+  },
+  "filesystem": {
+    "denyRead": [
+      "~/.ssh",
+      "~/.aws",
+      "~/.config/gcloud",
+      "~/.gnupg",
+      "/etc/passwd",
+      "/etc/shadow",
+      "/etc/sudoers"
+    ],
+    "allowWrite": [
+      "./data",
+      "/tmp"
+    ],
+    "denyWrite": [
+      ".env",
+      ".env.*",
+      "*.pem",
+      "*.key",
+      "*.p12",
+      "credentials.json",
+      "service-account.json"
+    ]
+  },
+  "ignoreViolations": {
+    "claude": [
+      "~/.claude"
+    ]
+  }
+}

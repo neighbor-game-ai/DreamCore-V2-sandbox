@@ -13,6 +13,7 @@
     "analyze": "node server/tools/analyzeClassification.js game_classification_report.json"
   },
   "dependencies": {
+    "@anthropic-ai/sandbox-runtime": "^0.0.32",
     "@anthropic-ai/sdk": "^0.71.2",
     "@supabase/supabase-js": "^2.91.0",
     "archiver": "^7.0.1",

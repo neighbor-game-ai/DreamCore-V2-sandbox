@@ -8,6 +8,114 @@ const { supabaseAdmin } = require('./supabaseClient');
 const geminiClient = require('./geminiClient');
 const claudeChat = require('./claudeChat');
 
+// Sandbox runtime for secure Claude CLI execution
+const USE_SANDBOX = process.env.USE_SANDBOX === 'true';
+let SandboxManager = null;
+let sandboxInitialized = false;
+
+// Initialize sandbox-runtime if enabled
+async function initSandbox() {
+  if (!USE_SANDBOX || sandboxInitialized) return;
+
+  try {
+    const sandboxModule = await import('@anthropic-ai/sandbox-runtime');
+    SandboxManager = sandboxModule.SandboxManager;
+
+    // Load config from file or use defaults
+    let config;
+    const configPath = path.join(__dirname, 'sandbox-config.json');
+
+    if (fs.existsSync(configPath)) {
+      config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      console.log('[sandbox-runtime] Loaded config from sandbox-config.json');
+    } else {
+      config = {
+        network: {
+          allowedDomains: [
+            'api.anthropic.com',
+            '*.anthropic.com',
+            'registry.npmjs.org',
+            'cdn.jsdelivr.net',
+            'cdnjs.cloudflare.com',
+          ],
+          deniedDomains: [],
+          allowLocalBinding: false,
+        },
+        filesystem: {
+          denyRead: ['~/.ssh', '~/.aws'],
+          allowWrite: [process.env.DATA_DIR || './data', '/tmp'],
+          denyWrite: ['.env', '*.pem', '*.key'],
+        },
+      };
+    }
+
+    // Ensure DATA_DIR is writable
+    const dataDir = process.env.DATA_DIR || './data';
+    if (!config.filesystem.allowWrite.includes(dataDir)) {
+      config.filesystem.allowWrite.push(dataDir);
+    }
+
+    await SandboxManager.initialize(config);
+    sandboxInitialized = true;
+    console.log('[sandbox-runtime] Initialized with secure configuration');
+  } catch (e) {
+    console.error('[sandbox-runtime] Failed to initialize:', e.message);
+    console.log('[sandbox-runtime] Falling back to non-sandboxed execution');
+  }
+}
+
+// Spawn Claude CLI with optional sandbox wrapping
+async function spawnClaudeAsync(args, options = {}) {
+  if (USE_SANDBOX && SandboxManager && sandboxInitialized) {
+    try {
+      // Build the claude command string
+      const claudeCmd = ['claude', ...args].map(arg => {
+        // Escape quotes in args
+        if (arg.includes(' ') || arg.includes('"')) {
+          return `"${arg.replace(/"/g, '\\"')}"`;
+        }
+        return arg;
+      }).join(' ');
+
+      // wrapWithSandbox returns a shell command string
+      const wrappedCommand = await SandboxManager.wrapWithSandbox(claudeCmd);
+
+      if (wrappedCommand) {
+        console.log('[sandbox-runtime] Running Claude in sandbox');
+        // Execute the wrapped command via shell
+        return spawn('sh', ['-c', wrappedCommand], {
+          ...options,
+          env: { ...process.env, ...options.env },
+        });
+      }
+    } catch (e) {
+      console.error('[sandbox-runtime] Wrap failed:', e.message);
+      // Fall through to non-sandboxed execution
+    }
+  }
+
+  // Fallback: direct spawn
+  return spawn('claude', args, options);
+}
+
+// Synchronous wrapper that returns spawn immediately
+// The sandbox wrapping happens async but we can't await in all contexts
+function spawnClaude(args, options = {}) {
+  if (USE_SANDBOX && SandboxManager && sandboxInitialized) {
+    // For sync contexts, we fall back to non-sandboxed
+    // Use spawnClaudeAsync for proper sandboxing
+    console.log('[sandbox-runtime] Note: Use spawnClaudeAsync for sandbox support');
+  }
+
+  // Direct spawn (sandboxing requires async)
+  return spawn('claude', args, options);
+}
+
+// Initialize sandbox on module load (non-blocking)
+if (USE_SANDBOX) {
+  initSandbox().catch(e => console.error('[sandbox-runtime] Init error:', e));
+}
+
 // Skills to exclude (causing errors or not ready)
 const EXCLUDED_SKILLS = [
   'audio-mobile', 'audio-synth', 'game-audio',  // Audio issues
@@ -180,7 +288,7 @@ class ClaudeRunner {
 
 回答:`;
 
-      const claude = spawn('claude', [
+      const claude = spawnClaude([
         '--print',
         '--model', 'haiku',
         '--dangerously-skip-permissions'
@@ -349,7 +457,7 @@ ${movementContext ? `## コードパターン\n${movementContext}\n` : ''}
 例:
 結果: cute cat character, game sprite, facing right, side view, 2D style`;
 
-      const claude = spawn('claude', [
+      const claude = spawnClaude([
         '--print',
         '--model', 'sonnet',  // Use Sonnet for better image direction analysis
         '--dangerously-skip-permissions'
@@ -523,7 +631,7 @@ ${specSummary ? `現在のゲーム仕様:\n${specSummary}` : ''}
     return new Promise((resolve) => {
       // Use haiku model for fast skill detection
       // Pass prompt via stdin to avoid shell escaping issues
-      const claude = spawn('claude', [
+      const claude = spawnClaude([
         '--print',
         '--model', 'haiku',
         '--dangerously-skip-permissions'
@@ -1518,8 +1626,8 @@ ${skillInstructions}
       jobManager.updateProgress(jobId, 10, `Claude CLI スキル: ${detectedSkills.join(', ')}`);
     }
 
-    return new Promise((resolve) => {
-      const claude = spawn('claude', [
+    return new Promise(async (resolve) => {
+      const claude = await spawnClaudeAsync([
         '--model', 'opus',
         '--verbose',
         '--output-format', 'stream-json',
@@ -1708,7 +1816,7 @@ ${skillInstructions}
       console.log('Running Claude in:', projectDir);
       console.log('Prompt length:', prompt.length);
 
-      const claude = spawn('claude', [
+      const claude = spawnClaude([
         '--model', 'opus',
         '--verbose',
         '--output-format', 'stream-json',
@@ -1942,7 +2050,7 @@ ${currentSpecs.progress || '（なし）'}
 \`\`\``;
 
     return new Promise((resolve) => {
-      const claude = spawn('claude', [
+      const claude = spawnClaude([
         '--print',
         '--model', 'haiku',
         '--dangerously-skip-permissions'
@@ -2091,7 +2199,7 @@ ${templates[specType]}
 - 既存の値は維持（コードで確認できるもののみ変更）
 - マークダウン形式で出力のみ（説明不要）`;
 
-      const claude = spawn('claude', [
+      const claude = spawnClaude([
         '--print',
         '--model', 'haiku',
         '--dangerously-skip-permissions'
@@ -2176,7 +2284,7 @@ ${generatedCode ? generatedCode.substring(0, 8000) : '(コードなし)'}
 
       // Use Claude Haiku for spec generation
       const result = await new Promise((resolve) => {
-        const claude = spawn('claude', [
+        const claude = spawnClaude([
           '--print',
           '--model', 'haiku',
           '--dangerously-skip-permissions'
@@ -2276,7 +2384,7 @@ ${dimension === '3d' ? '3D' : dimension === '2d' ? '2D' : '未指定'}
 - スプライト向き: 横スクロール(右進行)→プレイヤーright/敵left、縦スクロール→プレイヤーup/敵down
 - JSON形式で出力すること`;
 
-      const claude = spawn('claude', [
+      const claude = spawnClaude([
         '--print',
         '--model', 'sonnet',  // Use Sonnet for better game spec generation (prevents cross-project leakage)
         '--dangerously-skip-permissions'
@@ -2612,7 +2720,7 @@ ${dimension === '3d' ? '3D' : dimension === '2d' ? '2D' : '未指定'}
 ## 出力（JSON配列のみ）
 例: ["mechanics", "progress"]`;
 
-      const claude = spawn('claude', [
+      const claude = spawnClaude([
         '--print',
         '--model', 'haiku',
         '--dangerously-skip-permissions'
