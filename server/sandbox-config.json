@@ -12,6 +12,7 @@
       "esm.sh",
       "generativelanguage.googleapis.com",
       "*.googleapis.com",
+      "storage.googleapis.com",
       "pypi.org",
       "files.pythonhosted.org"
     ],

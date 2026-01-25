@@ -22,6 +22,7 @@ class PublishPage {
     this.isDirty = false;
     this.isGenerating = false;
     this.isGeneratingMovie = false;
+    this.movieObjectUrl = null;
 
     if (!this.projectId) {
       alert('プロジェクトが指定されていません');
@@ -508,16 +509,11 @@ class PublishPage {
     // Check if movie already exists
     const movieUrl = `/api/projects/${this.projectId}/movie?t=${Date.now()}`;
 
-    fetch(movieUrl, { method: 'HEAD' })
+    DreamCoreAuth.authFetch(movieUrl, { method: 'HEAD' })
       .then(response => {
         if (response.ok) {
           // Movie exists, show it
-          const placeholder = this.moviePreview.querySelector('.movie-placeholder');
-          this.movieVideo.src = movieUrl;
-          this.movieVideo.classList.remove('hidden');
-          if (placeholder) {
-            placeholder.classList.add('hidden');
-          }
+          this.setMovieSource(movieUrl);
           this.generateMovieBtn.innerHTML = `
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="23 4 23 10 17 10"></polyline>
@@ -530,6 +526,31 @@ class PublishPage {
       .catch(() => {
         // Movie doesn't exist, keep placeholder
       });
+  }
+
+  async setMovieSource(movieUrl) {
+    try {
+      const response = await DreamCoreAuth.authFetch(movieUrl, { method: 'GET' });
+      if (!response.ok) {
+        throw new Error(`Failed to load movie: ${response.status}`);
+      }
+      const blob = await response.blob();
+      if (this.movieObjectUrl) {
+        URL.revokeObjectURL(this.movieObjectUrl);
+      }
+      this.movieObjectUrl = URL.createObjectURL(blob);
+      const placeholder = this.moviePreview.querySelector('.movie-placeholder');
+      this.movieVideo.src = this.movieObjectUrl;
+      this.movieVideo.classList.remove('hidden');
+      if (placeholder) {
+        placeholder.classList.add('hidden');
+      }
+    } catch (error) {
+      console.error('Error loading movie:', error);
+      if (this.moviePlaceholderText) {
+        this.moviePlaceholderText.textContent = '動画を読み込めませんでした';
+      }
+    }
   }
 
   async generateMovie() {
@@ -558,11 +579,7 @@ class PublishPage {
       const data = await response.json();
 
       if (data.success && data.movieUrl) {
-        this.movieVideo.src = data.movieUrl;
-        this.movieVideo.classList.remove('hidden');
-        if (placeholder) {
-          placeholder.classList.add('hidden');
-        }
+        await this.setMovieSource(data.movieUrl);
         this.generateMovieBtn.innerHTML = `
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="23 4 23 10 17 10"></polyline>

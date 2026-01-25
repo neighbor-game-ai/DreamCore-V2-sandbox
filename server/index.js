@@ -2110,11 +2110,39 @@ export const RemotionRoot = () => {
 
       console.log('[Movie] Starting Remotion render...');
 
-      const remotion = spawn('npx', [
+      const defaultChromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+      const envBrowserPath = process.env.REMOTION_BROWSER_EXECUTABLE || process.env.CHROME_PATH || null;
+      const remotionBrowserDir = path.join(gameVideoDir, 'node_modules', '.remotion', 'chrome-headless-shell');
+      const headlessShellPlatforms = process.platform === 'darwin'
+        ? ['mac-arm64', 'mac-x64']
+        : process.platform === 'linux'
+          ? ['linux-x64', 'linux-arm64']
+          : ['win64'];
+      const headlessShellCandidates = headlessShellPlatforms.map((platform) => {
+        const exeName = platform === 'win64' ? 'chrome-headless-shell.exe' : 'chrome-headless-shell';
+        return path.join(remotionBrowserDir, platform, `chrome-headless-shell-${platform}`, exeName);
+      });
+      const headlessShellPath = headlessShellCandidates.find((candidate) => fs.existsSync(candidate)) || null;
+
+      const browserExecutable = envBrowserPath
+        ? (fs.existsSync(envBrowserPath) ? envBrowserPath : null)
+        : headlessShellPath || (fs.existsSync(defaultChromePath) ? defaultChromePath : null);
+      const chromeMode = headlessShellPath && browserExecutable === headlessShellPath
+        ? 'headless-shell'
+        : 'chrome-for-testing';
+
+      const remotionArgs = [
         'remotion', 'render',
         'GameVideo',
-        outputPath
-      ], {
+        outputPath,
+        '--log=verbose',
+        `--chrome-mode=${chromeMode}`
+      ];
+      if (browserExecutable) {
+        remotionArgs.push('--browser-executable', browserExecutable);
+      }
+
+      const remotion = spawn('npx', remotionArgs, {
         cwd: gameVideoDir,
         env: { ...process.env }
       });
@@ -2141,8 +2169,8 @@ export const RemotionRoot = () => {
           res.json({ success: true, movieUrl, duration: 7 });
         } else {
           console.error('[Movie] Render failed:', renderCode);
-          console.error('[Movie] Output:', renderOutput.slice(-1000));
-          res.status(500).json({ error: 'Failed to render video', output: renderOutput.slice(-500) });
+          console.error('[Movie] Output:', renderOutput.slice(-4000));
+          res.status(500).json({ error: 'Failed to render video', output: renderOutput.slice(-4000) });
         }
       });
 
