@@ -18,6 +18,15 @@ const db = require('./database-supabase');
 const { supabaseAdmin } = require('./supabaseClient');
 const config = require('./config');
 
+// Modal client for remote file operations (lazy-loaded when USE_MODAL=true)
+let modalClient = null;
+function getModalClient() {
+  if (!modalClient && config.USE_MODAL) {
+    modalClient = require('./modalClient');
+  }
+  return modalClient;
+}
+
 // Helper: get client or fallback to admin (for background job context)
 const getClient = (client) => client || supabaseAdmin;
 
@@ -325,8 +334,27 @@ const renameProject = async (client, userId, projectId, newName) => {
 
 // ==================== File Operations ====================
 
-// Recursively list all files in project directory
+/**
+ * Recursively list all files in project directory
+ * @param {string} userId - User ID
+ * @param {string} projectId - Project ID
+ * @param {string} [subdir=''] - Subdirectory to list (for local recursion)
+ * @returns {string[]|Promise<string[]>} Array of file paths
+ *
+ * Note: Returns Promise when USE_MODAL=true
+ */
 const listProjectFiles = (userId, projectId, subdir = '') => {
+  // Use Modal for file listing if enabled
+  if (config.USE_MODAL) {
+    return listProjectFilesModal(userId, projectId);
+  }
+
+  // Local file listing
+  return listProjectFilesLocal(userId, projectId, subdir);
+};
+
+// Local file listing (original implementation)
+const listProjectFilesLocal = (userId, projectId, subdir = '') => {
   const projectDir = getProjectDir(userId, projectId);
   const targetDir = subdir ? path.join(projectDir, subdir) : projectDir;
 
@@ -345,7 +373,7 @@ const listProjectFiles = (userId, projectId, subdir = '') => {
 
     if (stat.isDirectory()) {
       // Recursively get files from subdirectory
-      const subFiles = listProjectFiles(userId, projectId, relativePath);
+      const subFiles = listProjectFilesLocal(userId, projectId, relativePath);
       results.push(...subFiles);
     } else if (stat.isFile()) {
       results.push(relativePath);
@@ -353,6 +381,24 @@ const listProjectFiles = (userId, projectId, subdir = '') => {
   }
 
   return results;
+};
+
+// Modal file listing
+const listProjectFilesModal = async (userId, projectId) => {
+  try {
+    const client = getModalClient();
+    const files = await client.listFiles(userId, projectId);
+
+    // Filter out hidden files and root-level json (matching local behavior)
+    return files.filter(f => {
+      if (f.startsWith('.')) return false;
+      if (f.endsWith('.json') && !f.includes('/')) return false;
+      return true;
+    });
+  } catch (err) {
+    console.error(`[listProjectFiles] Modal error:`, err.message);
+    return [];
+  }
 };
 
 // List only directories in project
@@ -366,7 +412,28 @@ const listProjectDirs = (userId, projectId) => {
   });
 };
 
+/**
+ * Read a file from a project directory
+ * @param {string} userId - User ID (Supabase Auth UUID)
+ * @param {string} projectId - Project ID
+ * @param {string} filename - Filename (can include subdirectory)
+ * @returns {Promise<string|null>|string|null} File content or null if not found
+ *
+ * Note: Returns Promise when USE_MODAL=true, synchronous string when false
+ * For backward compatibility, callers should handle both cases
+ */
 const readProjectFile = (userId, projectId, filename) => {
+  // Use Modal for file reading if enabled
+  if (config.USE_MODAL) {
+    return readProjectFileModal(userId, projectId, filename);
+  }
+
+  // Local file reading
+  return readProjectFileLocal(userId, projectId, filename);
+};
+
+// Local file reading (original implementation)
+const readProjectFileLocal = (userId, projectId, filename) => {
   const filePath = path.join(getProjectDir(userId, projectId), filename);
   if (fs.existsSync(filePath)) {
     // Check if it's a binary file
@@ -380,6 +447,28 @@ const readProjectFile = (userId, projectId, filename) => {
   return null;
 };
 
+// Modal file reading
+const readProjectFileModal = async (userId, projectId, filename) => {
+  try {
+    const client = getModalClient();
+    const content = await client.getFile(userId, projectId, filename);
+
+    if (content === null) {
+      return null;
+    }
+
+    // Check if it's a binary file (returned as Buffer)
+    if (Buffer.isBuffer(content)) {
+      return `[Binary file: ${filename}]`;
+    }
+
+    return content;
+  } catch (err) {
+    console.error(`[readProjectFile] Modal error for ${filename}:`, err.message);
+    return null;
+  }
+};
+
 /**
  * Write a file to a project directory
  * @param {Object} client - Supabase client with user's JWT (optional, uses admin if null)
@@ -390,6 +479,17 @@ const readProjectFile = (userId, projectId, filename) => {
  * @returns {Promise<string>} File path
  */
 const writeProjectFile = async (client, userId, projectId, filename, content) => {
+  // Use Modal for file writing if enabled
+  if (config.USE_MODAL) {
+    return writeProjectFileModal(client, userId, projectId, filename, content);
+  }
+
+  // Local file writing
+  return writeProjectFileLocal(client, userId, projectId, filename, content);
+};
+
+// Local file writing (original implementation)
+const writeProjectFileLocal = async (client, userId, projectId, filename, content) => {
   const projectDir = ensureProjectDir(userId, projectId);
   const filePath = path.join(projectDir, filename);
 
@@ -405,6 +505,30 @@ const writeProjectFile = async (client, userId, projectId, filename, content) =>
   await db.touchProject(getClient(client), projectId);
 
   return filePath;
+};
+
+// Modal file writing
+const writeProjectFileModal = async (client, userId, projectId, filename, content) => {
+  try {
+    const modalClientInstance = getModalClient();
+
+    // Use applyFilesSync to wait for completion
+    await modalClientInstance.applyFilesSync({
+      user_id: userId,
+      project_id: projectId,
+      files: [{ path: filename, content: content, action: 'create' }],
+      commit_message: `Update ${filename}`
+    });
+
+    // Update project timestamp in database
+    await db.touchProject(getClient(client), projectId);
+
+    // Return a virtual path (files are on Modal Volume)
+    return `/modal/data/users/${userId}/projects/${projectId}/${filename}`;
+  } catch (err) {
+    console.error(`[writeProjectFile] Modal error for ${filename}:`, err.message);
+    throw err;
+  }
 };
 
 /**
@@ -651,7 +775,28 @@ const createVersionSnapshot = (userId, projectId, message = '', aiContext = null
   return null;
 };
 
+/**
+ * Get version history for a project
+ * @param {string} userId - User ID
+ * @param {string} projectId - Project ID
+ * @param {Object} [options={}] - Options
+ * @param {boolean} [options.includeEdits] - Include edit diffs
+ * @returns {Array|Promise<Array>} Array of version objects
+ *
+ * Note: Returns Promise when USE_MODAL=true
+ */
 const getVersions = (userId, projectId, options = {}) => {
+  // Use Modal for git operations if enabled
+  if (config.USE_MODAL) {
+    return getVersionsModal(userId, projectId, options);
+  }
+
+  // Local git operations
+  return getVersionsLocal(userId, projectId, options);
+};
+
+// Local git log (original implementation)
+const getVersionsLocal = (userId, projectId, options = {}) => {
   const projectDir = getProjectDir(userId, projectId);
 
   if (!fs.existsSync(path.join(projectDir, '.git'))) {
@@ -700,6 +845,56 @@ const getVersions = (userId, projectId, options = {}) => {
   return versions.slice(0, 20);
 };
 
+// Modal git log
+const getVersionsModal = async (userId, projectId, options = {}) => {
+  try {
+    const client = getModalClient();
+    const commits = await client.gitLog(userId, projectId, 50);
+
+    // Filter out internal commits (same as local)
+    const restorePatterns = ['Before restore', 'Restored to', 'Initial project setup', 'Migration from'];
+
+    const versions = [];
+    let versionNum = 1;
+
+    for (const commit of commits) {
+      const isRestoreCommit = restorePatterns.some(pattern =>
+        commit.message && commit.message.includes(pattern)
+      );
+
+      if (!isRestoreCommit) {
+        const version = {
+          id: commit.hash,
+          number: versionNum++,
+          message: commit.message || 'Update',
+          timestamp: commit.date || new Date().toISOString(),
+          hash: commit.hash
+        };
+
+        // Include edits if requested (via git diff)
+        if (options.includeEdits) {
+          try {
+            const diff = await client.gitDiff(userId, projectId, commit.hash);
+            if (diff) {
+              version.edits = [{ diff }];
+              version.summary = '';
+            }
+          } catch (diffErr) {
+            console.warn(`[getVersionsModal] Failed to get diff for ${commit.hash}:`, diffErr.message);
+          }
+        }
+
+        versions.push(version);
+      }
+    }
+
+    return versions.slice(0, 20);
+  } catch (err) {
+    console.error('[getVersionsModal] Error:', err.message);
+    return [];
+  }
+};
+
 /**
  * Get AI context for a specific git commit
  * @param {string} projectDir - Project directory path
@@ -746,12 +941,32 @@ const getAIContextForCommit = (projectDir, commitHash) => {
   }
 };
 
+/**
+ * Restore project to a specific version
+ * @param {string} userId - User ID
+ * @param {string} projectId - Project ID
+ * @param {string} versionId - Git commit hash to restore to
+ * @returns {Object|Promise<Object>} Result with success flag
+ *
+ * Note: Returns Promise when USE_MODAL=true
+ */
 const restoreVersion = (userId, projectId, versionId) => {
   // Validate versionId format to prevent command injection
   if (!config.isValidGitHash(versionId)) {
     return { success: false, error: 'Invalid version ID format' };
   }
 
+  // Use Modal for git operations if enabled
+  if (config.USE_MODAL) {
+    return restoreVersionModal(userId, projectId, versionId);
+  }
+
+  // Local git operations
+  return restoreVersionLocal(userId, projectId, versionId);
+};
+
+// Local git restore (original implementation)
+const restoreVersionLocal = (userId, projectId, versionId) => {
   const projectDir = getProjectDir(userId, projectId);
 
   if (!fs.existsSync(path.join(projectDir, '.git'))) {
@@ -778,6 +993,31 @@ const restoreVersion = (userId, projectId, versionId) => {
   }
 
   return { success: false, error: 'Failed to restore version' };
+};
+
+// Modal git restore
+const restoreVersionModal = async (userId, projectId, versionId) => {
+  try {
+    const client = getModalClient();
+    const result = await client.gitRestore(userId, projectId, versionId);
+
+    if (result.success) {
+      return {
+        success: true,
+        versionId,
+        needsSpecRegeneration: true,
+        restored_files: result.restored_files
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error || 'Failed to restore version on Modal'
+      };
+    }
+  } catch (err) {
+    console.error('[restoreVersionModal] Error:', err.message);
+    return { success: false, error: err.message };
+  }
 };
 
 // ==================== Public Projects ====================
@@ -896,10 +1136,43 @@ const getLatestAIContext = (userId, projectId) => {
 
 /**
  * Get edits for a specific version (on demand)
+ * @param {string} userId - User ID
+ * @param {string} projectId - Project ID
+ * @param {string} versionHash - Git commit hash
+ * @returns {Object|Promise<Object>|null} AI context or diff data
+ *
+ * Note: Returns Promise when USE_MODAL=true
  */
 const getVersionEdits = (userId, projectId, versionHash) => {
+  // Use Modal for git operations if enabled
+  if (config.USE_MODAL) {
+    return getVersionEditsModal(userId, projectId, versionHash);
+  }
+
+  // Local git operations
   const projectDir = getProjectDir(userId, projectId);
   return getAIContextForCommit(projectDir, versionHash);
+};
+
+// Modal git diff
+const getVersionEditsModal = async (userId, projectId, versionHash) => {
+  try {
+    const client = getModalClient();
+    const diff = await client.gitDiff(userId, projectId, versionHash);
+
+    if (diff) {
+      return {
+        edits: [{ diff }],
+        summary: '',
+        fromGitDiff: true
+      };
+    }
+
+    return null;
+  } catch (err) {
+    console.error('[getVersionEditsModal] Error:', err.message);
+    return null;
+  }
 };
 
 module.exports = {

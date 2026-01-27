@@ -169,6 +169,30 @@ const validateEnvironment = () => {
   console.log('Environment validation passed');
 };
 
+// ==================== Modal Integration ====================
+
+/**
+ * Modal Sandbox integration settings.
+ * When USE_MODAL=true, Claude CLI and file operations run on Modal.
+ * When USE_MODAL=false, operations run locally (fallback).
+ */
+const USE_MODAL = process.env.USE_MODAL === 'true';
+
+// Main Modal endpoint (for generate_game)
+const MODAL_ENDPOINT = process.env.MODAL_ENDPOINT;
+
+// Internal authentication secret (shared between Express and Modal)
+const MODAL_INTERNAL_SECRET = process.env.MODAL_INTERNAL_SECRET;
+
+// Optional: Individual endpoint overrides (auto-derived from MODAL_ENDPOINT if not set)
+const MODAL_GET_FILE_ENDPOINT = process.env.MODAL_GET_FILE_ENDPOINT;
+const MODAL_LIST_FILES_ENDPOINT = process.env.MODAL_LIST_FILES_ENDPOINT;
+const MODAL_APPLY_FILES_ENDPOINT = process.env.MODAL_APPLY_FILES_ENDPOINT;
+const MODAL_DETECT_INTENT_ENDPOINT = process.env.MODAL_DETECT_INTENT_ENDPOINT;
+const MODAL_DETECT_SKILLS_ENDPOINT = process.env.MODAL_DETECT_SKILLS_ENDPOINT;
+const MODAL_GET_SKILL_CONTENT_ENDPOINT = process.env.MODAL_GET_SKILL_CONTENT_ENDPOINT;
+const MODAL_GEMINI_ENDPOINT = process.env.MODAL_GEMINI_ENDPOINT;
+
 // ==================== GCS Settings (Backup) ====================
 
 const GCS_PROJECT_ID = process.env.GCS_PROJECT_ID;
@@ -250,6 +274,18 @@ module.exports = {
   GCS_BUCKET_PROJECTS,
   GCS_BUCKET_GAMES,
   USE_GCS_BACKUP,
+
+  // Modal Integration
+  USE_MODAL,
+  MODAL_ENDPOINT,
+  MODAL_INTERNAL_SECRET,
+  MODAL_GET_FILE_ENDPOINT,
+  MODAL_LIST_FILES_ENDPOINT,
+  MODAL_APPLY_FILES_ENDPOINT,
+  MODAL_DETECT_INTENT_ENDPOINT,
+  MODAL_DETECT_SKILLS_ENDPOINT,
+  MODAL_GET_SKILL_CONTENT_ENDPOINT,
+  MODAL_GEMINI_ENDPOINT,
 
   // Rate Limiting
   RATE_LIMIT,

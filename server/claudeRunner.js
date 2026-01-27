@@ -7,6 +7,16 @@ const db = require('./database-supabase');
 const { supabaseAdmin } = require('./supabaseClient');
 const geminiClient = require('./geminiClient');
 const claudeChat = require('./claudeChat');
+const config = require('./config');
+
+// Modal client for remote execution (lazy-loaded when USE_MODAL=true)
+let modalClient = null;
+function getModalClient() {
+  if (!modalClient && config.USE_MODAL) {
+    modalClient = require('./modalClient');
+  }
+  return modalClient;
+}
 
 // Sandbox runtime for secure Claude CLI execution
 const USE_SANDBOX = process.env.USE_SANDBOX === 'true';
@@ -331,6 +341,25 @@ class ClaudeRunner {
 
   // Use Claude CLI to detect user intent (restore, chat, or edit)
   async detectIntent(userMessage) {
+    // Use Modal for intent detection if enabled
+    if (config.USE_MODAL) {
+      try {
+        const client = getModalClient();
+        const intent = await client.detectIntent(userMessage);
+        console.log('[detectIntent] Modal result:', intent);
+        return intent;
+      } catch (err) {
+        console.error('[detectIntent] Modal error, falling back to local:', err.message);
+        // Fall through to local execution
+      }
+    }
+
+    // Local execution (original code)
+    return this._detectIntentLocal(userMessage);
+  }
+
+  // Local intent detection using Claude CLI Haiku
+  async _detectIntentLocal(userMessage) {
     return new Promise(async (resolve) => {
       const prompt = `ユーザーのメッセージの意図を判定してください。
 
@@ -638,16 +667,36 @@ ${movementContext ? `## コードパターン\n${movementContext}\n` : ''}
   // AI-driven skill detection using Claude CLI
   // Returns a list of relevant skill names based on context analysis
   async detectSkillsWithAI(userMessage, currentCode = null, isNewProject = false, gameSpec = null, dimension = null) {
-    // Build skill list for prompt (lazy loaded)
-    const metadata = await this.getSkillMetadata();
-    const skillList = metadata.map(s => `- ${s.name}: ${s.description}`).join('\n');
-
     // Detect framework from current code
     const framework = this.detectFrameworkFromCode(currentCode);
     console.log(`Framework detection: ${framework || 'none'} (code length: ${currentCode?.length || 0})`);
     if (framework) {
       console.log(`Detected framework from code: ${framework}`);
     }
+
+    // Use Modal for skill detection if enabled
+    if (config.USE_MODAL) {
+      try {
+        const client = getModalClient();
+        const effectiveDimension = dimension || (framework === 'threejs' ? '3d' : '2d');
+        const skills = await client.detectSkills(userMessage, effectiveDimension, currentCode || '');
+        console.log('[detectSkillsWithAI] Modal result:', skills.join(', ') || 'none');
+        return skills;
+      } catch (err) {
+        console.error('[detectSkillsWithAI] Modal error, falling back to local:', err.message);
+        // Fall through to local execution
+      }
+    }
+
+    // Local execution (original code)
+    return this._detectSkillsWithAILocal(userMessage, currentCode, isNewProject, gameSpec, dimension, framework);
+  }
+
+  // Local skill detection using Claude CLI Haiku
+  async _detectSkillsWithAILocal(userMessage, currentCode, isNewProject, gameSpec, dimension, framework) {
+    // Build skill list for prompt (lazy loaded)
+    const metadata = await this.getSkillMetadata();
+    const skillList = metadata.map(s => `- ${s.name}: ${s.description}`).join('\n');
 
     // Build detailed context
     let contextInfo = '';
@@ -673,7 +722,7 @@ ${movementContext ? `## コードパターン\n${movementContext}\n` : ''}
       if (gameSpec.length > 500) specSummary += '...';
     }
 
-    // Build prompt dynamically from loaded skills (skillList defined at line 361)
+    // Build prompt dynamically from loaded skills
     const prompt = `ユーザーのリクエストに最適なスキルを選んでJSON配列で出力せよ。説明不要。
 
 利用可能なスキル:
@@ -1361,14 +1410,64 @@ ${skillInstructions}
         }
       }
 
-      // Create git commit with AI context
-      jobManager.updateProgress(jobId, 88, 'バージョン保存中...');
-      userManager.createVersionSnapshot(
-        userId,
-        projectId,
-        geminiResult.summary || 'Gemini generated code',
-        aiContext  // Pass AI context for traceability
-      );
+      // Sync files to Modal Volume when USE_MODAL=true
+      if (config.USE_MODAL) {
+        jobManager.updateProgress(jobId, 88, 'Modal Volumeに同期中...');
+        try {
+          const client = getModalClient();
+          const commitMessage = geminiResult.summary || 'Gemini generated code';
+
+          // Collect files for Modal sync
+          const filesToSync = [];
+          if (geminiResult.mode === 'edit' && geminiResult.edits) {
+            // For edit mode, re-read the edited files
+            for (const edit of geminiResult.edits) {
+              const filePath = path.join(projectDir, edit.path);
+              if (fs.existsSync(filePath)) {
+                const content = fs.readFileSync(filePath, 'utf-8');
+                filesToSync.push({ path: edit.path, content });
+              }
+            }
+          } else if (geminiResult.files) {
+            // For create mode, use the files from result (with asset replacements applied)
+            for (const file of geminiResult.files) {
+              const filePath = path.join(projectDir, file.path);
+              if (fs.existsSync(filePath)) {
+                const content = fs.readFileSync(filePath, 'utf-8');
+                filesToSync.push({ path: file.path, content });
+              }
+            }
+          }
+
+          if (filesToSync.length > 0) {
+            // Call Modal's applyFiles (includes git commit)
+            for await (const event of client.applyFiles({
+              user_id: userId,
+              project_id: projectId,
+              files: filesToSync,
+              commit_message: commitMessage
+            })) {
+              // Log Modal sync progress
+              if (event.type === 'log') {
+                console.log(`[Modal sync] ${event.content}`);
+              }
+            }
+            console.log(`[Modal sync] Synced ${filesToSync.length} files to Modal Volume`);
+          }
+        } catch (modalErr) {
+          console.error('[Modal sync] Failed to sync to Modal Volume:', modalErr.message);
+          // Continue even if Modal sync fails - local files are still valid
+        }
+      } else {
+        // Local mode: Create git commit with AI context
+        jobManager.updateProgress(jobId, 88, 'バージョン保存中...');
+        userManager.createVersionSnapshot(
+          userId,
+          projectId,
+          geminiResult.summary || 'Gemini generated code',
+          aiContext  // Pass AI context for traceability
+        );
+      }
 
       jobManager.updateProgress(jobId, 95, 'ファイル適用完了');
       return true;
@@ -1664,10 +1763,7 @@ ${skillInstructions}
       console.log('[DEBUG] Using Claude CLI (Gemini skipped)');
     }
 
-    // Fall back to Claude Code CLI
-    console.log('Using Claude Code CLI for job:', jobId, 'in:', projectDir);
-
-    // Build prompt for Claude CLI (uses sync skill detection)
+    // Build prompt for Claude CLI
     let prompt, detectedSkills;
     if (debugOptions.disableSkills) {
       console.log('[DEBUG] Skills disabled');
@@ -1683,6 +1779,148 @@ ${skillInstructions}
       jobManager.updateProgress(jobId, 10, `Claude CLI スキル: ${detectedSkills.join(', ')}`);
     }
 
+    // Use Modal for Claude CLI execution if enabled
+    if (config.USE_MODAL) {
+      console.log('Using Claude CLI on Modal for job:', jobId);
+      return this._runClaudeOnModal(jobId, userId, projectId, prompt, userMessage, detectedSkills);
+    }
+
+    // Fall back to local Claude Code CLI
+    console.log('Using local Claude Code CLI for job:', jobId, 'in:', projectDir);
+    return this._runClaudeLocal(jobId, userId, projectId, projectDir, prompt, userMessage, detectedSkills);
+  }
+
+  // Run Claude CLI on Modal (remote execution)
+  async _runClaudeOnModal(jobId, userId, projectId, prompt, userMessage, detectedSkills) {
+    try {
+      const client = getModalClient();
+      let assistantText = '';
+      let progressEstimate = 20;
+      let exitCode = null;
+
+      jobManager.updateProgress(jobId, 15, 'Modal Sandbox 実行中...');
+
+      for await (const event of client.generateGame({
+        user_id: userId,
+        project_id: projectId,
+        prompt: prompt,
+      })) {
+        switch (event.type) {
+          case 'stream':
+            // Stream content to WebSocket subscribers
+            if (event.content) {
+              assistantText += event.content;
+              jobManager.notifySubscribers(jobId, { type: 'stream', content: event.content });
+            }
+            break;
+
+          case 'progress':
+            // Update progress
+            progressEstimate = Math.min(progressEstimate + 10, 90);
+            jobManager.updateProgress(jobId, progressEstimate, event.message || '実行中...');
+            break;
+
+          case 'log':
+            // Log messages from Modal (debug/verbose output)
+            if (event.content) {
+              console.log('[Modal log]', event.content);
+              // Check for tool usage in log messages
+              const toolMatch = event.content.match(/\[(\w+)\]/);
+              if (toolMatch) {
+                progressEstimate = Math.min(progressEstimate + 15, 90);
+                jobManager.updateProgress(jobId, progressEstimate, `実行中: ${toolMatch[1]}`);
+                jobManager.notifySubscribers(jobId, { type: 'stream', content: `\n[${toolMatch[1]}]\n` });
+              }
+            }
+            break;
+
+          case 'debug':
+            // Debug info from Modal
+            console.log('[Modal debug]', event);
+            if (event.exit_code !== undefined) {
+              exitCode = event.exit_code;
+            }
+            break;
+
+          case 'completed':
+            // Execution completed
+            exitCode = event.exit_code !== undefined ? event.exit_code : 0;
+            console.log('Claude job on Modal', jobId, 'completed with exit code:', exitCode);
+            break;
+
+          case 'failed':
+            // Execution failed
+            console.error('Claude job on Modal failed:', event.message || event.error);
+            await jobManager.failJob(jobId, event.message || event.error || 'Modal execution failed');
+            return { success: false, error: event.message || event.error };
+
+          default:
+            // Pass through other events
+            console.log('[Modal event]', event.type, event);
+        }
+      }
+
+      // Process result
+      if (exitCode === 0 || exitCode === null) {
+        // Read updated file from Modal
+        const currentHtml = await userManager.readProjectFile(userId, projectId, 'index.html');
+
+        // Use collected assistant text or default message
+        const responseMessage = assistantText.trim() || 'ゲームを更新しました';
+
+        // Build AI context for traceability
+        const aiContext = {
+          userPrompt: userMessage,
+          aiSummary: responseMessage,
+          skills: detectedSkills,
+          generator: 'claude-modal'
+        };
+
+        // Note: Version snapshot is handled by Modal (git commit happens in apply_files)
+        // We still log the AI context locally for Express-side tracking
+        console.log('Modal job completed, response:', responseMessage.substring(0, 100));
+
+        // Add to history
+        await userManager.addToHistory(null, userId, projectId, 'assistant', responseMessage);
+
+        // Complete the job with the actual response
+        await jobManager.completeJob(jobId, {
+          message: responseMessage,
+          html: currentHtml
+        });
+
+        // Update specs asynchronously (don't wait)
+        this.updateSpec(userId, projectId, userMessage).catch(err => {
+          console.error('Spec update error:', err.message);
+        });
+
+        // Auto-rename project if it has default name
+        this.maybeAutoRenameProject(userId, projectId).then(renamed => {
+          if (renamed) {
+            jobManager.notifySubscribers(jobId, {
+              type: 'projectRenamed',
+              project: renamed
+            });
+          }
+        }).catch(err => {
+          console.error('Auto-rename error:', err.message);
+        });
+
+        return { success: true };
+      } else {
+        const errorMsg = `Claude CLI exited with code ${exitCode}`;
+        await jobManager.failJob(jobId, errorMsg);
+        return { success: false, error: errorMsg };
+      }
+    } catch (err) {
+      console.error('Modal execution error:', err.message);
+      await jobManager.failJob(jobId, err.message);
+      return { success: false, error: err.message };
+    }
+  }
+
+  // Run Claude CLI locally (original implementation)
+  async _runClaudeLocal(jobId, userId, projectId, projectDir, prompt, userMessage, detectedSkills) {
     return new Promise(async (resolve) => {
       const claude = await spawnClaudeAsync([
         '--model', 'opus',
