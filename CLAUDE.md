@@ -80,6 +80,26 @@ DreamCore-V2 のユーザーが、何の違和感もなく使える状態
 
 ---
 
+## Supabase 設定（DreamCore-V2 と共有）
+
+**DreamCore-V2 と同じ Supabase プロジェクトを使用する。新規作成は禁止。**
+
+| 項目 | 値 |
+|------|-----|
+| プロジェクトID | `tcynrijrovktirsvwiqb` |
+| リージョン | Northeast Asia (Tokyo) |
+| 環境変数のコピー元 | `/Users/admin/DreamCore-V2/.env` |
+| スキーマ定義 | `/Users/admin/DreamCore-V2/.claude/docs/database-schema.md` |
+
+### 禁止事項（Supabase関連）
+
+- 新しい Supabase プロジェクトを作成しない
+- テーブル構造を変更しない
+- RLS ポリシーを変更しない
+- 認証設定を変更しない
+
+Supabase に関する変更が必要な場合は、**まず DreamCore-V2 側で行い**、その後 DreamCore-V2-sandbox に反映する。
+
 ## 必須環境変数
 
 起動時に以下が未設定の場合、即エラー終了:
@@ -87,6 +107,8 @@ DreamCore-V2 のユーザーが、何の違和感もなく使える状態
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
+
+**コピー元**: `/Users/admin/DreamCore-V2/.env`
 
 ### Modal統合（`USE_MODAL=true` 時に必要）
 
