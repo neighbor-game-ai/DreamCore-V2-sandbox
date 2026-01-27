@@ -1,626 +1,656 @@
-# Modal 技術設計書
+# Modal + Next.js 技術設計書
 
 作成日: 2026-01-27
-対象: DreamCore-V2 Modal移行
+更新日: 2026-01-27
+参考: DreamCore-V2-modal エンジニア実装
 
 ---
 
-## Modal概要
+## システム概要
 
-[Modal](https://modal.com/) はサーバーレスコンピューティングプラットフォーム。
-コンテナベースの関数実行、永続ストレージ（Volume）、GPUサポートを提供。
+```
+Browser ──JWT──▶ Vercel (Next.js) ──X-Modal-Secret──▶ Modal ──▶ gVisor Sandbox
+                       │                                              │
+                       ▼                                              ▼
+                  Supabase                                      Claude CLI
+                  (Auth + DB)                                   (Code Gen)
+```
 
 ---
 
-## Volume設計
+## 1. Modal Sandbox設計
 
-### ユーザーVolume
+### Sandbox Image構成
 
-```
-Volume: dreamcore-user-{userId}
-├── projects/
-│   └── {projectId}/
-│       ├── index.html
-│       ├── spec.md
-│       ├── STYLE.md
-│       ├── PUBLISH.json
-│       ├── thumbnail.webp
-│       ├── movie.mp4
-│       └── .git/
-└── assets/
-    ├── player_abc123.png
-    └── enemy_def456.png
+```python
+# modal/app.py
+sandbox_image = modal.Image.debian_slim(python_version="3.11")
+    .apt_install("git", "curl", "ca-certificates", "nodejs", "npm")
+    .pip_install("Pillow", "httpx")
+    .run_commands(
+        # Claude Code CLI インストール
+        "npm install -g @anthropic-ai/claude-code",
+        # 非rootユーザー作成
+        "useradd -m -s /bin/bash claude"
+    )
 ```
 
-### グローバルVolume
+### Sandbox実行パラメータ
+
+| パラメータ | 値 | 説明 |
+|-----------|-----|------|
+| `timeout` | 600秒 | 最大実行時間（10分） |
+| `memory` | 2048MB | メモリ上限 |
+| `user` | claude (UID 1000) | 非root実行 |
+| `isolation` | gVisor | VM級隔離 |
+
+### gVisor隔離の特徴
 
 ```
-Volume: dreamcore-global
-├── assets/
-│   └── {category}/
-│       └── {alias}_{hash}.png
-└── skills/
-    └── {skill-name}/
-        └── SKILL.md
+┌─────────────────────────────────────────────────────────┐
+│  Host Kernel                                             │
+│  ┌─────────────────────────────────────────────────────┐│
+│  │  gVisor Sentry (User-space Kernel)                  ││
+│  │  - System call interception                         ││
+│  │  - Kernel attack surface minimization               ││
+│  │  ┌─────────────────────────────────────────────────┐││
+│  │  │  Sandbox Container                              │││
+│  │  │  - Claude Code CLI                              │││
+│  │  │  - User's generated code (isolated)             │││
+│  │  └─────────────────────────────────────────────────┘││
+│  └─────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 2. Modal Volume設計
+
+### Volume構成
+
+```
+dreamcore-data/                      ← ユーザーデータ（読み書き可能）
+└── users/
+    └── {userId}/                    ← UUID形式のみ許可
+        ├── projects/
+        │   └── {projectId}/
+        │       ├── index.html
+        │       ├── style.css
+        │       ├── script.js
+        │       ├── assets/
+        │       │   ├── player.png
+        │       │   └── enemy.png
+        │       └── .claude/
+        │           └── skills/      ← プロジェクト固有スキル
+        └── assets/                  ← ユーザーグローバルアセット
+
+dreamcore-global/                    ← グローバルリソース（読み取り専用）
+├── .claude/
+│   └── skills/                      ← 共有スキル
+│       ├── p5js-setup/
+│       ├── threejs-setup/
+│       ├── kawaii-colors/
+│       └── ...
+└── scripts/
+    └── generate_image.py
 ```
 
 ### Volume作成
 
+```bash
+# Modal CLI で作成
+modal volume create dreamcore-data
+modal volume create dreamcore-global
+
+# スキルアップロード
+cd modal
+modal run upload_skills.py
+```
+
+---
+
+## 3. Modal Endpoints設計
+
+### FastAPI Endpoints
+
 ```python
-# modal_app.py
+# modal/app.py
 import modal
+from fastapi import FastAPI, Header, HTTPException
+from fastapi.responses import StreamingResponse
 
 app = modal.App("dreamcore")
+web_app = FastAPI()
 
-# ユーザーVolume（動的作成）
-def get_user_volume(user_id: str) -> modal.Volume:
-    return modal.Volume.from_name(
-        f"dreamcore-user-{user_id}",
-        create_if_missing=True
-    )
-
-# グローバルVolume
+# Volumes
+data_volume = modal.Volume.from_name("dreamcore-data")
 global_volume = modal.Volume.from_name("dreamcore-global")
-```
 
----
+# Secrets
+secrets = [
+    modal.Secret.from_name("anthropic-api-key"),
+    modal.Secret.from_name("modal-internal-secret"),
+    modal.Secret.from_name("gemini-api-key"),
+]
 
-## Secret設計
+@web_app.post("/generate_game")
+async def generate_game(
+    request: GenerateRequest,
+    x_modal_secret: str = Header(...),
+):
+    """Claude CLIでゲーム生成（SSE）"""
+    validate_secret(x_modal_secret)
+    validate_uuid(request.user_id)
+    validate_uuid(request.project_id)
 
-### 必要なSecrets
-
-```python
-# Modal Secrets設定
-secrets = modal.Secret.from_name("dreamcore-secrets")
-
-# 含まれるキー:
-# - ANTHROPIC_API_KEY
-# - GOOGLE_API_KEY (Gemini)
-# - REPLICATE_API_TOKEN (背景削除)
-# - SUPABASE_URL
-# - SUPABASE_SERVICE_ROLE_KEY
-```
-
-### Secret作成（CLI）
-
-```bash
-modal secret create dreamcore-secrets \
-  ANTHROPIC_API_KEY=sk-ant-... \
-  GOOGLE_API_KEY=AIza... \
-  REPLICATE_API_TOKEN=r8_... \
-  SUPABASE_URL=https://xxx.supabase.co \
-  SUPABASE_SERVICE_ROLE_KEY=eyJ...
-```
-
----
-
-## Function設計
-
-### 1. generate-game（ゲーム生成）
-
-```python
-@app.function(
-    image=modal.Image.debian_slim()
-        .apt_install("git", "nodejs", "npm")
-        .pip_install("anthropic")
-        .run_commands("npm install -g @anthropic-ai/claude-code"),
-    secrets=[secrets],
-    timeout=600,  # 10分
-    memory=2048,
-)
-def generate_game(
-    user_id: str,
-    project_id: str,
-    message: str,
-    skills: list[str],
-    callback_url: str,  # ストリーミング用
-) -> dict:
-    import subprocess
-    import requests
-
-    volume = get_user_volume(user_id)
-    project_path = f"/vol/projects/{project_id}"
-
-    # Claude CLI実行
-    process = subprocess.Popen(
-        ["claude", "--model", "opus", "--output-format", "stream-json"],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        cwd=project_path,
+    return StreamingResponse(
+        generate_stream(request),
+        media_type="text/event-stream",
     )
 
-    # ストリーミング出力をコールバック
-    for line in process.stdout:
-        requests.post(callback_url, json={"chunk": line.decode()})
-
-    process.wait()
-
-    return {"status": "completed", "exit_code": process.returncode}
-```
-
-### 2. generate-image（画像生成）
-
-```python
-@app.function(
-    image=modal.Image.debian_slim()
-        .pip_install("google-generativeai", "pillow"),
-    secrets=[secrets],
-    timeout=120,
-)
-def generate_image(
-    user_id: str,
-    prompt: str,
-    output_path: str,
-    style: str = "kawaii",
-) -> dict:
-    import google.generativeai as genai
-    from PIL import Image
-
-    volume = get_user_volume(user_id)
-
-    # Gemini Imagen呼び出し
-    genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-    model = genai.ImageGenerationModel("imagen-3.0-generate-002")
-
-    result = model.generate_images(
-        prompt=f"{prompt}, {style} style",
-        number_of_images=1,
+@web_app.post("/generate_gemini")
+async def generate_gemini(
+    request: GenerateRequest,
+    x_modal_secret: str = Header(...),
+):
+    """Gemini APIで高速生成（SSE）"""
+    validate_secret(x_modal_secret)
+    return StreamingResponse(
+        gemini_stream(request),
+        media_type="text/event-stream",
     )
 
-    # Volume に保存
-    image = result.images[0]
-    with volume.open(output_path, "wb") as f:
-        image.save(f, "PNG")
-
-    return {"path": output_path}
-```
-
-### 3. git-operation（Git操作）
-
-```python
-@app.function(
-    image=modal.Image.debian_slim().apt_install("git"),
-    timeout=60,
-)
-def git_operation(
+@web_app.get("/get_file")
+async def get_file(
     user_id: str,
     project_id: str,
-    operation: str,  # "commit", "log", "checkout", "diff"
-    **kwargs,
-) -> dict:
-    import subprocess
-
-    volume = get_user_volume(user_id)
-    project_path = f"/vol/projects/{project_id}"
-
-    if operation == "commit":
-        message = kwargs.get("message", "Auto commit")
-        subprocess.run(["git", "add", "-A"], cwd=project_path)
-        subprocess.run(["git", "commit", "-m", message], cwd=project_path)
-
-    elif operation == "log":
-        result = subprocess.run(
-            ["git", "log", "--oneline", "-n", "50"],
-            cwd=project_path,
-            capture_output=True,
-            text=True,
-        )
-        return {"log": result.stdout}
-
-    elif operation == "checkout":
-        commit_hash = kwargs.get("commit_hash")
-        subprocess.run(["git", "checkout", commit_hash], cwd=project_path)
-
-    elif operation == "diff":
-        commit_hash = kwargs.get("commit_hash")
-        result = subprocess.run(
-            ["git", "diff", commit_hash, "HEAD"],
-            cwd=project_path,
-            capture_output=True,
-            text=True,
-        )
-        return {"diff": result.stdout}
-
-    return {"status": "ok"}
-```
-
-### 4. render-video（動画生成）
-
-```python
-@app.function(
-    image=modal.Image.debian_slim()
-        .apt_install("nodejs", "npm", "chromium")
-        .run_commands("npm install -g @remotion/cli"),
-    gpu="T4",  # GPU使用
-    timeout=300,
-    memory=4096,
-)
-def render_video(
-    user_id: str,
-    project_id: str,
-    output_path: str,
-) -> dict:
-    import subprocess
-
-    volume = get_user_volume(user_id)
-    project_path = f"/vol/projects/{project_id}"
-
-    # Remotionレンダリング
-    subprocess.run([
-        "npx", "remotion", "render",
-        "--props", f'{{"projectPath": "{project_path}"}}',
-        "--output", output_path,
-    ])
-
-    return {"path": output_path}
-```
-
-### 5. file-operation（ファイル操作）
-
-```python
-@app.function(timeout=30)
-def file_operation(
-    user_id: str,
-    operation: str,  # "read", "write", "delete", "list", "exists"
     path: str,
-    content: str = None,
-) -> dict:
-    volume = get_user_volume(user_id)
-    full_path = f"/vol/{path}"
+    x_modal_secret: str = Header(...),
+):
+    """プロジェクトファイル取得"""
+    validate_secret(x_modal_secret)
+    validate_uuid(user_id)
+    validate_uuid(project_id)
+    validate_path(path)
 
-    if operation == "read":
-        with volume.open(full_path, "r") as f:
-            return {"content": f.read()}
+    file_path = f"/data/users/{user_id}/projects/{project_id}/{path}"
+    with data_volume.open(file_path, "r") as f:
+        return {"content": f.read()}
 
-    elif operation == "write":
-        with volume.open(full_path, "w") as f:
-            f.write(content)
-        return {"status": "ok"}
+@web_app.post("/detect_intent")
+async def detect_intent(
+    request: IntentRequest,
+    x_modal_secret: str = Header(...),
+):
+    """ユーザー意図検出（Haiku）"""
+    validate_secret(x_modal_secret)
+    # Claude Haiku で intent 判定
+    intent = await detect_with_haiku(request.message)
+    return {"intent": intent}
 
-    elif operation == "delete":
-        volume.remove(full_path)
-        return {"status": "ok"}
-
-    elif operation == "list":
-        files = list(volume.iterdir(full_path))
-        return {"files": files}
-
-    elif operation == "exists":
-        exists = volume.exists(full_path)
-        return {"exists": exists}
-
-    return {"error": "unknown operation"}
+@web_app.post("/detect_skills")
+async def detect_skills(
+    request: SkillRequest,
+    x_modal_secret: str = Header(...),
+):
+    """必要スキル検出（Haiku）"""
+    validate_secret(x_modal_secret)
+    skills = await detect_skills_with_haiku(
+        request.message,
+        request.dimension,
+    )
+    return {"skills": skills}
 ```
+
+### Endpoint一覧
+
+| Endpoint | Method | Purpose | Auth |
+|----------|--------|---------|------|
+| `/generate_game` | POST | Claude CLIでゲーム生成（SSE） | X-Modal-Secret |
+| `/generate_gemini` | POST | Gemini APIで高速生成（SSE） | X-Modal-Secret |
+| `/get_file` | GET | プロジェクトファイル取得 | X-Modal-Secret |
+| `/list_files` | GET | プロジェクトファイル一覧 | X-Modal-Secret |
+| `/apply_files` | POST | 外部生成ファイル適用 | X-Modal-Secret |
+| `/detect_intent` | POST | ユーザー意図検出（Haiku） | X-Modal-Secret |
+| `/detect_skills` | POST | 必要スキル検出（Haiku） | X-Modal-Secret |
+| `/get_skill_content` | POST | スキルMDコンテンツ取得 | X-Modal-Secret |
 
 ---
 
-## Node.js クライアント
+## 4. Next.js API Routes設計
 
-### modalClient.js
+### ディレクトリ構成
 
-```javascript
-// server/modalClient.js
-const MODAL_API_URL = process.env.MODAL_API_URL || 'https://api.modal.com';
-const MODAL_TOKEN = process.env.MODAL_TOKEN;
+```
+next/src/app/
+├── api/
+│   ├── generate/
+│   │   └── route.ts          # SSEオーケストレーション
+│   ├── projects/
+│   │   ├── route.ts          # 一覧・作成
+│   │   └── [id]/
+│   │       └── route.ts      # 詳細・更新・削除
+│   ├── assets/
+│   │   ├── route.ts          # アップロード・一覧
+│   │   └── [id]/
+│   │       └── route.ts      # 取得・削除
+│   ├── preview/
+│   │   └── [projectId]/
+│   │       └── [...path]/
+│   │           └── route.ts  # セキュアファイル配信
+│   └── chat/
+│       └── save/
+│           └── route.ts      # チャット履歴保存
+├── (auth)/
+│   ├── login/
+│   │   └── page.tsx
+│   └── callback/
+│       └── route.ts
+├── create/
+│   └── page.tsx              # プロジェクト一覧
+├── project/
+│   └── [id]/
+│       └── page.tsx          # エディタ
+├── play/
+│   └── [id]/
+│       └── page.tsx          # プレビュー
+└── publish/
+    └── [id]/
+        └── page.tsx          # 公開設定
+```
 
-class ModalClient {
-  constructor() {
-    this.baseUrl = MODAL_API_URL;
-    this.token = MODAL_TOKEN;
+### /api/generate/route.ts
+
+```typescript
+// next/src/app/api/generate/route.ts
+import { createClient } from '@/lib/supabase/server';
+import { NextRequest } from 'next/server';
+
+export async function POST(request: NextRequest) {
+  // 1. JWT検証
+  const supabase = createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    return new Response('Unauthorized', { status: 401 });
   }
 
-  async callFunction(functionName, params) {
-    const response = await fetch(`${this.baseUrl}/v1/apps/dreamcore/functions/${functionName}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(params),
-    });
+  const { projectId, message } = await request.json();
 
-    if (!response.ok) {
-      throw new Error(`Modal function failed: ${response.status}`);
-    }
+  // 2. プロジェクト所有権チェック
+  const { data: project } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .eq('user_id', user.id)
+    .single();
 
-    return response.json();
+  if (!project) {
+    return new Response('Not Found', { status: 404 });
   }
 
-  async generateGame(userId, projectId, message, skills, callbackUrl) {
-    return this.callFunction('generate-game', {
-      user_id: userId,
+  // 3. Modal呼び出し（SSEプロキシ）
+  const modalResponse = await fetch(process.env.MODAL_ENDPOINT!, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Modal-Secret': process.env.MODAL_INTERNAL_SECRET!,
+    },
+    body: JSON.stringify({
+      user_id: user.id,
       project_id: projectId,
       message,
-      skills,
-      callback_url: callbackUrl,
-    });
-  }
+    }),
+  });
 
-  async generateImage(userId, prompt, outputPath, style = 'kawaii') {
-    return this.callFunction('generate-image', {
-      user_id: userId,
-      prompt,
-      output_path: outputPath,
-      style,
-    });
-  }
-
-  async gitOperation(userId, projectId, operation, options = {}) {
-    return this.callFunction('git-operation', {
-      user_id: userId,
-      project_id: projectId,
-      operation,
-      ...options,
-    });
-  }
-
-  async renderVideo(userId, projectId, outputPath) {
-    return this.callFunction('render-video', {
-      user_id: userId,
-      project_id: projectId,
-      output_path: outputPath,
-    });
-  }
-
-  async fileOperation(userId, operation, path, content = null) {
-    return this.callFunction('file-operation', {
-      user_id: userId,
-      operation,
-      path,
-      content,
-    });
-  }
-
-  // ファイル読み書きのショートカット
-  async readFile(userId, path) {
-    const result = await this.fileOperation(userId, 'read', path);
-    return result.content;
-  }
-
-  async writeFile(userId, path, content) {
-    return this.fileOperation(userId, 'write', path, content);
-  }
-
-  async deleteFile(userId, path) {
-    return this.fileOperation(userId, 'delete', path);
-  }
-
-  async listFiles(userId, path) {
-    const result = await this.fileOperation(userId, 'list', path);
-    return result.files;
-  }
-
-  async fileExists(userId, path) {
-    const result = await this.fileOperation(userId, 'exists', path);
-    return result.exists;
-  }
+  // 4. SSEストリームを転送
+  return new Response(modalResponse.body, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  });
 }
-
-module.exports = new ModalClient();
 ```
 
----
+### /api/preview/[projectId]/[...path]/route.ts
 
-## ストリーミングブリッジ
+```typescript
+// セキュアファイル配信
+import { createClient } from '@/lib/supabase/server';
+import { NextRequest } from 'next/server';
 
-### streamBridge.js
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { projectId: string; path: string[] } }
+) {
+  const { projectId, path } = params;
+  const filePath = path.join('/');
 
-```javascript
-// server/streamBridge.js
-const express = require('express');
-const { jobManager } = require('./jobManager');
-
-// ストリーミングコールバック用ルーター
-const streamRouter = express.Router();
-
-// Modal Functionからのコールバック受信
-streamRouter.post('/callback/:jobId', (req, res) => {
-  const { jobId } = req.params;
-  const { chunk, type, error } = req.body;
-
-  const job = jobManager.getJob(jobId);
-  if (!job) {
-    return res.status(404).json({ error: 'Job not found' });
-  }
-
-  if (type === 'stream') {
-    // WebSocketに転送
-    jobManager.emit(jobId, 'stream', { content: chunk });
-  } else if (type === 'progress') {
-    jobManager.updateProgress(jobId, req.body.progress, req.body.message);
-  } else if (type === 'error') {
-    jobManager.failJob(jobId, error);
-  } else if (type === 'complete') {
-    jobManager.completeJob(jobId, req.body.result);
-  }
-
-  res.json({ ok: true });
-});
-
-// コールバックURL生成
-function getCallbackUrl(jobId) {
-  const baseUrl = process.env.CALLBACK_BASE_URL || 'https://api.dreamcore.com';
-  return `${baseUrl}/modal/callback/${jobId}`;
-}
-
-module.exports = { streamRouter, getCallbackUrl };
-```
-
-### index.jsへの統合
-
-```javascript
-// server/index.js
-const { streamRouter, getCallbackUrl } = require('./streamBridge');
-
-// ストリーミングコールバック用エンドポイント
-app.use('/modal', streamRouter);
-```
-
----
-
-## 環境変数
-
-### 本番環境
-
-```bash
-# Modal
-MODAL_TOKEN=your-modal-token
-MODAL_API_URL=https://api.modal.com
-USE_MODAL=true
-
-# コールバック
-CALLBACK_BASE_URL=https://api.dreamcore.com
-
-# Supabase（既存）
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-```
-
-### ローカル開発
-
-```bash
-# Modal（ローカルテスト用）
-MODAL_TOKEN=your-modal-token
-USE_MODAL=false  # ローカルでは無効化
-
-# コールバック（ngrok等でトンネル）
-CALLBACK_BASE_URL=https://abc123.ngrok.io
-```
-
----
-
-## ローカル開発フロー
-
-### 1. Modal CLIインストール
-
-```bash
-pip install modal
-modal token new
-```
-
-### 2. Function開発
-
-```bash
-# ローカルでテスト
-modal run modal_app.py::generate_game --user-id test --project-id test
-
-# デプロイ
-modal deploy modal_app.py
-```
-
-### 3. ローカルサーバー + Modal
-
-```bash
-# ngrokでトンネル作成（コールバック用）
-ngrok http 3000
-
-# 環境変数設定
-export CALLBACK_BASE_URL=https://abc123.ngrok.io
-export USE_MODAL=true
-
-# サーバー起動
-npm run dev
-```
-
----
-
-## フォールバック設計
-
-### 条件分岐
-
-```javascript
-// server/claudeRunner.js
-const modalClient = require('./modalClient');
-const USE_MODAL = process.env.USE_MODAL === 'true';
-
-async function runClaude(userId, projectId, message, skills) {
-  if (USE_MODAL) {
-    // Modal経由
-    return runClaudeOnModal(userId, projectId, message, skills);
+  // 署名付きURL検証 or JWT検証
+  const signature = request.nextUrl.searchParams.get('sig');
+  if (signature) {
+    const isValid = verifySignature(projectId, filePath, signature);
+    if (!isValid) {
+      return new Response('Invalid signature', { status: 403 });
+    }
   } else {
-    // ローカル実行（既存コード）
-    return runClaudeLocal(userId, projectId, message, skills);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    // 所有権チェック
+    const { data: project } = await supabase
+      .from('projects')
+      .select('user_id')
+      .eq('id', projectId)
+      .single();
+
+    if (!project || project.user_id !== user.id) {
+      return new Response('Not Found', { status: 404 });
+    }
   }
-}
 
-async function runClaudeOnModal(userId, projectId, message, skills) {
-  const callbackUrl = getCallbackUrl(jobId);
-  return modalClient.generateGame(userId, projectId, message, skills, callbackUrl);
-}
+  // Modalからファイル取得
+  const response = await fetch(
+    `${process.env.MODAL_GET_FILE_ENDPOINT}?user_id=${userId}&project_id=${projectId}&path=${filePath}`,
+    {
+      headers: {
+        'X-Modal-Secret': process.env.MODAL_INTERNAL_SECRET!,
+      },
+    }
+  );
 
-async function runClaudeLocal(userId, projectId, message, skills) {
-  // 既存のローカル実行コード
-  const child = spawn('claude', [...], { cwd: projectDir });
-  // ...
+  const { content } = await response.json();
+  const contentType = getContentType(filePath);
+
+  return new Response(content, {
+    headers: { 'Content-Type': contentType },
+  });
 }
 ```
 
 ---
 
-## モニタリング
+## 5. 認証フロー
 
-### Modal Dashboard
-- Function実行時間
-- エラー率
-- Volume使用量
-
-### カスタムメトリクス
-```javascript
-// ジョブ完了時にログ
-console.log(JSON.stringify({
-  type: 'job_completed',
-  userId,
-  projectId,
-  duration: endTime - startTime,
-  modal: USE_MODAL,
-}));
+```
+┌──────────┐     ┌──────────────┐     ┌─────────────┐     ┌─────────────────┐
+│  Browser │────▶│  Next.js API │────▶│  Modal      │────▶│  Sandbox        │
+│          │     │  (Vercel)    │     │  Backend    │     │  (gVisor)       │
+└──────────┘     └──────────────┘     └─────────────┘     └─────────────────┘
+      │                 │                    │                    │
+      │  1. JWT Token   │                    │                    │
+      │  (Authorization │                    │                    │
+      │   Header)       │                    │                    │
+      │────────────────▶│                    │                    │
+      │                 │                    │                    │
+      │                 │  2. JWT Verify     │                    │
+      │                 │  (JWKS, local)     │                    │
+      │                 │──────────┐         │                    │
+      │                 │          │         │                    │
+      │                 │◀─────────┘         │                    │
+      │                 │                    │                    │
+      │                 │  3. Project Owner  │                    │
+      │                 │  Check (Supabase)  │                    │
+      │                 │──────────┐         │                    │
+      │                 │          │         │                    │
+      │                 │◀─────────┘         │                    │
+      │                 │                    │                    │
+      │                 │  4. X-Modal-Secret │                    │
+      │                 │────────────────────▶                    │
+      │                 │                    │                    │
+      │                 │                    │  5. UUID Validate  │
+      │                 │                    │──────────┐         │
+      │                 │                    │          │         │
+      │                 │                    │◀─────────┘         │
+      │                 │                    │                    │
+      │                 │                    │  6. Sandbox Create │
+      │                 │                    │───────────────────▶│
+      │                 │                    │                    │
+      │  7. SSE Stream  │◀───────────────────│◀───────────────────│
+      │◀────────────────│                    │                    │
 ```
 
----
+### 認証レイヤー
 
-## コスト見積もり
-
-### Modal料金体系（2026年時点の目安）
-
-| リソース | 単価 | 想定使用量/月 | 月額 |
-|---------|------|--------------|------|
-| CPU (generate-game) | $0.0001/sec | 100,000 sec | $10 |
-| CPU (その他) | $0.0001/sec | 50,000 sec | $5 |
-| GPU T4 (render-video) | $0.0006/sec | 10,000 sec | $6 |
-| Volume Storage | $0.30/GB/月 | 100 GB | $30 |
-| Volume I/O | $0.10/million | 10 million | $1 |
-
-**想定月額: 約$50-100**
-
-※実際の使用量に応じて変動
+| レイヤー | 方式 | 検証内容 |
+|---------|------|----------|
+| Browser → Next.js | JWT (Supabase Auth) | ユーザー認証 |
+| Next.js → Modal | X-Modal-Secret | 内部サービス間認証 |
+| Modal内部 | UUID検証 | パストラバーサル防止 |
+| Supabase | RLS | 所有権チェック（補完的） |
 
 ---
 
-## セキュリティ考慮
-
-### 隔離
-- ユーザーごとに別Volume
-- Function実行はステートレス
-- ネットワーク制限（必要なAPIのみ許可）
-
-### Secret管理
-- Modal Secretsで一元管理
-- 環境変数で注入
-- ログに出力しない
-
-### 入力検証
-- パス操作時のディレクトリトラバーサル防止
-- ユーザーIDの検証
+## 6. UUID検証
 
 ```python
-def validate_path(user_id: str, path: str) -> str:
-    """パストラバーサル防止"""
-    import os
-    base = f"/vol/projects"
-    full = os.path.normpath(os.path.join(base, path))
-    if not full.startswith(base):
-        raise ValueError("Invalid path")
-    return full
+# modal/app.py
+import re
+
+UUID_REGEX = re.compile(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    re.IGNORECASE
+)
+
+def validate_uuid(value: str) -> None:
+    """UUID形式を検証。パストラバーサル攻撃を防止。"""
+    if not UUID_REGEX.match(value):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid UUID format: {value}"
+        )
+
+def validate_path(path: str) -> None:
+    """ファイルパスを検証。"""
+    if '..' in path:
+        raise HTTPException(status_code=400, detail="Invalid path: contains ..")
+    if path.startswith('/'):
+        raise HTTPException(status_code=400, detail="Invalid path: absolute path")
+    if path.startswith(('/etc', '/proc', '/dev')):
+        raise HTTPException(status_code=400, detail="Invalid path: system path")
 ```
+
+---
+
+## 7. SSEストリーミング
+
+### Modal側（Python）
+
+```python
+# modal/app.py
+async def generate_stream(request: GenerateRequest):
+    """Claude CLI出力をSSEでストリーム"""
+    project_dir = f"/data/users/{request.user_id}/projects/{request.project_id}"
+
+    with modal.Sandbox.create(
+        image=sandbox_image,
+        volumes={"/data": data_volume, "/global": global_volume},
+        secrets=secrets,
+        timeout=600,
+    ) as sb:
+        # Claude CLI実行
+        proc = sb.exec(
+            "bash", "-c",
+            f"cd {project_dir} && echo '{request.prompt}' | claude --output-format stream-json"
+        )
+
+        # 出力をSSEとしてストリーム
+        for line in proc.stdout:
+            yield f"data: {json.dumps({'type': 'stream', 'content': line})}\n\n"
+
+        exit_code = proc.wait()
+        yield f"data: {json.dumps({'type': 'done', 'exit_code': exit_code})}\n\n"
+```
+
+### Next.js側（TypeScript）
+
+```typescript
+// クライアント側でSSEを受信
+async function* streamGenerate(projectId: string, message: string) {
+  const response = await fetch('/api/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ projectId, message }),
+  });
+
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+
+  let buffer = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = JSON.parse(line.slice(6));
+        yield data;
+      }
+    }
+  }
+}
+
+// 使用例
+for await (const event of streamGenerate(projectId, message)) {
+  if (event.type === 'stream') {
+    appendToChat(event.content);
+  } else if (event.type === 'done') {
+    refreshPreview();
+  }
+}
+```
+
+---
+
+## 8. 環境変数
+
+### Vercel (Next.js)
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+
+# Modal Endpoints
+MODAL_ENDPOINT=https://xxx--dreamcore-generate-game.modal.run
+MODAL_GET_FILE_ENDPOINT=https://xxx--dreamcore-get-file.modal.run
+MODAL_GEMINI_ENDPOINT=https://xxx--dreamcore-generate-gemini.modal.run
+MODAL_SKILL_CONTENT_ENDPOINT=https://xxx--dreamcore-get-skill-content.modal.run
+
+# Secrets
+MODAL_INTERNAL_SECRET=<random-hex-64>
+PREVIEW_SIGNING_SECRET=<random-hex-64>
+
+# Optional
+CORS_ALLOWED_ORIGINS=http://localhost:3000,https://dreamcore.gg
+```
+
+### Modal Secrets
+
+```bash
+# 作成コマンド
+modal secret create anthropic-api-key ANTHROPIC_API_KEY=sk-ant-...
+modal secret create modal-internal-secret MODAL_INTERNAL_SECRET=$(openssl rand -hex 32)
+modal secret create gemini-api-key GEMINI_API_KEY=...
+```
+
+---
+
+## 9. デプロイ手順
+
+### 初期セットアップ
+
+```bash
+# 1. Modal Secrets作成
+modal secret create anthropic-api-key ANTHROPIC_API_KEY=sk-ant-...
+modal secret create modal-internal-secret MODAL_INTERNAL_SECRET=$(openssl rand -hex 32)
+modal secret create gemini-api-key GEMINI_API_KEY=...
+
+# 2. Modal Volumes作成
+modal volume create dreamcore-data
+modal volume create dreamcore-global
+
+# 3. スキルアップロード
+cd modal
+modal run upload_skills.py
+
+# 4. Modalアプリデプロイ
+modal deploy app.py
+
+# 5. Vercel環境変数設定（ダッシュボードまたはCLI）
+vercel env add MODAL_ENDPOINT
+vercel env add MODAL_INTERNAL_SECRET
+# ...
+
+# 6. Vercelデプロイ
+vercel --prod
+```
+
+### 更新時
+
+```bash
+# スキル変更時
+cd modal && modal run upload_skills.py
+
+# Modalアプリ変更時
+cd modal && modal deploy app.py
+
+# Next.js変更時
+vercel --prod
+```
+
+---
+
+## 10. モニタリング
+
+### Modalログ
+
+```bash
+# リアルタイム監視
+modal logs dreamcore --follow
+
+# 特定エンドポイントのみ
+modal logs dreamcore --filter="generate_game"
+```
+
+### テスト
+
+```bash
+cd modal/tests
+
+# 全テスト実行
+python run_all.py
+
+# 個別テスト
+python test_sandbox_io.py   # Sandbox I/O
+python test_gvisor.py       # 隔離確認
+python test_stream.py       # SSEストリーミング
+python test_volume.py       # Volume永続化
+python test_auth.py         # 認証
+```
+
+---
+
+## 11. トラブルシューティング
+
+| Issue | Check |
+|-------|-------|
+| 401 on Modal | X-Modal-Secret matches? |
+| 401 on Next.js | JWT expired? |
+| Files not persisting | `volume.commit()` called? |
+| Skills not loading | `modal run upload_skills.py` run? |
+| Sandbox timeout | Check complexity, increase timeout |
+| SSE not streaming | Check Content-Type header |
