@@ -1056,7 +1056,7 @@ wss.on('connection', (ws) => {
           const history = await userManager.getConversationHistory(userSupabase, userId, currentProjectId);
 
           // Get versions (without edits - edits are fetched on demand)
-          const versionsWithEdits = userManager.getVersions(userId, currentProjectId);
+          const versionsWithEdits = await userManager.getVersions(userId, currentProjectId);
 
           // Check for active job
           const activeJob = await jobManager.getActiveJob(currentProjectId);
@@ -1388,7 +1388,7 @@ wss.on('connection', (ws) => {
             safeSend({ type: 'error', message: 'Access denied' });
             return;
           }
-          const versions = userManager.getVersions(userId, data.projectId);
+          const versions = await userManager.getVersions(userId, data.projectId);
           safeSend({
             type: 'versionsList',
             projectId: data.projectId,
@@ -1405,7 +1405,7 @@ wss.on('connection', (ws) => {
             safeSend({ type: 'error', message: 'Access denied' });
             return;
           }
-          const editsData = userManager.getVersionEdits(userId, data.projectId, data.versionHash);
+          const editsData = await userManager.getVersionEdits(userId, data.projectId, data.versionHash);
           safeSend({
             type: 'versionEdits',
             projectId: data.projectId,
@@ -1429,7 +1429,7 @@ wss.on('connection', (ws) => {
             safeSend({ type: 'error', message: 'Access denied' });
             return;
           }
-          const restoreResult = userManager.restoreVersion(userId, data.projectId, data.versionId);
+          const restoreResult = await userManager.restoreVersion(userId, data.projectId, data.versionId);
           if (restoreResult.success) {
             safeSend({
               type: 'versionRestored',
