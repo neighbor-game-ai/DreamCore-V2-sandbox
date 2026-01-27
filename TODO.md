@@ -35,6 +35,42 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 作業履歴
 
+### 2026-01-27: Modal Git 操作 await 修正
+
+**詳細:** `.claude/logs/2026-01-27-modal-git-await-fix.md`
+
+**実施内容:**
+- `server/index.js` の 4箇所で await 不足を修正
+- `test-modal-git-operations.js` 新規作成（E2Eテスト）
+- ローカル/Modal 両モードでテスト確認済み
+
+**修正箇所:**
+- selectProject: `getVersions()` に await
+- getVersions: `getVersions()` に await
+- getVersionEdits: `getVersionEdits()` に await
+- restoreVersion: `restoreVersion()` に await
+
+---
+
+### 2026-01-27: Modal 統合実装（Express側 Phase 1）
+
+**詳細:** `.claude/logs/2026-01-27-modal-integration-express.md`
+
+**実施内容:**
+- `config.js` に Modal 環境変数追加（USE_MODAL, MODAL_ENDPOINT等）
+- `modalClient.js` 新規作成（SSEパース、API呼び出し、Git操作）
+- `claudeRunner.js` に USE_MODAL 分岐追加（detectIntent, detectSkills, Claude CLI実行）
+- `userManager.js` のファイル操作・Git操作を Modal 対応
+
+**設計原則:**
+- `USE_MODAL=false` で即座にローカル実行にフォールバック可能
+- フロントエンド変更なし、WS/API形式維持
+- DB操作は Express に集約（Modal に Supabase 情報を渡さない）
+
+**依存タスク:** Modal側の Git 拡張（`/apply_files` に git_log/git_diff/git_restore アクション追加）が必要
+
+---
+
 ### 2026-01-25: sandbox-runtime 導入
 
 **詳細:** `.claude/logs/2026-01-25-sandbox-runtime.md`
@@ -209,4 +245,4 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ---
 
-最終更新: 2026-01-23 (統一パス構造リファクタリング)
+最終更新: 2026-01-27 (Modal Git操作 await修正)
