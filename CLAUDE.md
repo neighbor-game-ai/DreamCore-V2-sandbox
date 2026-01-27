@@ -88,9 +88,15 @@ DreamCore-V2 のユーザーが、何の違和感もなく使える状態
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+### Modal統合（`USE_MODAL=true` 時に必要）
+
+- `USE_MODAL` - Modal使用フラグ（`true` / `false`）
+- `MODAL_ENDPOINT` - Modal generate エンドポイント
+- `MODAL_INTERNAL_SECRET` - Modal内部認証シークレット
+
 ## 禁止事項
 
-- `/api/auth/*` は廃止 - Supabase Authで代替済み
+- `/api/auth/*` の扱いは DreamCore-V2 の現状に従う（勝手に削除・変更しない）
 - `visitorId` の新規利用禁止 - すべて `userId` (Supabase Auth) を使用
 - `db.getProject()` は使用禁止 - `db.getProjectById()` を使用
 - Cookie認証は使用しない - localStorage + Authorization ヘッダー方式を採用
@@ -141,6 +147,9 @@ Claude CLI の実行は以下の制限あり（`server/config.js` の `RATE_LIMI
 
 ## 重要ファイル
 
+- `docs/ENGINEER-HANDOFF.md` - **Modal統合の引き継ぎ文書（必読）**
+- `docs/MODAL-MIGRATION-PLAN.md` - Modal移行計画
+- `docs/MODAL-DESIGN.md` - Modal技術設計
 - `.claude/plans/auth-migration.md` - 認証移行ドキュメント（実装の詳細）
 - `.claude/plans/sandbox-architecture.md` - セキュリティ/サンドボックス設計
 - `server/authMiddleware.js` - 認証ミドルウェア
@@ -149,14 +158,15 @@ Claude CLI の実行は以下の制限あり（`server/config.js` の `RATE_LIMI
 - `server/database-supabase.js` - Supabase DB操作（現在使用中）
 - `.claude/docs/database-schema.md` - DBスキーマ設計詳細
 
-## Phase 1 スコープ
+## 機能スコープ
 
-- Creator機能のみ（ゲーム作成・プレビュー・保存）
-- 公開機能なし
-- `/play/:projectId` - owner-onlyプレビュー
-- `/discover` - 静的ページ（Phase 2準備中表示）
+**DreamCore-V2 の現状の仕様に完全に従う。**
 
-## RLS設計方針（Phase 1）
+機能の有効/無効、エンドポイントの挙動、ページの表示内容は、すべて DreamCore-V2 の実装をそのまま引き継ぐ。独自の判断で機能を削減・変更しないこと。
+
+参照: `/Users/admin/DreamCore-V2/`
+
+## RLS設計方針
 
 ### 基本原則
 
@@ -202,7 +212,9 @@ USING (owner_id = auth.uid() AND is_deleted = FALSE)
 - `node test-assets-api.js` - アセットAPIテスト
 - `node test-exception-boundary.js` - 例外・境界ケーステスト
 
-## Phase 1 完了ステータス
+## DreamCore-V2 完了ステータス（引き継ぎ対象）
+
+以下は DreamCore-V2 で完了済みの項目です。これらはすべて DreamCore-V2-sandbox でも同様に動作する必要があります。
 
 **最終検証日: 2026-01-22**
 
