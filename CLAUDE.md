@@ -1,6 +1,84 @@
-# DreamCore V2
+# DreamCore V2 Sandbox
 
-AI-powered browser game creation platform.
+AI-powered browser game creation platform with Modal Sandbox integration.
+
+---
+
+## ⚠️ プロジェクトの根幹（最重要・必読）
+
+### このプロジェクトは「完全な製品版」です
+
+**これは MVP（Minimum Viable Product）ではありません。**
+
+DreamCore-V2-sandbox は、本番稼働中の DreamCore-V2 の**完全なクローン**に Modal Sandbox を統合するプロジェクトです。機能削減、簡略化、「とりあえず動く版」は一切許容されません。
+
+### 絶対に守るべき原則
+
+| 原則 | 説明 |
+|------|------|
+| **機能の完全継承** | DreamCore-V2 の全機能をそのまま引き継ぐ。機能を削る・省略する・後回しにすることは禁止 |
+| **UX の完全維持** | ユーザー体験は 1mm も変えない。フロントエンドのコードは原則変更しない |
+| **API 契約の維持** | WebSocket メッセージ形式、REST API のリクエスト/レスポンス形式は一切変更しない |
+| **品質基準の維持** | エラーハンドリング、ログ出力、セキュリティ対策は DreamCore-V2 と同等以上 |
+
+### 変更してよいのは「実行基盤」のみ
+
+```
+【変更OK】
+- Claude CLI の実行場所: ローカル → Modal Sandbox
+- ファイルの保存場所: ローカル → Modal Volume
+
+【変更NG】
+- フロントエンドのコード
+- WebSocket のメッセージ形式
+- REST API のエンドポイント・形式
+- ユーザーが目にする UI/UX
+- 認証フロー
+- アセット管理の仕組み
+```
+
+### MVP思考への警告
+
+エンジニアは効率を求めるあまり、以下のような「MVP的な判断」をしがちです。**これらはすべて禁止です：**
+
+| ❌ 禁止される判断 | 理由 |
+|------------------|------|
+| 「この機能は後で実装する」 | 後回しは許容されない。DreamCore-V2 にある機能はすべて初日から動く必要がある |
+| 「簡易版を先に作る」 | 簡易版は存在しない。最初から製品版を作る |
+| 「エラーハンドリングは後で」 | DreamCore-V2 と同等のエラーハンドリングを最初から実装する |
+| 「テストは後で書く」 | DreamCore-V2 のテストがすべてパスする状態を維持する |
+| 「とりあえず動けばOK」 | 「とりあえず」は許容されない。本番品質が必須 |
+| 「この機能は使われてないから省略」 | 使用頻度に関係なく、すべての機能を実装する |
+
+### 判断に迷ったら
+
+「DreamCore-V2 ではどうなっているか？」を確認し、**それと完全に同じ動作**を実装してください。
+
+DreamCore-V2 のコード:
+```
+/Users/admin/DreamCore-V2/
+```
+
+迷った場合は「機能を削る」方向ではなく「DreamCore-V2 と同じにする」方向で判断してください。
+
+### このプロジェクトのゴール
+
+```
+DreamCore-V2 のユーザーが、何の違和感もなく使える状態
+```
+
+ユーザーは「バックエンドが Modal になった」ことに気づく必要すらありません。それが成功の基準です。
+
+---
+
+## Modal 統合の詳細
+
+引き継ぎ文書を参照してください:
+- `/Users/admin/DreamCore-V2-sandbox/docs/ENGINEER-HANDOFF.md`
+- `/Users/admin/DreamCore-V2-sandbox/docs/MODAL-MIGRATION-PLAN.md`
+- `/Users/admin/DreamCore-V2-sandbox/docs/MODAL-DESIGN.md`
+
+---
 
 ## 必須環境変数
 
