@@ -122,9 +122,8 @@ class GameCreatorApp {
     // Restore state
     this.pendingRestore = false;
 
-    // Limit exceeded state (pending prompt to cancel running job)
-    this.pendingLimitExceededPrompt = null;
-    this.limitExceededRetryPending = false;
+    // Limit exceeded state (no longer used for interruption, kept for reference)
+    // this.pendingLimitExceededPrompt = null;
 
     // Streaming elements
     this.streamingContainer = document.getElementById('streamingContainer');
@@ -1982,33 +1981,8 @@ class GameCreatorApp {
         break;
 
       case 'jobCancelled':
-        // Job was cancelled (usually from limit exceeded flow)
+        // Job was cancelled
         console.log('Job cancelled:', data.jobId);
-        // If we have a pending prompt, resend it
-        if (this.pendingLimitExceededPrompt) {
-          const pendingData = this.pendingLimitExceededPrompt;
-          this.pendingLimitExceededPrompt = null;
-          // Mark that we're attempting a retry (to detect loops)
-          this.limitExceededRetryPending = true;
-          // Delay to ensure slot is released by processJobWithSlot's finally block
-          // after the AbortError propagates through the async stack
-          setTimeout(() => {
-            this.limitExceededRetryPending = false;
-            // Reset processing state to allow resend
-            this.isProcessing = false;
-            this.sendButton.disabled = false;
-            // Restore attached assets if any
-            if (pendingData.attachedAssets && pendingData.attachedAssets.length > 0) {
-              this.attachedAssetsList = pendingData.attachedAssets.slice();
-              this.renderAttachedAssets();
-            }
-            // Set the input value and call sendMessage (it reads from chatInput)
-            if (this.chatInput && pendingData.content) {
-              this.chatInput.value = pendingData.content;
-              this.sendMessage();
-            }
-          }, 500);
-        }
         break;
 
       // Job-based events
@@ -3062,7 +3036,7 @@ class GameCreatorApp {
     console.log('pendingRestore set to true');
   }
 
-  // Handle limit exceeded - show confirmation to cancel running job
+  // Handle limit exceeded - show notification that another project is running
   handleLimitExceeded(data) {
     // Hide streaming indicator, reset state
     this.hideStreaming();
@@ -3070,20 +3044,9 @@ class GameCreatorApp {
     this.sendButton.disabled = false;
     this.stopButton.classList.add('hidden');
 
-    // If we're already waiting for a retry, show error instead of another modal
-    if (this.limitExceededRetryPending) {
-      console.log('[limitExceeded] Retry still pending, showing error');
-      this.addMessage('前の処理がまだ完了していません。しばらくお待ちください。', 'system');
-      this.limitExceededRetryPending = false;
-      return;
-    }
-
-    // Remove any existing limit-exceeded modals to prevent accumulation
+    // Remove any existing limit-exceeded messages to prevent accumulation
     const existingModals = this.chatMessages.querySelectorAll('.limit-exceeded-confirm');
     existingModals.forEach(modal => modal.remove());
-
-    // Store pending prompt for retry after cancel (overwrite any previous)
-    this.pendingLimitExceededPrompt = data.pendingPrompt;
 
     const job = data.jobs && data.jobs[0];
     const projectName = job?.projectName || '別のプロジェクト';
@@ -3091,37 +3054,19 @@ class GameCreatorApp {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message assistant limit-exceeded-confirm';
 
-    const confirmId = `limit-confirm-${Date.now()}`;
-    const cancelId = `limit-cancel-${Date.now()}`;
+    const closeId = `limit-close-${Date.now()}`;
 
     messageDiv.innerHTML = `
-      <div class="message-content">『${this.escapeHtml(projectName)}』の生成を中断して、<br>新しい生成を始めますか？</div>
+      <div class="message-content">『${this.escapeHtml(projectName)}』で生成中です。<br>完了後にもう一度お試しください。</div>
       <div class="restore-buttons">
-        <button class="restore-btn confirm" id="${confirmId}">OK</button>
-        <button class="restore-btn cancel" id="${cancelId}">キャンセル</button>
+        <button class="restore-btn cancel" id="${closeId}">閉じる</button>
       </div>
     `;
 
     this.chatMessages.appendChild(messageDiv);
 
-    // Attach click handlers
-    document.getElementById(confirmId).addEventListener('click', () => {
-      // Cancel the running job
-      if (job?.jobId) {
-        this.ws.send(JSON.stringify({
-          type: 'cancelJob',
-          jobId: job.jobId
-        }));
-      }
-      messageDiv.querySelector('.restore-buttons').remove();
-      messageDiv.querySelector('.message-content').textContent = '前の生成を中断して、新しい生成を開始します...';
-    });
-
-    document.getElementById(cancelId).addEventListener('click', () => {
-      // Clear pending prompt and do nothing
-      this.pendingLimitExceededPrompt = null;
-      this.addMessage('新しい生成をキャンセルしました', 'system');
-      messageDiv.querySelector('.restore-buttons').remove();
+    document.getElementById(closeId).addEventListener('click', () => {
+      messageDiv.remove();
     });
 
     this.scrollToLatestMessage(messageDiv);
