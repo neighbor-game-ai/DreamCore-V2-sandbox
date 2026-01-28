@@ -1171,10 +1171,10 @@ wss.on('connection', (ws) => {
           const shouldCheckStyleSelection = !data.skipStyleSelection && !data.selectedStyle;
           if (shouldCheckStyleSelection) {
             // Check if this is a new project
-            const files = userManager.listProjectFiles(userId, currentProjectId);
+            const files = await userManager.listProjectFiles(userId, currentProjectId);
             let isNewProject = true;
             if (files.length > 0) {
-              const indexContent = userManager.readProjectFile(userId, currentProjectId, 'index.html');
+              const indexContent = await userManager.readProjectFile(userId, currentProjectId, 'index.html');
               const isInitialWelcomePage = indexContent &&
                 indexContent.length < 2000 &&
                 indexContent.includes('Welcome to Game Creator');

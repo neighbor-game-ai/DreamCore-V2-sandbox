@@ -916,10 +916,10 @@ ${skillPaths}
     const history = await userManager.getConversationHistory(null, userId, projectId);
 
     // Check if this is a new project
-    const files = userManager.listProjectFiles(userId, projectId);
+    const files = await userManager.listProjectFiles(userId, projectId);
     let isNewProject = true;
     if (files.length > 0) {
-      const indexContent = userManager.readProjectFile(userId, projectId, 'index.html');
+      const indexContent = await userManager.readProjectFile(userId, projectId, 'index.html');
       const isInitialWelcomePage = indexContent &&
         indexContent.length < 2000 &&
         indexContent.includes('Welcome to Game Creator');
@@ -1033,13 +1033,13 @@ ${skillInstructions}
 
       // Get current code (null for new projects)
       // Check if this is truly a new project (only has initial welcome page)
-      const files = userManager.listProjectFiles(userId, projectId);
+      const files = await userManager.listProjectFiles(userId, projectId);
       let currentCode = null;
       let isNewProject = true;
 
       if (files.length > 0) {
         // Check if it's just the initial welcome page
-        const indexContent = userManager.readProjectFile(userId, projectId, 'index.html');
+        const indexContent = await userManager.readProjectFile(userId, projectId, 'index.html');
         const isInitialWelcomePage = indexContent &&
           indexContent.length < 2000 &&
           indexContent.includes('Welcome to Game Creator');
@@ -1047,10 +1047,11 @@ ${skillInstructions}
         if (!isInitialWelcomePage) {
           // Real project with actual code
           isNewProject = false;
-          currentCode = files.map(f => {
-            const content = userManager.readProjectFile(userId, projectId, f);
+          const fileContents = await Promise.all(files.map(async f => {
+            const content = await userManager.readProjectFile(userId, projectId, f);
             return `--- ${f} ---\n${content}`;
-          }).join('\n\n');
+          }));
+          currentCode = fileContents.join('\n\n');
         }
       }
 
@@ -1665,7 +1666,7 @@ ${skillInstructions}
         // For create mode: use generated code; for edit mode: use existing code
         let gameCodeForImages = null;
         if (geminiResult.mode === 'edit') {
-          gameCodeForImages = userManager.readProjectFile(userId, projectId, 'index.html');
+          gameCodeForImages = await userManager.readProjectFile(userId, projectId, 'index.html');
         } else if (geminiResult.files && geminiResult.files.length > 0) {
           const indexFile = geminiResult.files.find(f => f.path === 'index.html');
           gameCodeForImages = indexFile ? indexFile.content : geminiResult.files[0].content;
@@ -1687,7 +1688,7 @@ ${skillInstructions}
           const responseMessage = geminiResult.summary || 'Geminiでゲームを生成しました';
           await userManager.addToHistory(null, userId, projectId, 'assistant', responseMessage);
 
-          const currentHtml = userManager.readProjectFile(userId, projectId, 'index.html');
+          const currentHtml = await userManager.readProjectFile(userId, projectId, 'index.html');
           await jobManager.completeJob(jobId, {
             message: responseMessage,
             html: currentHtml,
@@ -2023,7 +2024,7 @@ ${skillInstructions}
 
           if (code === 0) {
             // Read updated file
-            const currentHtml = userManager.readProjectFile(userId, projectId, 'index.html');
+            const currentHtml = await userManager.readProjectFile(userId, projectId, 'index.html');
 
             // Extract HTML from response if present
             const htmlMatch = output.match(/```html\n([\s\S]*?)```/);
@@ -2194,7 +2195,7 @@ ${skillInstructions}
           this.runningProcesses.delete(processKey);
 
           if (code === 0) {
-            const currentHtml = userManager.readProjectFile(userId, projectId, 'index.html');
+            const currentHtml = await userManager.readProjectFile(userId, projectId, 'index.html');
 
             const htmlMatch = output.match(/```html\n([\s\S]*?)```/);
             if (htmlMatch) {

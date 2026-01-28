@@ -1,6 +1,6 @@
 # GCE Deploy Skill
 
-GameCreatorMVPをGCE (Google Compute Engine) にデプロイするスキル。
+DreamCore-V2-sandbox を GCE (Google Compute Engine) にデプロイ・管理するスキル。
 
 ## 使用タイミング
 
@@ -8,54 +8,96 @@ GameCreatorMVPをGCE (Google Compute Engine) にデプロイするスキル。
 - 「GCEにデプロイして」
 - 「本番環境を更新して」
 - 「サーバーを最新版にして」
-- 「デプロイして」
+- 「GCEでコマンド実行して」
+- 「サーバーのログを見せて」
 
 ## GCE接続情報
 
 ```
-Host: 34.84.28.42
-Instance: dreamcorecode
-Zone: asia-northeast1-b
-App Dir: /opt/gamecreator
-Process: PM2 (gamecreator) - runs as user dreamcorecode
-URL: http://34.84.28.42
+Instance: dreamcore-v2
+Zone: asia-northeast1-a
+User: notef
+IP: 35.200.79.157
+Port: 3005
+App Dir: /home/notef/DreamCore-V2-sandbox
+Process: PM2 (dreamcore-sandbox)
+URL: http://35.200.79.157:3005
 ```
 
-## デプロイ手順
-
-### gcloudでデプロイ（推奨）
+## SSH接続コマンド
 
 ```bash
-/usr/local/bin/gcloud compute ssh dreamcorecode@dreamcorecode --zone=asia-northeast1-b --command="cd /opt/gamecreator && sudo git stash && sudo git fetch origin && sudo git checkout main && sudo git pull origin main && sudo npm install --silent && pm2 restart gamecreator && pm2 status gamecreator"
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="コマンド"
+```
+
+## よく使うコマンド
+
+### デプロイ（git pull + restart）
+
+```bash
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="cd /home/notef/DreamCore-V2-sandbox && git pull && npm install && pm2 restart dreamcore-sandbox"
 ```
 
 ### ステータス確認
 
 ```bash
-/usr/local/bin/gcloud compute ssh dreamcorecode@dreamcorecode --zone=asia-northeast1-b --command="pm2 status gamecreator"
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="pm2 status"
 ```
 
 ### ログ確認
 
 ```bash
-/usr/local/bin/gcloud compute ssh dreamcorecode@dreamcorecode --zone=asia-northeast1-b --command="pm2 logs gamecreator --lines 50 --nostream"
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="pm2 logs dreamcore-sandbox --lines 50 --nostream"
 ```
 
-## 注意事項
+### 環境変数確認
 
-- git操作には`sudo`が必要（/opt/gamecreatorのパーミッション）
-- npm installにも`sudo`が必要
-- PM2は`dreamcorecode`ユーザーで実行されている
-- サーバーにローカル変更がある場合は `sudo git stash` で退避
+```bash
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="grep -E '^(USE_|MODAL_|SUPABASE_URL)' /home/notef/DreamCore-V2-sandbox/.env"
+```
+
+### サーバー再起動
+
+```bash
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="pm2 restart dreamcore-sandbox"
+```
+
+## ウォームアップ設定
+
+Modal コールドスタート対策として、5分ごとに list_files エンドポイントを叩く cron が設定済み。
+
+```
+スクリプト: /home/notef/bin/modal-warmup.sh
+cron: */5 * * * *
+ログ: /home/notef/logs/modal-warmup.log（エラー時のみ）
+```
+
+### ウォームアップ状態確認
+
+```bash
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="crontab -l | grep warmup; cat /home/notef/logs/modal-warmup.log 2>/dev/null || echo 'No errors logged'"
+```
 
 ## トラブルシューティング
 
 ### gcloud認証が切れた場合
+
 ```bash
 /usr/local/bin/gcloud auth login --launch-browser
 ```
 
 ### PM2プロセスが存在しない場合
+
 ```bash
-/usr/local/bin/gcloud compute ssh dreamcorecode@dreamcorecode --zone=asia-northeast1-b --command="cd /opt/gamecreator && pm2 start server/index.js --name gamecreator && pm2 save"
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="cd /home/notef/DreamCore-V2-sandbox && PORT=3005 pm2 start server/index.js --name dreamcore-sandbox && pm2 save"
+```
+
+### Modal 接続エラー
+
+```bash
+# .env の Modal 設定確認
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="grep MODAL /home/notef/DreamCore-V2-sandbox/.env"
+
+# 手動ウォームアップテスト
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="/home/notef/bin/modal-warmup.sh && echo OK"
 ```

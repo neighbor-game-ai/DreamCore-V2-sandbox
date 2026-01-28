@@ -35,6 +35,47 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 作業履歴
 
+### 2026-01-28: Modal ウォームアップ設定
+
+**詳細:** `.claude/logs/2026-01-28-modal-warmup-setup.md`
+
+**実施内容:**
+- GCE に cron ジョブ設定（5分ごとに `list_files` エンドポイントを叩く）
+- ウォームアップ用プロジェクト作成（`__warmup__`）
+- gce-deploy スキルを DreamCore-V2-sandbox 用に更新
+- CLAUDE.md に GCE 本番環境セクション追加
+
+**設定内容:**
+```
+スクリプト: /home/notef/bin/modal-warmup.sh
+cron: */5 * * * *
+ログ: /home/notef/logs/modal-warmup.log（エラー時のみ）
+```
+
+---
+
+### 2026-01-28: Phase C 本番デプロイ完了
+
+**詳細:** `.claude/logs/2026-01-28-phase-c-production-deploy.md`
+
+**実施内容:**
+- GitHub リポジトリ作成・プッシュ（`notef-neighbor/DreamCore-V2-sandbox`）
+- GCE サーバー（dreamcore-v2）にクローン・起動（ポート 3005）
+- 環境変数設定（Supabase, Modal, Gemini）
+- ゲーム生成テスト実施・正常完了
+
+**確認結果:**
+- ✅ Modal 統合動作確認（`[Modal sync] Committed` ログ出力）
+- ✅ Gemini によるゲーム生成・画像生成
+- ✅ ゲームの iframe 表示
+
+**発見した問題と対応:**
+- SSH ユーザー名: `admin` → `notef`
+- Supabase プロジェクト ID: 古い ID を正しい ID に修正
+- GEMINI_API_KEY: PM2 起動時に直接指定で解決
+
+---
+
 ### 2026-01-27: Modal Git 操作 await 修正
 
 **詳細:** `.claude/logs/2026-01-27-modal-git-await-fix.md`
@@ -245,4 +286,4 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ---
 
-最終更新: 2026-01-27 (Modal Git操作 await修正)
+最終更新: 2026-01-28 (Modal ウォームアップ設定)

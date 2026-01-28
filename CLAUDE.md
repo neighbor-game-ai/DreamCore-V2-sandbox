@@ -167,6 +167,51 @@ Claude CLI の実行は以下の制限あり（`server/config.js` の `RATE_LIMI
 - `npm start` - 本番起動
 - デフォルトポート: **3000**（`PORT`環境変数で変更可能）
 
+## GCE 本番環境
+
+| 項目 | 値 |
+|------|-----|
+| Instance | `dreamcore-v2` |
+| Zone | `asia-northeast1-a` |
+| User | `notef` |
+| IP | `35.200.79.157` |
+| Port | `3005` |
+| App Dir | `/home/notef/DreamCore-V2-sandbox` |
+| PM2 Process | `dreamcore-sandbox` |
+| URL | `http://35.200.79.157:3005` |
+
+### SSH接続
+
+```bash
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="コマンド"
+```
+
+### よく使うコマンド
+
+```bash
+# ステータス確認
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="pm2 status"
+
+# ログ確認
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="pm2 logs dreamcore-sandbox --lines 50 --nostream"
+
+# 再起動
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="pm2 restart dreamcore-sandbox"
+
+# デプロイ
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="cd /home/notef/DreamCore-V2-sandbox && git pull && npm install && pm2 restart dreamcore-sandbox"
+```
+
+### Modal ウォームアップ（設定済み）
+
+5分ごとに `list_files` エンドポイントを叩いてコンテナをウォーム状態に保つ cron が設定済み。
+
+```
+スクリプト: /home/notef/bin/modal-warmup.sh
+cron: */5 * * * *
+ログ: /home/notef/logs/modal-warmup.log（エラー時のみ）
+```
+
 ## 重要ファイル
 
 - `docs/ENGINEER-HANDOFF.md` - **Modal統合の引き継ぎ文書（必読）**
