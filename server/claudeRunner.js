@@ -1793,6 +1793,16 @@ ${skillInstructions}
 
   // Run Claude CLI on Modal (remote execution)
   async _runClaudeOnModal(jobId, userId, projectId, prompt, userMessage, detectedSkills) {
+    // Create AbortController for cancellation support
+    const abortController = new AbortController();
+
+    // Register process with jobManager for cancellation
+    jobManager.registerProcess(jobId, null, () => abortController.abort(), {
+      userId,
+      projectId,
+      stage: 'modal-processing'
+    });
+
     try {
       const client = getModalClient();
       let assistantText = '';
@@ -1805,6 +1815,7 @@ ${skillInstructions}
         user_id: userId,
         project_id: projectId,
         prompt: prompt,
+        signal: abortController.signal,
       })) {
         switch (event.type) {
           case 'stream':
@@ -1917,6 +1928,12 @@ ${skillInstructions}
         return { success: false, error: errorMsg };
       }
     } catch (err) {
+      // Handle cancellation (AbortError) gracefully
+      if (err.name === 'AbortError') {
+        console.log('Modal execution cancelled for job:', jobId);
+        // Job already marked as cancelled by cancelJob handler, just return
+        return { success: false, cancelled: true };
+      }
       console.error('Modal execution error:', err.message);
       await jobManager.failJob(jobId, err.message);
       return { success: false, error: err.message };
