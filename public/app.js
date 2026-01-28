@@ -2022,7 +2022,12 @@ class GameCreatorApp {
         }
         break;
 
+      case 'restoreProgress':
+        this.updateStreamingStatus(data.message);
+        break;
+
       case 'versionRestored':
+        this.completeStreaming();
         this.currentVersionId = data.versionId;
         this.addMessage(`バージョン ${data.versionId} に戻しました`, 'system');
         this.hideVersionPanel();
@@ -3276,6 +3281,10 @@ class GameCreatorApp {
       this.hideRestoreModal();
       return;
     }
+
+    // Show loading immediately for user feedback
+    this.showStreaming();
+    this.updateStreamingStatus('バージョン復元中...');
 
     this.ws.send(JSON.stringify({
       type: 'restoreVersion',

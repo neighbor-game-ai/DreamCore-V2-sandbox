@@ -1469,8 +1469,25 @@ wss.on('connection', (ws) => {
             safeSend({ type: 'error', message: 'Access denied' });
             return;
           }
+
+          // Send progress: checkout
+          safeSend({
+            type: 'restoreProgress',
+            stage: 'checkout',
+            message: 'ファイルを復元中...'
+          });
+
           const restoreResult = await userManager.restoreVersion(userId, data.projectId, data.versionId);
           if (restoreResult.success) {
+            // Send progress: sync (if Modal is enabled)
+            if (config.USE_MODAL) {
+              safeSend({
+                type: 'restoreProgress',
+                stage: 'sync',
+                message: 'ファイルを同期中...'
+              });
+            }
+
             // Sync restored files from Modal to local for fast preview
             await userManager.syncFromModal(userId, data.projectId);
 
