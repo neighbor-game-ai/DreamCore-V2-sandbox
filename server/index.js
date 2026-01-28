@@ -1340,7 +1340,21 @@ wss.on('connection', (ws) => {
             } catch (error) {
               // Handle slot limit errors with appropriate codes
               if (error.code === 'USER_LIMIT_EXCEEDED') {
-                safeSend(createWsError(ErrorCodes.USER_LIMIT_EXCEEDED, error.message));
+                // Get active jobs for the user to show which project is running
+                const activeJobs = await jobManager.getActiveJobsForUser(userId);
+                const { maxConcurrentPerUser } = config.RATE_LIMIT.cli;
+
+                safeSend({
+                  type: 'limitExceeded',
+                  limit: maxConcurrentPerUser,
+                  inProgress: activeJobs.length,
+                  jobs: activeJobs,
+                  // Store pending prompt info for retry after cancel
+                  pendingPrompt: {
+                    content: data.content,
+                    selectedStyle: data.selectedStyle
+                  }
+                });
               } else if (error.code === 'SYSTEM_LIMIT_EXCEEDED') {
                 safeSend(createWsError(ErrorCodes.SYSTEM_LIMIT_EXCEEDED, error.message));
               } else {
@@ -1417,6 +1431,33 @@ wss.on('connection', (ws) => {
             safeSend({ type: 'jobUpdate', ...update });
           });
           safeSend({ type: 'subscribed', jobId: data.jobId });
+          break;
+
+        case 'cancelJob':
+          // Cancel a running job (used when limit is exceeded and user wants to cancel previous)
+          if (!userId) {
+            safeSend({ type: 'error', message: 'Not authenticated' });
+            return;
+          }
+          if (!data.jobId) {
+            safeSend({ type: 'error', message: 'Job ID required' });
+            return;
+          }
+          // Verify ownership before cancelling
+          const jobToCancel = await jobManager.getJob(data.jobId);
+          if (!jobToCancel || jobToCancel.user_id !== userId) {
+            safeSend({ type: 'error', message: 'Job not found' });
+            return;
+          }
+          try {
+            await jobManager.cancelJob(data.jobId);
+            // Also release the slot
+            jobManager.releaseSlot(userId);
+            safeSend({ type: 'jobCancelled', jobId: data.jobId });
+          } catch (cancelError) {
+            console.error('Failed to cancel job:', cancelError);
+            safeSend({ type: 'error', message: 'Failed to cancel job' });
+          }
           break;
 
         case 'getVersions':

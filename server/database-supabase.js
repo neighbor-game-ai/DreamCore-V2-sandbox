@@ -869,6 +869,39 @@ const getActiveJobByProjectId = async (projectId) => {
 };
 
 /**
+ * Get active jobs for a user (with project info)
+ * Used for showing which projects are currently running when limit is exceeded
+ */
+const getActiveJobsForUser = async (userId) => {
+  const { data, error } = await supabaseAdmin
+    .from('jobs')
+    .select(`
+      id,
+      project_id,
+      status,
+      created_at,
+      projects!inner(name)
+    `)
+    .eq('user_id', userId)
+    .in('status', ['pending', 'processing'])
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[DB] getActiveJobsForUser error:', error.message);
+    return [];
+  }
+
+  // Transform to include project name directly
+  return (data || []).map(job => ({
+    jobId: job.id,
+    projectId: job.project_id,
+    projectName: job.projects?.name || 'Unknown Project',
+    status: job.status,
+    createdAt: job.created_at
+  }));
+};
+
+/**
  * Get pending jobs
  */
 const getPendingJobs = async (limit = 10) => {
@@ -1364,6 +1397,7 @@ module.exports = {
   getJobsByUserId,
   getJobsByProjectId,
   getActiveJobByProjectId,
+  getActiveJobsForUser,
   getPendingJobs,
   createJob,
   updateJobStatus,

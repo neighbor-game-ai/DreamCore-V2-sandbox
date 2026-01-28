@@ -90,6 +90,38 @@ class JobManager extends EventEmitter {
     };
   }
 
+  /**
+   * Get running jobs for a user
+   * @param {string} userId - User ID
+   * @returns {Array} Array of { jobId, projectId, projectName }
+   */
+  getRunningJobsForUser(userId) {
+    const jobs = [];
+    for (const [jobId, jobInfo] of this.runningJobs) {
+      if (jobInfo.userId === userId) {
+        jobs.push({
+          jobId,
+          projectId: jobInfo.projectId,
+          projectName: jobInfo.projectName || 'Unknown Project',
+          stage: jobInfo.stage || 'processing'
+        });
+      }
+    }
+    return jobs;
+  }
+
+  /**
+   * Update job info (for tracking projectName, stage, etc.)
+   * @param {string} jobId - Job ID
+   * @param {Object} info - Additional info to merge
+   */
+  updateJobInfo(jobId, info) {
+    const existing = this.runningJobs.get(jobId);
+    if (existing) {
+      this.runningJobs.set(jobId, { ...existing, ...info });
+    }
+  }
+
   // Create a new job
   async createJob(userId, projectId) {
     const job = await db.createJob(userId, projectId);
@@ -118,6 +150,11 @@ class JobManager extends EventEmitter {
   // Get jobs for a project
   async getProjectJobs(projectId, limit = 20) {
     return await db.getJobsByProjectId(projectId, limit);
+  }
+
+  // Get active jobs for a user (with project info)
+  async getActiveJobsForUser(userId) {
+    return await db.getActiveJobsForUser(userId);
   }
 
   // Start processing a job
@@ -171,8 +208,15 @@ class JobManager extends EventEmitter {
   }
 
   // Register a running process for a job
-  registerProcess(jobId, process, cancelFn) {
-    this.runningJobs.set(jobId, { process, cancel: cancelFn });
+  registerProcess(jobId, process, cancelFn, options = {}) {
+    this.runningJobs.set(jobId, {
+      process,
+      cancel: cancelFn,
+      userId: options.userId,
+      projectId: options.projectId,
+      projectName: options.projectName,
+      stage: options.stage || 'processing'
+    });
   }
 
   // Check if a job is running

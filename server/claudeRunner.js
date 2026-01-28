@@ -1937,8 +1937,12 @@ ${skillInstructions}
         stdio: ['pipe', 'pipe', 'pipe']
       });
 
-      // Register process for cancellation
-      jobManager.registerProcess(jobId, claude, () => claude.kill());
+      // Register process for cancellation (with metadata for limit exceeded handling)
+      jobManager.registerProcess(jobId, claude, () => claude.kill(), {
+        userId,
+        projectId,
+        stage: 'processing'
+      });
 
       // Write prompt to stdin
       claude.stdin.write(prompt);
