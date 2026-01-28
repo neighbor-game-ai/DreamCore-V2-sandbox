@@ -1208,8 +1208,8 @@ wss.on('connection', (ws) => {
             const testErrorType = data.errorType || 'timeout';
             console.log(`[Test] Triggering test error: ${testErrorType}`);
 
-            // Create a test job
-            const testJob = await jobManager.createJob(currentProjectId, 'テストエラー');
+            // Create a test job (requires userId and projectId)
+            const testJob = await jobManager.createJob(userId, currentProjectId);
             jobManager.subscribe(testJob.id, (update) => {
               safeSend({ ...update, jobId: testJob.id });
             });
