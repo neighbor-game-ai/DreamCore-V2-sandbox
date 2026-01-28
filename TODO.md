@@ -35,6 +35,43 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 作業履歴
 
+### 2026-01-28: ローカルキャッシュ実装（プレビュー高速化）
+
+**詳細:** `.claude/logs/2026-01-28-local-cache-implementation.md`
+
+**問題:** Modal 統合後、プレビュー表示と履歴復元が非常に遅い（50-150ms/ファイル × 5-20ファイル）
+
+**原因:** 毎回のファイルリクエストが Modal API を経由していた
+
+**実装内容:**
+- `syncFromModal()` 関数追加（Modal → ローカル同期）
+- Claude Modal 完了後に自動同期
+- 履歴復元後に自動同期
+- `/game/*` ルートをローカルファースト配信に変更
+
+**効果:** プレビュー表示・履歴復元が即座に反映されるようになった
+
+---
+
+### 2026-01-28: Modal Git safe.directory 修正
+
+**問題:** 変更履歴が表示されない
+
+**原因:** Modal Volume 上で git コマンドが "dubious ownership" エラー
+
+**修正:**
+- Modal `app.py` の全 git コマンドに `-c safe.directory={project_dir}` を追加
+
+---
+
+### 2026-01-28: Modal Cache-Control ヘッダー追加
+
+**実装内容:**
+- HTML: `no-store`（常に最新を取得）
+- 静的アセット（CSS/JS/画像等）: `public, max-age=3600`（1時間キャッシュ）
+
+---
+
 ### 2026-01-28: Modal generate_game volumes 修正
 
 **詳細:** `.claude/logs/2026-01-28-modal-volumes-fix.md`
@@ -317,4 +354,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-01-28 (Modal generate_game volumes 修正)
+最終更新: 2026-01-28 (ローカルキャッシュ実装)
