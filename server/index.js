@@ -1192,6 +1192,56 @@ wss.on('connection', (ws) => {
           }
           break;
 
+        case 'testError':
+          // Test error handling by triggering simulated errors from Modal
+          // Usage: { type: 'testError', errorType: 'timeout' | 'general' | 'sandbox' | 'network' | 'rate_limit' }
+          if (!userId || !currentProjectId) {
+            safeSend({ type: 'error', message: 'No project selected' });
+            return;
+          }
+          if (!config.USE_MODAL) {
+            safeSend({ type: 'error', message: 'Test errors only available in Modal mode' });
+            return;
+          }
+          try {
+            const modalClient = require('./modalClient');
+            const testErrorType = data.errorType || 'timeout';
+            console.log(`[Test] Triggering test error: ${testErrorType}`);
+
+            // Create a test job
+            const testJob = await jobManager.createJob(currentProjectId, 'テストエラー');
+            jobManager.subscribe(testJob.id, (update) => {
+              safeSend({ ...update, jobId: testJob.id });
+            });
+
+            // Start the test
+            safeSend({ type: 'started', job: testJob });
+            jobManager.updateProgress(testJob.id, 10, 'テストエラーをシミュレート中...');
+
+            // Call Modal with test error parameter
+            for await (const event of modalClient.generateGame({
+              user_id: userId,
+              project_id: currentProjectId,
+              prompt: 'test',
+              _test_error: testErrorType
+            })) {
+              if (event.type === 'failed') {
+                await jobManager.failJob(testJob.id, event.userMessage || event.error, {
+                  code: event.code,
+                  userMessage: event.userMessage,
+                  recoverable: event.recoverable,
+                  exitCode: event.exitCode
+                });
+              } else if (event.type === 'completed') {
+                await jobManager.completeJob(testJob.id, { message: 'Test completed' });
+              }
+            }
+          } catch (err) {
+            console.error('[Test] Error:', err.message);
+            safeSend({ type: 'error', message: err.message });
+          }
+          break;
+
         case 'message':
           if (!userId || !currentProjectId) {
             safeSend({ type: 'error', message: 'No project selected' });

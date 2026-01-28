@@ -143,18 +143,24 @@ class ModalClient {
    * @param {string} params.project_id - Project ID (UUID)
    * @param {string} params.prompt - Full prompt for Claude CLI
    * @param {AbortSignal} [params.signal] - Optional AbortSignal for cancellation
+   * @param {string} [params._test_error] - Test error type (timeout, general, sandbox, network, rate_limit)
    * @yields {Object} WebSocket-compatible events (progress, stream, completed, failed)
    */
-  async *generateGame({ user_id, project_id, prompt, signal }) {
+  async *generateGame({ user_id, project_id, prompt, signal, _test_error }) {
     const url = this.baseEndpoint;
     if (!url) {
       throw new Error('MODAL_ENDPOINT is not configured');
     }
 
+    const body = { user_id, project_id, prompt };
+    if (_test_error) {
+      body._test_error = _test_error;
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({ user_id, project_id, prompt }),
+      body: JSON.stringify(body),
       signal,  // Pass AbortSignal for cancellation support
     });
 
