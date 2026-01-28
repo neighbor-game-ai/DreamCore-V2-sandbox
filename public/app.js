@@ -1987,7 +1987,8 @@ class GameCreatorApp {
         if (this.pendingLimitExceededPrompt) {
           const pendingData = this.pendingLimitExceededPrompt;
           this.pendingLimitExceededPrompt = null;
-          // Small delay to ensure slot is released
+          // Delay to ensure slot is released by processJobWithSlot's finally block
+          // after the AbortError propagates through the async stack
           setTimeout(() => {
             // Restore attached assets if any
             if (pendingData.attachedAssets && pendingData.attachedAssets.length > 0) {
@@ -1999,7 +2000,7 @@ class GameCreatorApp {
               this.chatInput.value = pendingData.content;
               this.sendMessage();
             }
-          }, 100);
+          }, 500);
         }
         break;
 

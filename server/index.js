@@ -1452,8 +1452,8 @@ wss.on('connection', (ws) => {
           }
           try {
             await jobManager.cancelJob(data.jobId);
-            // Also release the slot
-            jobManager.releaseSlot(userId);
+            // Note: slot is released by processJobWithSlot's finally block
+            // after the AbortError is processed
             safeSend({ type: 'jobCancelled', jobId: data.jobId });
           } catch (cancelError) {
             console.error('Failed to cancel job:', cancelError);
