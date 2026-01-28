@@ -124,6 +124,7 @@ class GameCreatorApp {
 
     // Limit exceeded state (pending prompt to cancel running job)
     this.pendingLimitExceededPrompt = null;
+    this.limitExceededRetryPending = false;
 
     // Streaming elements
     this.streamingContainer = document.getElementById('streamingContainer');
@@ -1987,9 +1988,12 @@ class GameCreatorApp {
         if (this.pendingLimitExceededPrompt) {
           const pendingData = this.pendingLimitExceededPrompt;
           this.pendingLimitExceededPrompt = null;
+          // Mark that we're attempting a retry (to detect loops)
+          this.limitExceededRetryPending = true;
           // Delay to ensure slot is released by processJobWithSlot's finally block
           // after the AbortError propagates through the async stack
           setTimeout(() => {
+            this.limitExceededRetryPending = false;
             // Restore attached assets if any
             if (pendingData.attachedAssets && pendingData.attachedAssets.length > 0) {
               this.attachedAssetsList = pendingData.attachedAssets.slice();
@@ -3063,7 +3067,19 @@ class GameCreatorApp {
     this.sendButton.disabled = false;
     this.stopButton.classList.add('hidden');
 
-    // Store pending prompt for retry after cancel
+    // If we're already waiting for a retry, show error instead of another modal
+    if (this.limitExceededRetryPending) {
+      console.log('[limitExceeded] Retry still pending, showing error');
+      this.addMessage('前の処理がまだ完了していません。しばらくお待ちください。', 'system');
+      this.limitExceededRetryPending = false;
+      return;
+    }
+
+    // Remove any existing limit-exceeded modals to prevent accumulation
+    const existingModals = this.chatMessages.querySelectorAll('.limit-exceeded-confirm');
+    existingModals.forEach(modal => modal.remove());
+
+    // Store pending prompt for retry after cancel (overwrite any previous)
     this.pendingLimitExceededPrompt = data.pendingPrompt;
 
     const job = data.jobs && data.jobs[0];
