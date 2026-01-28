@@ -1532,7 +1532,12 @@ ${skillInstructions}
       ]);
     } catch (err) {
       if (err.message === 'JOB_TIMEOUT') {
-        await jobManager.failJob(jobId, 'Job timed out after 5 minutes');
+        await jobManager.failJob(jobId, '生成に時間がかかりすぎました（5分制限）', {
+          code: 'CLI_TIMEOUT',
+          userMessage: '生成に時間がかかりすぎました（5分制限）',
+          recoverable: true,
+          exitCode: 124
+        });
       }
       // Re-throw other errors (they're already handled in processJob)
     } finally {
@@ -1861,10 +1866,23 @@ ${skillInstructions}
             break;
 
           case 'failed':
-            // Execution failed
-            console.error('Claude job on Modal failed:', event.message || event.error);
-            await jobManager.failJob(jobId, event.message || event.error || 'Modal execution failed');
-            return { success: false, error: event.message || event.error };
+            // Execution failed - extract structured error info
+            const errorCode = event.code || 'UNKNOWN_ERROR';
+            const userMessage = event.userMessage || event.message || event.error || 'Modal execution failed';
+            const recoverable = event.recoverable || false;
+            const exitCodeFromEvent = event.exitCode || null;
+
+            console.error(`Claude job on Modal failed: code=${errorCode}, message=${userMessage}, recoverable=${recoverable}`);
+
+            // Fail job with user-friendly message and structured error details
+            await jobManager.failJob(jobId, userMessage, {
+              code: errorCode,
+              userMessage,
+              recoverable,
+              exitCode: exitCodeFromEvent
+            });
+
+            return { success: false, error: userMessage, code: errorCode, recoverable };
 
           default:
             // Pass through other events
@@ -1923,9 +1941,29 @@ ${skillInstructions}
 
         return { success: true };
       } else {
-        const errorMsg = `Claude CLI exited with code ${exitCode}`;
-        await jobManager.failJob(jobId, errorMsg);
-        return { success: false, error: errorMsg };
+        // Non-zero exit code without explicit error event (fallback)
+        const errorCodeMap = {
+          124: { code: 'CLI_TIMEOUT', userMessage: '生成に時間がかかりすぎました（5分制限）', recoverable: true },
+          137: { code: 'CLI_KILLED', userMessage: '生成がキャンセルされました', recoverable: true },
+          143: { code: 'CLI_TERMINATED', userMessage: '生成が中断されました', recoverable: true },
+        };
+        const errorInfo = errorCodeMap[exitCode] || {
+          code: 'CLI_GENERAL_ERROR',
+          userMessage: `生成中にエラーが発生しました (コード: ${exitCode})`,
+          recoverable: false
+        };
+
+        console.error(`Claude job failed with exit code ${exitCode}: ${errorInfo.userMessage}`);
+
+        // Fail job with structured error details
+        await jobManager.failJob(jobId, errorInfo.userMessage, {
+          code: errorInfo.code,
+          userMessage: errorInfo.userMessage,
+          recoverable: errorInfo.recoverable,
+          exitCode
+        });
+
+        return { success: false, error: errorInfo.userMessage, code: errorInfo.code, recoverable: errorInfo.recoverable };
       }
     } catch (err) {
       // Handle cancellation (AbortError) gracefully
@@ -1935,7 +1973,13 @@ ${skillInstructions}
         return { success: false, cancelled: true };
       }
       console.error('Modal execution error:', err.message);
-      await jobManager.failJob(jobId, err.message);
+      // Network/connection errors are typically recoverable
+      const isNetworkError = err.message.includes('fetch') || err.message.includes('network') || err.message.includes('ECONNREFUSED');
+      await jobManager.failJob(jobId, '実行環境との接続に問題があります', {
+        code: isNetworkError ? 'NETWORK_ERROR' : 'SANDBOX_ERROR',
+        userMessage: '実行環境との接続に問題があります',
+        recoverable: isNetworkError
+      });
       return { success: false, error: err.message };
     }
   }
@@ -2098,9 +2142,27 @@ ${skillInstructions}
 
             resolve({ success: true });
           } else {
-            const errorMsg = errorOutput || output || 'Unknown error';
-            await jobManager.failJob(jobId, errorMsg);
-            resolve({ success: false, error: errorMsg });
+            // Non-zero exit code - use structured error info
+            const errorCodeMap = {
+              124: { code: 'CLI_TIMEOUT', userMessage: '生成に時間がかかりすぎました（5分制限）', recoverable: true },
+              137: { code: 'CLI_KILLED', userMessage: '生成がキャンセルされました', recoverable: true },
+              143: { code: 'CLI_TERMINATED', userMessage: '生成が中断されました', recoverable: true },
+            };
+            const errorInfo = errorCodeMap[code] || {
+              code: 'CLI_GENERAL_ERROR',
+              userMessage: '生成中にエラーが発生しました',
+              recoverable: false
+            };
+            const rawError = errorOutput || output || 'Unknown error';
+            console.error(`Local Claude CLI failed: code=${code}, error=${rawError.substring(0, 200)}`);
+
+            await jobManager.failJob(jobId, errorInfo.userMessage, {
+              code: errorInfo.code,
+              userMessage: errorInfo.userMessage,
+              recoverable: errorInfo.recoverable,
+              exitCode: code
+            });
+            resolve({ success: false, error: errorInfo.userMessage });
           }
         } catch (err) {
           console.error('Error in close handler:', err);
@@ -2110,7 +2172,11 @@ ${skillInstructions}
 
       claude.on('error', async (err) => {
         try {
-          await jobManager.failJob(jobId, err.message);
+          await jobManager.failJob(jobId, '実行環境でエラーが発生しました', {
+            code: 'CLI_SPAWN_ERROR',
+            userMessage: '実行環境でエラーが発生しました',
+            recoverable: false
+          });
           resolve({ success: false, error: err.message });
         } catch (handlerErr) {
           console.error('Error in error handler:', handlerErr);

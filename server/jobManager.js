@@ -182,13 +182,22 @@ class JobManager extends EventEmitter {
     return job;
   }
 
-  // Fail a job
-  async failJob(jobId, error) {
+  // Fail a job (with optional structured error details)
+  async failJob(jobId, error, errorDetails = {}) {
     const job = await db.failJob(jobId, error);
     this.runningJobs.delete(jobId);
     this.emit('jobFailed', job);
-    this.notifySubscribers(jobId, { type: 'failed', job, error });
-    console.log(`Job failed: ${jobId} - ${error}`);
+    // Include structured error details (code, userMessage, recoverable, exitCode)
+    this.notifySubscribers(jobId, {
+      type: 'failed',
+      job,
+      error,
+      code: errorDetails.code || null,
+      userMessage: errorDetails.userMessage || error,
+      recoverable: errorDetails.recoverable || false,
+      exitCode: errorDetails.exitCode || null
+    });
+    console.log(`Job failed: ${jobId} - ${error} (code: ${errorDetails.code || 'none'})`);
     return job;
   }
 

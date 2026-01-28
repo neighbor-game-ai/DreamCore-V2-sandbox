@@ -2131,7 +2131,15 @@ class GameCreatorApp {
 
       case 'failed':
         this.hideStreaming();
-        this.addMessage(`エラー: ${update.error}`, 'error');
+        // Use userMessage (user-friendly) if available, fallback to raw error
+        const errorMessage = update.userMessage || update.error || 'エラーが発生しました';
+        this.addMessage(`エラー: ${errorMessage}`, 'error');
+
+        // Show recovery hint for recoverable errors
+        if (update.recoverable) {
+          this.addMessage('もう一度お試しください', 'system');
+        }
+
         this.updateStatus('connected', '接続中');
         this.isProcessing = false;
         this.currentJobId = null;
@@ -2139,8 +2147,12 @@ class GameCreatorApp {
         this.stopButton.classList.add('hidden');
         // Browser notification
         this.showNotification('⚠️ エラーが発生', {
-          body: update.error || 'ゲーム生成に失敗しました',
+          body: errorMessage,
         });
+        // Log error code for debugging (console only)
+        if (update.code) {
+          console.log(`[Error] code=${update.code}, exitCode=${update.exitCode}, recoverable=${update.recoverable}`);
+        }
         break;
 
       case 'cancelled':
