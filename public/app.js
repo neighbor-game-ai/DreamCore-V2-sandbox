@@ -2368,16 +2368,18 @@ class GameCreatorApp {
     }
 
     // Build final content with attached assets prepended (numbered)
+    // Save attachedAssets before clearing for pendingPrompt support
+    const attachedAssetsCopy = this.attachedAssetsList.slice();
     let finalContent = content;
-    if (this.attachedAssetsList.length > 0) {
-      const assetLines = this.attachedAssetsList.map((asset, index) =>
+    if (attachedAssetsCopy.length > 0) {
+      const assetLines = attachedAssetsCopy.map((asset, index) =>
         `${index + 1}：画像「${asset.name}」を使用: ${asset.url}`
       ).join('\n');
       finalContent = assetLines + '\n\n' + content;
     }
 
     // Display message to user (show attached images as thumbnails)
-    this.addMessage(content, 'user', { attachedAssets: this.attachedAssetsList.slice() });
+    this.addMessage(content, 'user', { attachedAssets: attachedAssetsCopy });
     this.chatInput.value = '';
     this.clearAttachedAssets();
 
@@ -2391,7 +2393,7 @@ class GameCreatorApp {
       type: 'message',
       content: finalContent,
       rawContent: content,  // Original user input (for pendingPrompt restore)
-      attachedAssets: this.attachedAssetsList.slice(),  // For pendingPrompt restore
+      attachedAssets: attachedAssetsCopy,  // For pendingPrompt restore
       debugOptions
     }));
   }
