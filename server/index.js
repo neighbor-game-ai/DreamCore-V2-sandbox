@@ -121,7 +121,7 @@ app.use((req, res, next) => {
       req.path.startsWith('/game/') ||
       req.path.startsWith('/g/') ||
       req.path.startsWith('/api/assets/') ||
-      req.path.startsWith('/api/published-games/')) {
+      req.path.startsWith('/api/published-games')) {
     const origin = req.headers.origin;
     if (origin && ALLOWED_ORIGINS.includes(origin)) {
       res.header('Access-Control-Allow-Origin', origin);
