@@ -81,8 +81,8 @@
         <div class="error" id="error">
             <div>Game not found</div>
         </div>
-        <!-- Security: allow-same-origin removed to prevent iframe from accessing parent -->
-        <iframe id="gameFrame" sandbox="allow-scripts allow-pointer-lock allow-popups" style="display:none;"></iframe>
+        <!-- Security: allow-same-origin intentionally omitted to prevent iframe from accessing parent -->
+        <iframe id="gameFrame" sandbox="allow-scripts allow-pointer-lock allow-popups allow-orientation-lock allow-forms" allow="fullscreen; accelerometer; gyroscope; gamepad; camera; microphone; autoplay" style="display:none;"></iframe>
     </div>
     <script>
         (function() {
