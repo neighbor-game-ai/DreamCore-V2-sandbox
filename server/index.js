@@ -159,7 +159,8 @@ app.get('/api/config', (req, res) => {
   res.set('Cache-Control', 'public, max-age=3600');
   res.json({
     supabaseUrl: SUPABASE_URL,
-    supabaseAnonKey: SUPABASE_ANON_KEY
+    supabaseAnonKey: SUPABASE_ANON_KEY,
+    playDomain: config.PLAY_DOMAIN || 'https://play.dreamcore.gg'
   });
 });
 
@@ -1187,20 +1188,34 @@ const injectPublicGameHtml = (html) => {
   return content;
 };
 
-// GET /g/:gameId - Play page for play.dreamcore.gg (iframe wrapper)
-// GET /g/:gameId/* - Public game file serving for v2.dreamcore.gg
-app.get('/g/:gameId', async (req, res, next) => {
-  // If accessed from play.dreamcore.gg, serve the iframe wrapper
+// GET /game/:gameId - Game detail page on v2.dreamcore.gg
+app.get('/game/:gameId', async (req, res) => {
+  // Only serve on v2 domain (not play domain)
   if (req.isPlayDomain) {
-    return res.sendFile(path.join(__dirname, '..', 'public', 'play-public.html'));
+    return res.status(404).send('Not found');
   }
-  // Otherwise continue to file serving
+  return res.sendFile(path.join(__dirname, '..', 'public', 'game.html'));
+});
+
+// GET /g/:gameId - Redirect to /g/:gameId/index.html on play domain
+app.get('/g/:gameId', async (req, res, next) => {
+  if (!req.isPlayDomain) {
+    return res.status(404).send('Not found');
+  }
+  // Forward to the /* route with index.html
+  req.params[0] = 'index.html';
   next();
 });
 
+// GET /g/:gameId/* - Public game file serving on play.dreamcore.gg only
 app.get('/g/:gameId/*', async (req, res) => {
   const { gameId } = req.params;
   const filename = req.params[0] || 'index.html';
+
+  // Only serve game files on play domain
+  if (!req.isPlayDomain) {
+    return res.status(404).send('Not found');
+  }
 
   // Validate UUID
   if (!isValidUUID(gameId)) {
@@ -1252,9 +1267,9 @@ app.get('/g/:gameId/*', async (req, res) => {
   const binaryExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.mp3', '.wav', '.ogg', '.woff', '.woff2', '.ttf'];
   const isBinary = binaryExtensions.includes(ext);
 
-  // Set CSP header to restrict iframe embedding
-  const playDomain = config.PLAY_DOMAIN || 'https://play.dreamcore.gg';
-  res.setHeader('Content-Security-Policy', `frame-ancestors 'self' ${playDomain}`);
+  // Set CSP header to allow embedding from v2 domain
+  const v2Domain = config.V2_DOMAIN || 'https://v2.dreamcore.gg';
+  res.setHeader('Content-Security-Policy', `frame-ancestors 'self' ${v2Domain}`);
 
   // Try local filesystem first
   if (fs.existsSync(localFilePath)) {

@@ -754,9 +754,9 @@ class PublishPage {
 
       const result = await response.json();
 
-      // Show success and redirect
+      // Show success and redirect to game detail page
       alert('ゲームを登録しました！');
-      window.location.href = `/game.html?id=${result.gameId || this.projectId}`;
+      window.location.href = `/game/${result.gameId}`;
     } catch (error) {
       console.error('Error publishing:', error);
       alert('登録に失敗しました');
