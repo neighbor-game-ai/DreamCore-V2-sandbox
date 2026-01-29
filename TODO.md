@@ -43,13 +43,13 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 - [claude-slack-gif-creator](https://github.com/modal-projects/claude-slack-gif-creator) - 永続 Sandbox、セッション管理
 
 ### 高優先度（Phase 3）
-- [ ] **CIDR Allowlist** - ネットワーク制限改善（Anthropic API のみ許可）
+- [x] **CIDR Allowlist + Proxy** - ネットワーク制限（許可ドメインのみ通信可能）✅ 2026-01-29
 - [x] **Idle Timeout** - 未使用 Sandbox 自動終了（20分、コスト削減）✅ 2026-01-28
-- [ ] **エラー分類改善** - exit_code 追跡、エラータイプ分類
+- [x] **エラー分類改善** - exit_code 追跡、エラータイプ分類 ✅ 2026-01-29
 
 ### 中優先度（Phase 4）
 - [ ] **セッション永続化** - Claude が会話履歴を記憶（`resume` パラメータ）
-- [ ] **API キープロキシ** - Sandbox に API キーを渡さないセキュリティ強化
+- [x] **API キープロキシ** - Sandbox に API キーを渡さないセキュリティ強化 ✅ 2026-01-29
 - [x] **Sandbox 再利用** - プロジェクト単位で Sandbox を維持（20分 TTL）✅ 2026-01-28
 - [ ] **Sandbox 上限** - ユーザーあたり最大3個の制限（Phase 2）
 
@@ -61,6 +61,86 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 ---
 
 ## 作業履歴
+
+### 2026-01-29: API キープロキシ実装
+
+**詳細:** `.claude/logs/2026-01-29-api-key-proxy.md`
+
+**背景:** Modal Sandbox 内の環境変数（ANTHROPIC_API_KEY, GEMINI_API_KEY）がプロンプトインジェクションで漏洩するリスク
+
+**実装内容:**
+- GCE に API Proxy サーバー構築（`/home/notef/api-proxy/`）
+- Let's Encrypt で TLS 証明書取得（`api-proxy.dreamcore.gg`）
+- Modal Proxy で静的 IP 取得、Nginx で IP 制限
+- Modal app.py を `api_proxy_secret` に移行（Sandbox 内に API キーなし）
+- `ANTHROPIC_BASE_URL` / `GEMINI_BASE_URL` 経由でプロキシにアクセス
+
+**アーキテクチャ:**
+```
+Modal Sandbox (API キーなし)
+├── Claude CLI → ANTHROPIC_BASE_URL → GCE Proxy → api.anthropic.com
+└── Image Gen → GEMINI_BASE_URL → GCE Proxy → googleapis.com
+```
+
+**セキュリティ:**
+| 対策 | 内容 |
+|------|------|
+| API キー不在 | Sandbox 環境変数に API キーなし |
+| IP 制限 | Modal Proxy 静的 IP（52.55.224.171）のみ許可 |
+| URL シークレット | `/a/{secret}/` パスで認証 |
+| TLS | Let's Encrypt 証明書 |
+
+---
+
+### 2026-01-29: エラー分類改善
+
+**詳細:** `.claude/logs/2026-01-29-error-classification.md`
+
+**背景:** Claude CLI の終了コードやエラータイプがユーザーに分かりにくかった
+
+**実装内容:**
+- Modal app.py: CLI_ERROR_CODES / API_ERROR_CODES 定数追加
+- Modal app.py: 非ゼロ exit_code で構造化エラーイベント送信
+- jobManager.js: failJob に errorDetails パラメータ追加
+- claudeRunner.js: 構造化エラー情報の抽出と伝達
+- app.js: userMessage 優先表示、recoverable で再試行ヒント
+
+**エラーメッセージ:**
+| エラー | メッセージ | 再試行 |
+|--------|----------|--------|
+| timeout | 生成に時間がかかりすぎました（5分制限） | ✅ |
+| general | 生成中にエラーが発生しました | ❌ |
+| network | ネットワーク接続に問題があります | ✅ |
+| rate_limit | APIの利用制限に達しました | ✅ |
+| sandbox | 実行環境の準備に失敗しました | ❌ |
+
+**テスト機能:** `testError` WebSocket メッセージでエラーをシミュレート可能
+
+---
+
+### 2026-01-29: PROXY統合とSecret化（Modal統合Phase 2）
+
+**詳細:** `.claude/logs/2026-01-29-proxy-integration.md`
+
+**背景:** Modal Sandbox の外部通信を制限し、許可されたAPIのみアクセス可能にする
+
+**実装内容:**
+- GCE Squid プロキシ経由で全外部通信を統一
+- 許可ドメイン: `api.anthropic.com`, `generativelanguage.googleapis.com`, `api.replicate.com`
+- プロキシ認証情報を Modal Secret (`dreamcore-proxy`) に移行
+- Sandbox: CIDR allowlist でプロキシIPのみ許可 + 環境変数で PROXY 設定
+- Modal Function: 環境変数で PROXY 設定（httpx が自動読取）
+
+**発見した問題:**
+- `httpx.Client(proxy=...)` パラメータが Modal 環境で動作しない → 環境変数経由で解決
+
+**最終構成:**
+```
+Modal Sandbox/Function → GCE Squid Proxy → 許可されたAPI
+                         (Basic認証 + ドメイン制限)
+```
+
+---
 
 ### 2026-01-28: Sandbox 再利用機能（リクエスト高速化）
 
@@ -92,17 +172,18 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 **問題:** `maxConcurrentPerUser: 1` の制限により、複数プロジェクトで同時にAI生成できない。エラーになるだけで対処法がわからない。
 
-**実装内容:**
+**初期設計（試行）:** 割り込み機能（OK で既存ジョブをキャンセルし再送信）を試みたが、UI状態管理の複雑さから断念。
+
+**最終実装（通知のみ）:**
 - `limitExceeded` イベント: 実行中のジョブ情報とともに送信
-- `cancelJob` ハンドラ: ジョブのキャンセルとスロット解放
-- 確認モーダル: 「『{projectName}』の生成を中断して、新しい生成を始めますか？」
-- 自動再送信: キャンセル成功後、保留中のプロンプトを自動で送信
+- 通知メッセージ: 「『{projectName}』で生成中です。完了後にもう一度お試しください。」
+- 「閉じる」ボタンのみ（割り込み不可）
 
 **ユーザーフロー:**
 1. プロジェクトAで生成中
-2. プロジェクトBで生成開始 → 確認メッセージ表示
-3. OK → Aをキャンセルし、Bの生成を自動開始
-4. キャンセル → 何もしない（Aは継続）
+2. プロジェクトBで生成開始 → 通知メッセージ表示
+3. ユーザーは閉じるボタンで通知を閉じ、Aの完了を待つ
+4. Aが完了後、改めてBで生成
 
 ---
 
@@ -426,4 +507,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-01-28 (ローカルキャッシュ実装)
+最終更新: 2026-01-29 (API キープロキシ実装)

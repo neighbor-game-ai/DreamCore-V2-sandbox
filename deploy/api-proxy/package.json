@@ -1,0 +1,19 @@
+{
+  "name": "dreamcore-api-proxy",
+  "version": "1.0.0",
+  "description": "API Key Proxy for DreamCore Modal Sandbox",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "http-proxy-middleware": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
