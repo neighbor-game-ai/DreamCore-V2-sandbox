@@ -75,10 +75,10 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
   - `POST /api/published-games/:id/play` - プレイ数カウント（認証不要）
   - `GET /api/published-games` - 公開ゲーム一覧
   - `GET /g/:gameId/*` - 公開ゲームファイル配信（認証不要）
-- [ ] `/discover` ページ実装
-- [ ] フロントエンド公開 UI 実装（公開ボタン等）
-- [ ] Nginx 設定（v2.dreamcore.gg / play.dreamcore.gg）
-- [ ] SSL 証明書設定（Let's Encrypt）
+- [x] Nginx 設定（v2.dreamcore.gg / play.dreamcore.gg）✅ 2026-01-30
+- [x] SSL 証明書設定（Let's Encrypt）✅ 2026-01-30
+- [x] フロントエンド公開 UI（既存の publish.html が対応済み）✅ 2026-01-30
+- [ ] `/discover` ページ実装（公開ゲーム一覧UI）
 
 ---
 
@@ -111,6 +111,35 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 ---
 
 ## 作業履歴
+
+### 2026-01-30: V2 ゲーム公開・表示機能実装
+
+**詳細:** `.claude/logs/2026-01-30-published-games-feature.md`
+
+**実装内容:**
+- `published_games` テーブル作成（Supabase）
+- 公開 API エンドポイント 6個実装
+- `/g/:gameId/*` 公開ゲームファイル配信ルート
+- `play-public.html` iframe ラッパー（play.dreamcore.gg 用）
+- DNS 設定（v2.dreamcore.gg, play.dreamcore.gg → 35.200.79.157）
+- SSL 証明書取得（Let's Encrypt）
+- Nginx 設定（両ドメイン → localhost:3005）
+
+**セキュリティ対応:**
+- パストラバーサル対策（isPathSafe）
+- iframe sandbox（allow-same-origin 削除）
+- CORS 設定（play.dreamcore.gg からのアクセス許可）
+- CSP frame-ancestors 設定
+- RLS で unlisted を保護（service_role 経由のみ）
+
+**発見した問題:**
+- CORS パスマッチングが trailing slash 必須だった → 修正
+
+**テスト結果:** CLI テスト全項目合格
+
+**プレイURL形式:** `https://play.dreamcore.gg/g/{gameId}`
+
+---
 
 ### 2026-01-29: サムネイル生成修正
 
@@ -596,4 +625,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-01-29 (サムネイル生成修正)
+最終更新: 2026-01-30 (V2 ゲーム公開・表示機能実装)
