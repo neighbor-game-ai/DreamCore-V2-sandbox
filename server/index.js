@@ -1876,113 +1876,99 @@ ${specContent ? `仕様書:\n${specContent.slice(0, 3000)}\n` : ''}${refImageIns
 ${limitedAssetPaths.length > 0 ? `- 参照画像が${limitedAssetPaths.length}枚提供されるので、それぞれをどう使うか指示する
 - 「参照画像1の○○を～に配置」のように具体的に指示` : ''}
 
-出力: プロンプトのみ（説明不要）
-
-プロンプト:`;
+出力: プロンプトのみ（説明不要）`;
 
     const { spawn } = require('child_process');
 
-    // Step 1: Generate image prompt with Claude
-    const claudePrompt = spawn('claude', [
-      '--print',
-      '--model', 'sonnet',
-      '--dangerously-skip-permissions'
-    ], {
+    // Step 1: Generate image prompt with Modal Haiku
+    console.log('[Thumbnail] Generating prompt with Modal Haiku...');
+    let imagePrompt = '';
+    try {
+      const haikuResult = await modalClient.chatHaiku({
+        message: promptGeneratorPrompt,
+        game_spec: '',
+        conversation_history: [],
+      });
+      imagePrompt = (haikuResult.message || '')
+        .replace(/^["'`]+|["'`]+$/g, '')
+        .replace(/^\*+|\*+$/g, '')
+        .trim();
+      console.log('[Thumbnail] Haiku generated prompt:', imagePrompt.slice(0, 200) + '...');
+    } catch (haikuErr) {
+      console.error('[Thumbnail] Haiku error, using fallback prompt:', haikuErr.message);
+      // Fallback: use a simple prompt based on title/spec
+      imagePrompt = `ゲーム「${title || req.project.name}」のサムネイル。縦長9:16、アプリストア向け高品質イラスト。`;
+    }
+
+    if (imagePrompt.length < 20) {
+      imagePrompt = `ゲーム「${title || req.project.name}」のサムネイル。縦長9:16、アプリストア向け高品質イラスト。`;
+    }
+
+    console.log('[Thumbnail] Image prompt:', imagePrompt);
+    console.log('[Thumbnail] Reference images:', limitedAssetPaths.length);
+
+    // Step 2: Generate image with Nano Banana
+    const outputPath = path.join(projectDir, 'thumbnail.png');
+    const nanoBananaScript = path.join(__dirname, '..', '.claude', 'skills', 'nanobanana', 'generate.py');
+    const nanoBananaVenvPython = path.join(__dirname, '..', '.claude', 'skills', 'nanobanana', '.venv', 'bin', 'python');
+    const nanoBananaPython = fs.existsSync(nanoBananaVenvPython) ? nanoBananaVenvPython : 'python3';
+
+    const nanoBananaArgs = [
+      nanoBananaScript,
+      imagePrompt,
+      '-a', '9:16',
+      '-o', outputPath
+    ];
+
+    if (limitedAssetPaths.length > 0) {
+      nanoBananaArgs.push('--refs', ...limitedAssetPaths);
+    }
+
+    const nanoBanana = spawn(nanoBananaPython, nanoBananaArgs, {
       cwd: process.cwd(),
       env: { ...process.env }
     });
 
-    claudePrompt.stdin.write(promptGeneratorPrompt);
-    claudePrompt.stdin.end();
-
-    let imagePrompt = '';
-    claudePrompt.stdout.on('data', (data) => {
-      imagePrompt += data.toString();
+    let nbOutput = '';
+    nanoBanana.stdout.on('data', (data) => {
+      nbOutput += data.toString();
+      console.log('[NanoBanana]', data.toString());
+    });
+    nanoBanana.stderr.on('data', (data) => {
+      console.error('[NanoBanana Error]', data.toString());
     });
 
-    claudePrompt.on('close', async (code) => {
-      const rawOutput = imagePrompt.trim();
-      console.log('[Thumbnail] Raw Claude output:', rawOutput);
+    nanoBanana.on('close', async (code) => {
+      if (code === 0 && fs.existsSync(outputPath)) {
+        // Convert PNG to WebP for smaller file size
+        const webpPath = path.join(projectDir, 'thumbnail.webp');
+        try {
+          const originalSize = fs.statSync(outputPath).size;
+          await sharp(outputPath)
+            .resize(1080, 1920, { fit: 'inside', withoutEnlargement: true })
+            .webp({ quality: 85 })
+            .toFile(webpPath);
+          const newSize = fs.statSync(webpPath).size;
+          console.log(`[Thumbnail] Converted to WebP: ${originalSize} -> ${newSize} bytes`);
 
-      imagePrompt = rawOutput
-        .replace(/^["'`]+|["'`]+$/g, '')
-        .replace(/^\*+|\*+$/g, '')
-        .trim();
-
-      if (imagePrompt.length < 20) {
-        imagePrompt = rawOutput;
-      }
-
-      console.log('[Thumbnail] Image prompt:', imagePrompt);
-      console.log('[Thumbnail] Reference images:', limitedAssetPaths.length);
-
-      // Step 2: Generate image with Nano Banana
-      const outputPath = path.join(projectDir, 'thumbnail.png');
-      const nanoBananaScript = path.join(__dirname, '..', '.claude', 'skills', 'nanobanana', 'generate.py');
-      const nanoBananaVenvPython = path.join(__dirname, '..', '.claude', 'skills', 'nanobanana', '.venv', 'bin', 'python');
-      const nanoBananaPython = fs.existsSync(nanoBananaVenvPython) ? nanoBananaVenvPython : 'python3';
-
-      const nanoBananaArgs = [
-        nanoBananaScript,
-        imagePrompt,
-        '-a', '9:16',
-        '-o', outputPath
-      ];
-
-      if (limitedAssetPaths.length > 0) {
-        nanoBananaArgs.push('--refs', ...limitedAssetPaths);
-      }
-
-      const nanoBanana = spawn(nanoBananaPython, nanoBananaArgs, {
-        cwd: process.cwd(),
-        env: { ...process.env }
-      });
-
-      let nbOutput = '';
-      nanoBanana.stdout.on('data', (data) => {
-        nbOutput += data.toString();
-        console.log('[NanoBanana]', data.toString());
-      });
-      nanoBanana.stderr.on('data', (data) => {
-        console.error('[NanoBanana Error]', data.toString());
-      });
-
-      nanoBanana.on('close', async (code) => {
-        if (code === 0 && fs.existsSync(outputPath)) {
-          // Convert PNG to WebP for smaller file size
-          const webpPath = path.join(projectDir, 'thumbnail.webp');
-          try {
-            const originalSize = fs.statSync(outputPath).size;
-            await sharp(outputPath)
-              .resize(1080, 1920, { fit: 'inside', withoutEnlargement: true })
-              .webp({ quality: 85 })
-              .toFile(webpPath);
-            const newSize = fs.statSync(webpPath).size;
-            console.log(`[Thumbnail] Converted to WebP: ${originalSize} -> ${newSize} bytes`);
-
-            // Remove original PNG
-            fs.unlinkSync(outputPath);
-          } catch (convErr) {
-            console.error('[Thumbnail] WebP conversion failed, keeping PNG:', convErr.message);
-          }
-
-          // Commit thumbnail to Git (non-blocking, safe)
-          gitCommitAsync(projectDir, 'Update thumbnail');
-
-          // Return URL to the generated thumbnail
-          const thumbnailUrl = `/api/projects/${projectId}/thumbnail?t=${Date.now()}`;
-          res.json({ success: true, thumbnailUrl });
-        } else {
-          res.status(500).json({ error: 'Failed to generate thumbnail', output: nbOutput });
+          // Remove original PNG
+          fs.unlinkSync(outputPath);
+        } catch (convErr) {
+          console.error('[Thumbnail] WebP conversion failed, keeping PNG:', convErr.message);
         }
-      });
 
-      nanoBanana.on('error', (err) => {
-        res.status(500).json({ error: err.message });
-      });
+        // Commit thumbnail to Git (non-blocking, safe)
+        gitCommitAsync(projectDir, 'Update thumbnail');
+
+        // Return URL to the generated thumbnail
+        const thumbnailUrl = `/api/projects/${projectId}/thumbnail?t=${Date.now()}`;
+        res.json({ success: true, thumbnailUrl });
+      } else {
+        res.status(500).json({ error: 'Failed to generate thumbnail', output: nbOutput });
+      }
     });
 
-    claudePrompt.on('error', (err) => {
+    nanoBanana.on('error', (err) => {
       res.status(500).json({ error: err.message });
     });
 
