@@ -1,101 +1,77 @@
-# 同時実行制限時の UX 改善
+# 同時実行制限 UX 改善
 
 **日付:** 2026-01-28
 **作業者:** Claude
 
-## 実施内容
+## 背景
 
-### 背景
+`maxConcurrentPerUser: 1` の制限により、ユーザーが複数プロジェクトで同時にAI生成を試みるとエラーになる。エラーメッセージだけでは何が起きているか分かりにくく、UX改善が必要だった。
 
-- `maxConcurrentPerUser: 1` の制限により、複数プロジェクトで同時にAI生成ができなかった
-- ユーザーが別プロジェクトで生成を開始しようとすると、単にエラーになるだけだった
-- UX を改善し、実行中のジョブをキャンセルして新しい生成を開始する選択肢を提供
+## 初期設計（試行）
+
+当初は「割り込み機能」を実装しようとした:
+- 確認モーダル: 「『{projectName}』の生成を中断して、新しい生成を始めますか？」
+- OK → 既存ジョブをキャンセルし、新しい生成を自動開始
+- キャンセル → 何もしない
+
+### 発生した問題
+
+1. **sendMessage() のパラメータ問題**: `sendMessage()` は引数を受け付けず、`chatInput.value` から読み取る
+2. **attachedAssets が空になる**: `clearAttachedAssets()` が先に呼ばれて配列が空に
+3. **Modal プロセスが継続**: fetch キャンセル用の AbortController が未実装
+4. **スロット解放タイミング**: `cancelJob` ハンドラで早期に `releaseSlot()` を呼ぶと2重実行
+5. **isProcessing ブロック**: 再送前に `isProcessing = false` にしないと送信がブロック
+6. **モーダルの重複表示**: limitExceeded が複数回発火
+
+これらの問題を順次修正したが、割り込み→再送信のフローが複雑になりすぎたため、**シンプルな通知方式に変更**。
+
+## 最終実装（通知のみ）
+
+割り込み機能を削除し、シンプルな通知メッセージを表示:
+
+```
+『プロジェクト名』で生成中です。
+完了後にもう一度お試しください。
+
+[閉じる]
+```
 
 ### 実装内容
 
-#### 1. バックエンド: アクティブジョブ取得機能
-
-**database-supabase.js:**
-- `getActiveJobsForUser(userId)` 関数を追加
-- jobs テーブルと projects テーブルを JOIN して、実行中ジョブのプロジェクト名を取得
-
-```javascript
-// 返り値の形式
-[{
-  jobId: 'uuid',
-  projectId: 'uuid',
-  projectName: 'プロジェクト名',
-  status: 'processing',
-  createdAt: '2026-01-28T...'
-}]
-```
-
-#### 2. バックエンド: JobManager 拡張
-
-**jobManager.js:**
-- `getActiveJobsForUser()` メソッドを追加（DB 呼び出しのラッパー）
-- `updateJobInfo()` メソッドを追加（ジョブ情報の更新用）
-- `registerProcess()` を拡張して userId/projectId/projectName を追跡
-
-#### 3. バックエンド: WebSocket ハンドラ
-
-**index.js:**
-- `USER_LIMIT_EXCEEDED` 発生時に `limitExceeded` イベントを送信
-  - 実行中のジョブ一覧
-  - 保留中のプロンプト情報
-- `cancelJob` メッセージハンドラを追加
-  - 所有権の検証
-  - ジョブのキャンセル
-  - スロットの解放
-  - `jobCancelled` イベントの送信
-
-#### 4. フロントエンド: 確認モーダル
-
-**app.js:**
-- `pendingLimitExceededPrompt` 状態を追加
-- `handleLimitExceeded()` メソッドを追加
-  - チャット内に確認メッセージを表示
-  - 「OK」「キャンセル」ボタン
-- `limitExceeded` と `jobCancelled` の WebSocket ハンドラを追加
-- キャンセル成功後、保留中のプロンプトを自動再送信
+1. **`limitExceeded` イベント**: 実行中のジョブ情報を含めて送信
+2. **通知表示**: プロジェクト名と「閉じる」ボタンのみ
+3. **状態リセット**: `isProcessing = false`, ストリーミング表示を非表示
+4. **重複防止**: 既存の通知を削除してから新規表示
 
 ### ユーザーフロー
 
-```
 1. プロジェクトAで生成中
-2. プロジェクトBで新しい生成を開始しようとする
-3. 確認メッセージが表示:
-   『プロジェクトA』の生成を中断して、
-   新しい生成を始めますか？
-   [OK] [キャンセル]
-
-4a. OKの場合:
-   - プロジェクトAのジョブがキャンセルされる
-   - プロジェクトBの生成が自動的に開始される
-
-4b. キャンセルの場合:
-   - 何も起こらない（プロジェクトAは継続）
-```
+2. プロジェクトBで生成開始 → 通知メッセージ表示
+3. ユーザーは閉じるボタンで通知を閉じ、Aの完了を待つ
+4. Aが完了後、改めてBで生成
 
 ## 変更ファイル一覧
 
 | ファイル | 変更内容 |
 |----------|----------|
+| `public/app.js` | `handleLimitExceeded()` 実装（通知表示） |
+| `server/index.js` | `limitExceeded` イベント送信、`cancelJob` ハンドラ |
+| `server/jobManager.js` | `getActiveJobsForUser()` 呼び出し、デバッグログ追加 |
+| `server/claudeRunner.js` | AbortController 実装（キャンセル対応） |
+| `server/modalClient.js` | AbortSignal サポート |
 | `server/database-supabase.js` | `getActiveJobsForUser()` 関数追加 |
-| `server/jobManager.js` | `getActiveJobsForUser()`, `updateJobInfo()` 追加、`registerProcess()` 拡張 |
-| `server/index.js` | `limitExceeded` イベント送信、`cancelJob` ハンドラ追加 |
-| `public/app.js` | `handleLimitExceeded()` 追加、WebSocket ハンドラ追加 |
-
-## テスト方法
-
-1. プロジェクトAを開いて生成を開始
-2. 別タブでプロジェクトBを開いて生成を開始
-3. 確認メッセージが表示されることを確認
-4. 「OK」を押してプロジェクトAがキャンセルされ、Bの生成が始まることを確認
-5. 同じ流れで「キャンセル」を押して何も起こらないことを確認
 
 ## 学び・注意点
 
-- WebSocket メッセージの型は DreamCore-V2 との互換性を維持
-- `pendingPrompt` をサーバーからクライアントに渡すことで、クライアント側で再送信が容易に
-- スロットの解放は `releaseSlot()` を明示的に呼び出す必要がある
+1. **複雑なUI状態管理は避ける**: 割り込み→再送信のような多段階フローは状態管理が難しい
+2. **シンプルが最善**: 通知のみの方がバグが少なく、ユーザーにも分かりやすい
+3. **AbortController は有用**: fetch のキャンセルには必須（将来のキャンセル機能で活用可能）
+4. **スロット管理は一箇所で**: `finally` ブロックでの解放が最も安全
+
+## 将来の拡張可能性
+
+AbortController の実装は残してあるため、将来的に割り込み機能を再検討する場合の基盤は整っている。ただし、UIフローの再設計が必要。
+
+## コミット
+
+- `4c13d66 feat: 同時実行制限を割り込み不可に変更`
