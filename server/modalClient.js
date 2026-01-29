@@ -413,6 +413,42 @@ class ModalClient {
   }
 
   /**
+   * Handle chat using Haiku on Modal
+   * @param {Object} params
+   * @param {string} params.message - User's question
+   * @param {string} [params.game_spec] - SPEC.md content
+   * @param {Array} [params.conversation_history] - Previous messages
+   * @returns {Promise<Object>} { message, suggestions }
+   */
+  async chatHaiku({ message, game_spec = '', conversation_history = [] }) {
+    const endpoint = getEndpoint(
+      null, // No explicit config, derive from base
+      this.baseEndpoint,
+      'chat_haiku'
+    );
+    if (!endpoint) {
+      throw new Error('Modal chat_haiku endpoint is not configured');
+    }
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ message, game_spec, conversation_history }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`Modal chat_haiku error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    return {
+      message: data.message || '',
+      suggestions: data.suggestions || [],
+    };
+  }
+
+  /**
    * Generate code using Gemini on Modal (fast path)
    * @param {Object} params
    * @param {string} params.user_id - User ID (UUID)
