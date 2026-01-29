@@ -3,7 +3,7 @@
  * Uses Modal Haiku endpoint (via modalClient)
  */
 const config = require('./config');
-const { getModalClient } = require('./modalClient');
+const modalClient = require('./modalClient');
 
 class ClaudeChat {
   constructor() {
@@ -105,8 +105,7 @@ class ClaudeChat {
     const startTime = Date.now();
 
     try {
-      const client = getModalClient();
-      const result = await client.chatHaiku({
+      const result = await modalClient.chatHaiku({
         message: userMessage,
         game_spec: gameSpec || '',
         conversation_history: conversationHistory,
