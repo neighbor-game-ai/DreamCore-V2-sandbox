@@ -133,6 +133,48 @@ v2.dreamcore.gg からのみ iframe 埋め込み可能。
 
 ---
 
+## 追加作業
+
+### Discover ページ（Coming Soon）
+
+- `public/discover.html` を Coming Soon 表示に変更
+- 他ページと同じ構造に統一（認証チェック、Supabase lazy loader、5タブ bottom-nav）
+- タブナビゲーションのクリックハンドラ追加
+
+### ブランド名統一
+
+- `create.html`: GAME CREATOR → **DreamCore**
+- `game.html`: GAME CREATOR → **DreamCore**
+
+### フォントサイズ調整
+
+`.brand-text` の文字が小さすぎたため拡大:
+
+| 環境 | 変更前 | 変更後 |
+|------|--------|--------|
+| デスクトップ | 0.75rem (12px) | 1.125rem (18px) |
+| モバイル | 0.6875rem (11px) | 1rem (16px) |
+| letter-spacing | 0.12em | 0.02em |
+
+### TODO 追加
+
+- Bottom Navigation 共通化（各HTMLに直接記述 → JS動的挿入 or Web Components）
+
+---
+
+## 変更ファイル一覧（追加分）
+
+| ファイル | 変更内容 |
+|----------|----------|
+| `public/discover.html` | Coming Soon + 統一構造 |
+| `public/create.html` | ブランド名変更 |
+| `public/game.html` | ブランド名変更 |
+| `public/style.css` | brand-text フォントサイズ拡大 |
+| `docs/IFRAME-SECURITY.md` | 新規作成（iframe セキュリティガイド） |
+| `TODO.md` | Bottom Navigation 共通化を追加 |
+
+---
+
 ## 参考
 
 - [itch.io のセキュリティモデル](https://itch.io/docs/creators/html5)
