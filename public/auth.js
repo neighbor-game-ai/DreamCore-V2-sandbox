@@ -105,12 +105,6 @@ async function initAuth() {
 
   supabaseClient = window.supabase.createClient(config.url, config.anonKey);
 
-  // Load cached session immediately (no network)
-  const cachedSession = getCachedSession();
-  if (cachedSession) {
-    currentSession = cachedSession;
-  }
-
   // Listen for auth state changes
   supabaseClient.auth.onAuthStateChange((event, session) => {
     console.log('[Auth] State changed:', event);
@@ -118,6 +112,29 @@ async function initAuth() {
     setCachedSession(session);
     authStateListeners.forEach(listener => listener(event, session));
   });
+
+  // Handle OAuth callback: exchange code for session
+  const url = new URL(window.location.href);
+  if (url.searchParams.has('code')) {
+    console.log('[Auth] OAuth callback detected, exchanging code for session');
+    const { data, error } = await supabaseClient.auth.exchangeCodeForSession(url.toString());
+    if (error) {
+      console.error('[Auth] Code exchange error:', error.message);
+    } else if (data.session) {
+      currentSession = data.session;
+      setCachedSession(data.session);
+      // Clean up URL (remove code parameter)
+      url.searchParams.delete('code');
+      window.history.replaceState({}, '', url.pathname + url.search);
+      return supabaseClient;
+    }
+  }
+
+  // Load cached session immediately (no network)
+  const cachedSession = getCachedSession();
+  if (cachedSession) {
+    currentSession = cachedSession;
+  }
 
   // If no cached session, fetch from Supabase (this is slow)
   if (!currentSession) {
