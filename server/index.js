@@ -1198,13 +1198,12 @@ app.get('/game/:gameId', async (req, res) => {
 });
 
 // GET /g/:gameId - Redirect to /g/:gameId/index.html on play domain
-app.get('/g/:gameId', async (req, res, next) => {
+app.get('/g/:gameId', async (req, res) => {
   if (!req.isPlayDomain) {
     return res.status(404).send('Not found');
   }
-  // Forward to the /* route with index.html
-  req.params[0] = 'index.html';
-  next();
+  // Redirect to index.html
+  return res.redirect(`/g/${req.params.gameId}/index.html`);
 });
 
 // GET /g/:gameId/* - Public game file serving on play.dreamcore.gg only
