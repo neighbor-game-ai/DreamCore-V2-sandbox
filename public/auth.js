@@ -117,15 +117,29 @@ async function initAuth() {
   const url = new URL(window.location.href);
   if (url.searchParams.has('code')) {
     console.log('[Auth] OAuth callback detected, exchanging code for session');
-    const { data, error } = await supabaseClient.auth.exchangeCodeForSession(url.toString());
-    if (error) {
-      console.error('[Auth] Code exchange error:', error.message);
-    } else if (data.session) {
-      currentSession = data.session;
-      setCachedSession(data.session);
-      // Clean up URL (remove code parameter)
-      url.searchParams.delete('code');
-      window.history.replaceState({}, '', url.pathname + url.search);
+    try {
+      const { data, error } = await supabaseClient.auth.exchangeCodeForSession(url.toString());
+      if (error) {
+        console.error('[Auth] Code exchange error:', error.message);
+        // Code might already be exchanged by onAuthStateChange, try getSession
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+          console.log('[Auth] Got session from getSession after code exchange error');
+          currentSession = session;
+          setCachedSession(session);
+        }
+      } else if (data.session) {
+        console.log('[Auth] Code exchange successful');
+        currentSession = data.session;
+        setCachedSession(data.session);
+      }
+    } catch (e) {
+      console.error('[Auth] Code exchange exception:', e);
+    }
+    // Clean up URL (remove code parameter) regardless of result
+    url.searchParams.delete('code');
+    window.history.replaceState({}, '', url.pathname + url.search);
+    if (currentSession) {
       return supabaseClient;
     }
   }
