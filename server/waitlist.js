@@ -87,9 +87,12 @@ function setupRoutes(app) {
    * Response: { allowed: boolean, status: 'pending'|'approved'|null }
    */
   app.get('/api/check-access', async (req, res) => {
+    console.log('[Waitlist] /api/check-access called');
+
     // Authorization ヘッダーからトークンを取得
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('[Waitlist] No auth header');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -100,10 +103,13 @@ function setupRoutes(app) {
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
       if (error || !user) {
+        console.log('[Waitlist] Invalid token:', error?.message);
         return res.status(401).json({ error: 'Invalid token' });
       }
 
+      console.log('[Waitlist] User:', user.email);
       const result = await checkUserAccess(user.email);
+      console.log('[Waitlist] Result:', result);
       res.json(result);
     } catch (err) {
       console.error('[Waitlist] Check access error:', err.message);
