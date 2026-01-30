@@ -275,7 +275,10 @@ class GeminiClient {
 
           // Parse the complete JSON response
           try {
-            const result = JSON.parse(fullText);
+            // Sanitize control characters that may break JSON parsing
+            // This handles cases where Gemini outputs unescaped control chars in strings
+            const sanitizedText = fullText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+            const result = JSON.parse(sanitizedText);
 
             // Log Gemini output for debugging
             console.log('\n========== Gemini Response ==========');
@@ -391,7 +394,9 @@ class GeminiClient {
 
         res.on('end', () => {
           try {
-            const response = JSON.parse(data);
+            // Sanitize control characters
+            const sanitizedData = data.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+            const response = JSON.parse(sanitizedData);
 
             if (response.error) {
               console.error('Gemini Image API error:', response.error);
