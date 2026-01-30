@@ -50,7 +50,7 @@ class PublishPage {
     await this.loadProjectData();
     await this.loadPublishData();
     this.updateUI();
-    this.loadExistingMovie();
+    // this.loadExistingMovie(); // Movie feature disabled
   }
 
   bindElements() {
@@ -157,7 +157,7 @@ class PublishPage {
     this.regenerateTagsBtn.addEventListener('click', () => this.regenerateTags());
     this.regenerateThumbnailBtn.addEventListener('click', () => this.regenerateThumbnail());
     this.uploadThumbnailBtn.addEventListener('click', () => this.uploadThumbnail());
-    this.generateMovieBtn.addEventListener('click', () => this.generateMovie());
+    // this.generateMovieBtn?.addEventListener('click', () => this.generateMovie()); // Movie feature disabled
 
     // Publish
     this.publishButton.addEventListener('click', () => this.publish());
