@@ -80,7 +80,8 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--gray-50);
+            /* Slightly darker background to make game portal stand out */
+            background: var(--gray-100);
             color: var(--gray-900);
             display: flex;
             flex-direction: column;
@@ -181,15 +182,17 @@
             background: var(--gray-200);
         }
 
-        /* ===== Game Section ===== */
+        /* ===== Game Section - Portal to Play ===== */
         .game-section {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: var(--s-16);
-            padding-bottom: calc(var(--s-16) + 64px + env(safe-area-inset-bottom));
+            padding: var(--s-12);
+            padding-bottom: calc(var(--s-12) + 64px + env(safe-area-inset-bottom));
             min-height: 0;
+            /* Dark backdrop makes game "pop" */
+            background: linear-gradient(180deg, var(--gray-100) 0%, #E0E0E0 100%);
         }
 
         .game-container {
@@ -197,10 +200,16 @@
             height: 100%;
             max-width: 100%;
             max-height: 100%;
-            border-radius: var(--r-16);
+            /* Larger radius for "portal" feel */
+            border-radius: var(--r-24);
             overflow: hidden;
             background: var(--black);
-            box-shadow: 0 4px 32px rgba(0, 0, 0, 0.12);
+            /* Deep layered shadow for floating effect */
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.04),
+                0 8px 16px rgba(0, 0, 0, 0.08),
+                0 24px 48px rgba(0, 0, 0, 0.12),
+                0 0 0 1px rgba(0, 0, 0, 0.04);
             position: relative;
             /* Disable text selection and tap highlight */
             -webkit-user-select: none;
@@ -209,6 +218,19 @@
             user-select: none;
             -webkit-touch-callout: none;
             -webkit-tap-highlight-color: transparent;
+            /* Subtle animation on load */
+            animation: portalAppear 0.4s var(--ease-out);
+        }
+
+        @keyframes portalAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         .game-frame {
@@ -221,6 +243,17 @@
             -webkit-touch-callout: none;
             outline: none;
             touch-action: manipulation;
+        }
+
+        /* Inner glow effect for portal depth */
+        .game-container::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: var(--r-24);
+            /* Subtle inner border for depth */
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+            pointer-events: none;
         }
 
         .game-frame:focus,
@@ -322,7 +355,7 @@
         .loading-overlay {
             position: fixed;
             inset: 0;
-            background: var(--gray-50);
+            background: var(--gray-100);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -337,19 +370,20 @@
         }
 
         .loading-spinner {
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
             border: 3px solid var(--gray-200);
             border-top-color: var(--red);
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: var(--s-12);
+            animation: spin 0.8s linear infinite;
+            margin-bottom: var(--s-16);
         }
 
         .loading-text {
             color: var(--gray-400);
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
+            letter-spacing: 0.02em;
         }
 
         @keyframes spin {
@@ -360,7 +394,7 @@
         .error-overlay {
             position: fixed;
             inset: 0;
-            background: var(--gray-50);
+            background: var(--gray-100);
             display: none;
             flex-direction: column;
             align-items: center;
