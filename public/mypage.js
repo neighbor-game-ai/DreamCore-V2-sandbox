@@ -111,7 +111,8 @@ class MyPageApp {
 
   async loadProjects() {
     try {
-      const response = await DreamCoreAuth.authFetch('/api/projects');
+      // Only show published games on mypage
+      const response = await DreamCoreAuth.authFetch('/api/projects?published=true');
       if (response.ok) {
         const data = await response.json();
         this.projects = data.projects || [];
@@ -167,7 +168,7 @@ class MyPageApp {
             </div>
           </div>
           <div class="mypage-case-info">
-            <div class="mypage-empty-case-text">新しいゲーム</div>
+            <div class="mypage-empty-case-text">ゲームを公開</div>
           </div>
         </div>
       `;

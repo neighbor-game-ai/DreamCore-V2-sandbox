@@ -2053,7 +2053,27 @@ wss.on('connection', (ws) => {
 // NOTE: /api/project/:projectId removed - use /api/projects/:projectId instead
 
 // Get all projects for a user
+// Query params:
+//   ?published=true - Only return projects that have been published
 app.get('/api/projects', authenticate, async (req, res) => {
+  const publishedOnly = req.query.published === 'true';
+
+  if (publishedOnly) {
+    // Get only published games
+    const publishedGames = await db.getPublishedGamesByUserId(req.supabase, req.user.id);
+    const projects = publishedGames.map(g => ({
+      id: g.project_id,
+      name: g.title,
+      description: g.description || '',
+      isPublic: true,
+      isPublished: true,
+      publishedGameId: g.id,
+      createdAt: g.published_at,
+      updatedAt: g.updated_at
+    }));
+    return res.json({ projects });
+  }
+
   const projects = await userManager.getProjects(req.supabase, req.user.id);
   res.json({ projects });
 });
