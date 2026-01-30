@@ -1447,6 +1447,13 @@ wss.on('connection', (ws) => {
           }
           currentProjectId = data.projectId;
 
+          // Sync files from Modal to local for fast preview (non-blocking)
+          if (config.USE_MODAL) {
+            userManager.syncFromModal(userId, currentProjectId).catch(err => {
+              console.error(`[selectProject] syncFromModal failed for ${currentProjectId}:`, err.message);
+            });
+          }
+
           // Get conversation history
           const history = await userManager.getConversationHistory(userSupabase, userId, currentProjectId);
 
