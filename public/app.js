@@ -3354,9 +3354,9 @@ class GameCreatorApp {
           </svg>
         </div>
         <div class="quota-error-content">
-          <div class="quota-error-title">上限に達しました</div>
-          <div class="quota-error-detail">${limitType}は1日${error.limit}回まで</div>
-          <div class="quota-error-reset">リセット: 明日 ${resetTimeStr}</div>
+          <div class="quota-error-title">本日の${limitType}上限に達しました</div>
+          <div class="quota-error-detail">1日${error.limit}回までご利用いただけます</div>
+          <div class="quota-error-reset">リセット時刻: 明日 ${resetTimeStr}（日本時間）</div>
         </div>
       </div>
     `;

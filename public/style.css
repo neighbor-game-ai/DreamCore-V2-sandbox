@@ -7591,19 +7591,14 @@ body[data-page="notifications"] {
 
 .quota-error-icon {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #F59E0B;
   border-radius: var(--r-8);
   color: white;
-}
-
-.quota-error-icon svg {
-  width: 18px;
-  height: 18px;
 }
 
 .quota-error-content {
@@ -7627,6 +7622,17 @@ body[data-page="notifications"] {
 .quota-error-reset {
   font-size: 0.75rem;
   color: #D97706;
+}
+
+/* Quota Error - Mobile */
+@media (max-width: 480px) {
+  .quota-error-icon {
+    display: none;
+  }
+
+  .quota-error-content {
+    text-align: center;
+  }
 }
 
 /* Quota Limit Modal */
