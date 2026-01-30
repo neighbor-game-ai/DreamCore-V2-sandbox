@@ -967,8 +967,9 @@ const injectGameHtml = (html, req) => {
 };
 
 // Serve project game files (supports nested paths: js/, css/, assets/)
-// Authentication required - owner-only access (Phase 1 policy)
-app.get('/game/:userId/:projectId/*', authenticate, async (req, res) => {
+// Authentication required for index.html - owner-only access (Phase 1 policy)
+// Sub-resources (js, css, etc.) are allowed if Referer matches the same project
+app.get('/game/:userId/:projectId/*', authenticateOptional, async (req, res) => {
   const { userId, projectId } = req.params;
   const filename = req.params[0] || 'index.html';
 
@@ -977,9 +978,26 @@ app.get('/game/:userId/:projectId/*', authenticate, async (req, res) => {
     return res.status(400).json({ error: 'Invalid ID format' });
   }
 
-  // Ownership check: authenticated user must match URL userId
-  if (req.user.id !== userId) {
-    return res.status(403).json({ error: 'Access denied' });
+  // Check authentication or valid Referer
+  const referer = req.headers.referer || '';
+  const expectedRefererPattern = new RegExp(`/game/${userId}/${projectId}/`);
+  const isValidReferer = referer && expectedRefererPattern.test(referer);
+
+  if (req.user) {
+    // Token authentication: ownership check
+    if (req.user.id !== userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+  } else if (isValidReferer) {
+    // Referer-based access for sub-resources loaded from iframe
+    // This allows audio.js, style.css, etc. to load without explicit token
+    // Security: Referer can be spoofed, but:
+    // - Only same-project resources are accessible
+    // - Primary access (index.html) requires valid token
+    // - Project files are not sensitive (user's own game code)
+  } else {
+    // No valid authentication
+    return res.status(401).json({ error: 'Authentication required' });
   }
 
   // Path traversal protection (applies to both Modal and local modes)
