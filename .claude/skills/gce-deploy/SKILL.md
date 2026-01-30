@@ -103,9 +103,14 @@ cron: */5 * * * *
 
 ### gcloud認証が切れた場合
 
+SSH接続で `Reauthentication failed` エラーが出た場合、ブラウザ認証を実行：
+
 ```bash
 /usr/local/bin/gcloud auth login --launch-browser
 ```
+
+ブラウザが自動で開くので、Googleアカウントでログインして認証を完了する。
+認証完了後、再度デプロイコマンドを実行。
 
 ### PM2プロセスが存在しない場合
 

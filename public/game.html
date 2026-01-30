@@ -80,8 +80,8 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            /* Slightly darker background to make game portal stand out */
-            background: var(--gray-100);
+            /* Clean white background - Nintendo style */
+            background: var(--white);
             color: var(--gray-900);
             display: flex;
             flex-direction: column;
@@ -157,15 +157,24 @@
             align-items: center;
             justify-content: center;
             transition: all 0.2s var(--ease-out);
+            position: relative;
         }
 
         .action-btn:hover {
             color: var(--gray-600);
             background: var(--gray-100);
+            transform: scale(1.05);
         }
 
         .action-btn:active {
-            transform: scale(0.95);
+            transform: scale(0.9);
+            animation: btnBounce 0.4s var(--ease-out);
+        }
+
+        @keyframes btnBounce {
+            0% { transform: scale(0.9); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
         }
 
         .action-btn.active {
@@ -174,6 +183,45 @@
 
         .action-btn.active svg {
             fill: var(--red);
+        }
+
+        /* Heart like animation */
+        .action-btn.like-pop {
+            animation: likePop 0.6s var(--ease-out);
+        }
+
+        @keyframes likePop {
+            0% { transform: scale(1); }
+            25% { transform: scale(1.3); }
+            50% { transform: scale(0.9); }
+            75% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* Floating hearts container */
+        .floating-hearts {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            pointer-events: none;
+        }
+
+        .floating-heart {
+            position: absolute;
+            font-size: 16px;
+            animation: floatUp 0.8s var(--ease-out) forwards;
+            opacity: 0;
+        }
+
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(0.5);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -150px) scale(1.2);
+            }
         }
 
         .action-divider {
@@ -188,11 +236,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: var(--s-12);
-            padding-bottom: calc(var(--s-12) + 64px + env(safe-area-inset-bottom));
+            padding: var(--s-16);
+            padding-bottom: calc(var(--s-16) + 64px + env(safe-area-inset-bottom));
             min-height: 0;
-            /* Dark backdrop makes game "pop" */
-            background: linear-gradient(180deg, var(--gray-100) 0%, #E0E0E0 100%);
+            background: var(--white);
         }
 
         .game-container {
@@ -200,16 +247,15 @@
             height: 100%;
             max-width: 100%;
             max-height: 100%;
-            /* Larger radius for "portal" feel */
             border-radius: var(--r-24);
             overflow: hidden;
             background: var(--black);
-            /* Deep layered shadow for floating effect */
+            /* Floating effect with subtle red glow */
             box-shadow:
-                0 2px 4px rgba(0, 0, 0, 0.04),
-                0 8px 16px rgba(0, 0, 0, 0.08),
-                0 24px 48px rgba(0, 0, 0, 0.12),
-                0 0 0 1px rgba(0, 0, 0, 0.04);
+                0 4px 8px rgba(0, 0, 0, 0.08),
+                0 12px 24px rgba(0, 0, 0, 0.12),
+                0 0 0 3px var(--white),
+                0 0 0 5px var(--red);
             position: relative;
             /* Disable text selection and tap highlight */
             -webkit-user-select: none;
@@ -218,14 +264,17 @@
             user-select: none;
             -webkit-touch-callout: none;
             -webkit-tap-highlight-color: transparent;
-            /* Subtle animation on load */
-            animation: portalAppear 0.4s var(--ease-out);
+            /* Fun appear animation */
+            animation: portalAppear 0.5s var(--ease-out);
         }
 
         @keyframes portalAppear {
             from {
                 opacity: 0;
-                transform: scale(0.98);
+                transform: scale(0.95);
+            }
+            50% {
+                transform: scale(1.01);
             }
             to {
                 opacity: 1;
@@ -254,6 +303,40 @@
             /* Subtle inner border for depth */
             box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
             pointer-events: none;
+        }
+
+        /* Sparkle effect on load */
+        .sparkle-container {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 20;
+            overflow: hidden;
+            border-radius: var(--r-24);
+        }
+
+        .sparkle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: var(--red);
+            border-radius: 50%;
+            animation: sparkle 0.8s var(--ease-out) forwards;
+        }
+
+        @keyframes sparkle {
+            0% {
+                opacity: 1;
+                transform: scale(0);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0);
+            }
         }
 
         .game-frame:focus,
@@ -351,11 +434,11 @@
             transform: scale(0.95);
         }
 
-        /* ===== Loading ===== */
+        /* ===== Loading - Playful ===== */
         .loading-overlay {
             position: fixed;
             inset: 0;
-            background: var(--gray-100);
+            background: var(--white);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -369,32 +452,57 @@
             pointer-events: none;
         }
 
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid var(--gray-200);
-            border-top-color: var(--red);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+        .loading-icon {
+            width: 64px;
+            height: 64px;
             margin-bottom: var(--s-16);
+            animation: bounce 0.6s ease-in-out infinite;
+        }
+
+        .loading-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
         }
 
         .loading-text {
-            color: var(--gray-400);
-            font-size: 13px;
-            font-weight: 500;
-            letter-spacing: 0.02em;
+            color: var(--gray-600);
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .loading-dots {
+            display: inline-flex;
+            gap: 4px;
+            margin-left: 4px;
+        }
+
+        .loading-dots span {
+            width: 4px;
+            height: 4px;
+            background: var(--red);
+            border-radius: 50%;
+            animation: dotPulse 1s ease-in-out infinite;
+        }
+
+        .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes dotPulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
         }
 
         /* ===== Error ===== */
         .error-overlay {
             position: fixed;
             inset: 0;
-            background: var(--gray-100);
+            background: var(--white);
             display: none;
             flex-direction: column;
             align-items: center;
@@ -631,10 +739,23 @@
     </style>
 </head>
 <body>
-    <!-- Loading -->
+    <!-- Loading - Playful -->
     <div class="loading-overlay" id="loading">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">読み込み中...</div>
+        <div class="loading-icon">
+            <svg viewBox="0 0 64 64" fill="none">
+                <circle cx="32" cy="32" r="28" stroke="#FF3B30" stroke-width="4" fill="none" stroke-dasharray="8 4"/>
+                <circle cx="32" cy="32" r="16" fill="#FF3B30"/>
+                <circle cx="26" cy="28" r="4" fill="white"/>
+            </svg>
+        </div>
+        <div class="loading-text">
+            ゲームを準備中
+            <span class="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </span>
+        </div>
     </div>
 
     <!-- Error -->
@@ -844,6 +965,9 @@
             document.getElementById('loading').classList.add('hidden');
             document.title = `${game.title} - DreamCore`;
 
+            // Create sparkle effect
+            createSparkles();
+
             const iframe = document.getElementById('gameFrame');
             iframe.src = `${playDomain}/g/${gameId}/index.html`;
 
@@ -914,7 +1038,64 @@
             const btn = document.getElementById('likeBtn');
             isLiked = !isLiked;
             btn.classList.toggle('active', isLiked);
+
+            // Add bounce animation
+            btn.classList.remove('like-pop');
+            void btn.offsetWidth; // Trigger reflow
+            btn.classList.add('like-pop');
+
+            // Create floating hearts
+            if (isLiked) {
+                createFloatingHearts(btn);
+            }
         });
+
+        function createFloatingHearts(btn) {
+            const container = document.createElement('div');
+            container.className = 'floating-hearts';
+            btn.appendChild(container);
+
+            for (let i = 0; i < 5; i++) {
+                const heart = document.createElement('span');
+                heart.className = 'floating-heart';
+                heart.textContent = '❤️';
+                heart.style.left = `${(Math.random() - 0.5) * 40}px`;
+                heart.style.animationDelay = `${i * 0.1}s`;
+                container.appendChild(heart);
+            }
+
+            setTimeout(() => container.remove(), 1000);
+        }
+
+        function createSparkles() {
+            const gameContainer = document.querySelector('.game-container');
+            const container = document.createElement('div');
+            container.className = 'sparkle-container';
+            gameContainer.appendChild(container);
+
+            // Create sparkles around the edges
+            const positions = [
+                { x: '10%', y: '10%' },
+                { x: '90%', y: '10%' },
+                { x: '50%', y: '5%' },
+                { x: '10%', y: '90%' },
+                { x: '90%', y: '90%' },
+                { x: '50%', y: '95%' },
+                { x: '5%', y: '50%' },
+                { x: '95%', y: '50%' },
+            ];
+
+            positions.forEach((pos, i) => {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle';
+                sparkle.style.left = pos.x;
+                sparkle.style.top = pos.y;
+                sparkle.style.animationDelay = `${i * 0.05}s`;
+                container.appendChild(sparkle);
+            });
+
+            setTimeout(() => container.remove(), 1000);
+        }
 
         document.getElementById('commentBtn').addEventListener('click', () => {
             openPanel('commentPanelOverlay');
