@@ -5,6 +5,8 @@ node_modules/
 .env
 .env.local
 .env.*.local
+# GCP service account keys (local only)
+dreamcore-472900-*.json
 
 # User data (contains generated games and personal data)
 users/

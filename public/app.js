@@ -293,6 +293,9 @@ class GameCreatorApp {
             return;
           }
 
+          // Access granted - reveal page
+          this.revealPage();
+
           this.accessToken = session.access_token;
           this.currentUser = session.user;
           this.userId = session.user.id;
@@ -307,13 +310,23 @@ class GameCreatorApp {
         return;
       }
 
-      // Use cached session for immediate UI (before SDK loads)
+      // Use cached session for immediate auth
       this.accessToken = cachedSession.access_token;
       this.currentUser = cachedSession.user;
       this.userId = cachedSession.user.id;
       this.isAuthenticated = true;
 
-      // Update UI with user info immediately
+      // V2 Waitlist: Check access permission BEFORE revealing page
+      const { allowed } = await DreamCoreAuth.checkAccess();
+      if (!allowed) {
+        window.location.href = '/waitlist.html';
+        return;
+      }
+
+      // Access granted - reveal page
+      this.revealPage();
+
+      // Update UI with user info
       if (this.currentUser && this.userDisplayName) {
         this.userDisplayName.textContent = this.currentUser.user_metadata?.full_name ||
                                            this.currentUser.user_metadata?.name ||
@@ -327,7 +340,6 @@ class GameCreatorApp {
       this.loadPageData();
 
       // BACKGROUND: Verify session with SDK (refresh if needed)
-      // This runs after UI is already displayed
       DreamCoreAuth.getSession().then(async session => {
         if (!session) {
           // Session expired - redirect to login
@@ -338,18 +350,23 @@ class GameCreatorApp {
           // Token refreshed - update
           this.accessToken = session.access_token;
         }
-
-        // V2 Waitlist: Check access permission
-        const { allowed } = await DreamCoreAuth.checkAccess();
-        if (!allowed) {
-          window.location.href = '/waitlist.html';
-        }
       }).catch(err => {
         console.warn('[Auth] Background verification failed:', err);
       });
     } catch (error) {
       console.error('[Auth] Init error:', error);
       window.location.href = '/';
+    }
+  }
+
+  /**
+   * Reveal page after access check passes
+   * Removes the visibility:hidden style that prevents flash of content
+   */
+  revealPage() {
+    const style = document.getElementById('access-check-style');
+    if (style) {
+      style.remove();
     }
   }
 

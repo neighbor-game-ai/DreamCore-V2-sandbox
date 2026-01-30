@@ -463,6 +463,105 @@ const USE_MODAL = process.env.USE_MODAL === 'true';
 
 ---
 
+## 15. Vertex AI 移行（詳細版）
+
+### 15.1 目的とアーキテクチャ
+
+- 目的: **Claude CLI を維持したまま Vertex AI 経由で Claude/Gemini を利用**
+- ポイント: **Sandbox 内に実 API キーを置かない**（サービスアカウントで OAuth）
+- 構成:
+  - **Claude CLI (Vertex)**: `CLOUD_ML_REGION=us-east5` を使用
+  - **Gemini (Vertex)**: **global エンドポイント**を使用
+  - **通信経路**: Modal Sandbox → Squid（GCE）→ Google API（OAuth + aiplatform）
+
+### 15.2 使うモデル名（仕様固定）
+
+`vertex-claude-config` に以下を設定（Claude CLI は `--model opus/sonnet/haiku` を使い続ける）:
+
+```
+ANTHROPIC_DEFAULT_OPUS_MODEL=claude-opus-4-5@20251101
+ANTHROPIC_DEFAULT_SONNET_MODEL=claude-sonnet-4-5@20250929
+ANTHROPIC_DEFAULT_HAIKU_MODEL=claude-haiku-4-5@20251001
+```
+
+CLI 実行は従来通り:
+- `claude --model opus`
+- `claude --model sonnet`
+- `claude --model haiku`
+
+上記が **Vertex のモデルIDにマッピング**される（`ANTHROPIC_DEFAULT_*` を参照）。
+
+### 15.3 必要な Secrets
+
+1) **GCP サービスアカウント JSON**（Modal Secret）
+
+```
+modal secret create gcp-vertex-ai --force \
+  GOOGLE_APPLICATION_CREDENTIALS_JSON="$(cat /Users/admin/DreamCore-V2-modal/dreamcore-472900-2d2afdbce239.json)"
+```
+
+2) **Vertex 設定**（Modal Secret）
+
+```
+modal secret create vertex-claude-config --force \
+  ANTHROPIC_VERTEX_PROJECT_ID="dreamcore-472900" \
+  CLOUD_ML_REGION="us-east5" \
+  ANTHROPIC_DEFAULT_OPUS_MODEL="claude-opus-4-5@20251101" \
+  ANTHROPIC_DEFAULT_SONNET_MODEL="claude-sonnet-4-5@20250929" \
+  ANTHROPIC_DEFAULT_HAIKU_MODEL="claude-haiku-4-5@20251001"
+```
+
+**注意**: サービスアカウント JSON は **Git に入れない**（`.gitignore` 済み）。
+
+### 15.4 ネットワーク（Squid allowlist）
+
+Sandbox の `cidr_allowlist` は **GCE Proxy のみ** (`35.200.79.157/32`)。  
+Google API への通信は Squid 経由で許可。
+
+Squid 許可ドメイン:
+- `oauth2.googleapis.com`
+- `sts.googleapis.com`
+- `aiplatform.googleapis.com`
+- `us-east5-aiplatform.googleapis.com`
+- `www.googleapis.com`
+
+### 15.5 変更したコード（重要箇所）
+
+**/Users/admin/DreamCore-V2-modal/modal/app.py**
+- Vertex Secrets 追加
+- `get_vertex_env()` / `write_gcp_credentials()` 追加
+- `generate_game` / `run_haiku_in_sandbox` を Vertex 対応（`CLAUDE_CODE_USE_VERTEX=1`）
+- `generate_gemini` を Vertex API 呼び出しに変更
+- `shlex.quote()` で CLI コマンドの安全化
+
+**/Users/admin/DreamCore-V2-modal/modal/scripts/generate_image.py**
+- Vertex 画像生成を使用（`gemini-3-pro-image-preview`）
+- `httpx.Client(trust_env=True)` で Squid を利用
+
+### 15.6 検証手順（最小）
+
+1) `detect_intent`（Haiku / Vertex）  
+2) `generate_gemini`（Gemini / Vertex）  
+3) Squid ログで `oauth2.googleapis.com` / `aiplatform.googleapis.com` / `us-east5-aiplatform.googleapis.com` を確認  
+4) `generate_publish_info`（Haiku / Vertex）
+
+---
+
+## 16. 直近E2E結果（2026-01-29）
+
+Vertex AI 移行後の最終チェック結果（本番相当環境で実施）:
+
+1. `detect_intent`（Haiku / Vertex）: ✅ `{"intent":"edit"}`
+2. `generate_gemini`（Gemini / Vertex）: ✅ `index.html` 生成
+3. Squid ログ: ✅ `oauth2.googleapis.com` / `aiplatform.googleapis.com` / `us-east5-aiplatform.googleapis.com` 通過
+4. `generate_publish_info`（Haiku / Vertex）: ✅ 応答（ゲームコード無し時は `No JSON found` を返す想定）
+
+補足:
+- Vertex AI の通信経路は Squid 経由で確認済み。
+- Gemini 画像生成は `images` 配列を検出した場合のみ実行されるため、テスト時に未発火でも正常。
+
+---
+
 ## 重要ポイント（まとめ）
 
 1. **フロントエンドは一切変更しない** - WebSocket通信はそのまま維持

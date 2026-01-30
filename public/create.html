@@ -26,6 +26,10 @@
       100% { background-position: -200% 0; }
     }
   </style>
+  <!-- Hide body until access check completes -->
+  <style id="access-check-style">
+    body { visibility: hidden; }
+  </style>
   <meta name="description" content="チャットで会話するだけで、オリジナルのゲームが作れます。">
   <!-- Early auth check + Supabase lazy loader -->
   <script>
