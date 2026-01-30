@@ -34,37 +34,26 @@
   <!-- Early auth check + Supabase lazy loader -->
   <script>
     (function() {
-      // DEBUG: Log what we see
-      console.log('[EarlyCheck] URL:', window.location.href);
-      console.log('[EarlyCheck] search:', window.location.search);
-      console.log('[EarlyCheck] hash:', window.location.hash);
-
       // Skip if OAuth callback (code parameter present)
       var search = window.location.search;
       var hash = window.location.hash;
       if ((hash && hash.includes('access_token')) ||
           (search && (search.includes('code=') || search.includes('error=')))) {
-        console.log('[EarlyCheck] OAuth callback detected, skipping early check');
         return; // Let auth.js handle OAuth callback
       }
       // Check our session cache
       var cached = localStorage.getItem('dreamcore_session_cache');
-      console.log('[EarlyCheck] cached:', cached ? 'exists' : 'null');
       if (!cached) {
-        console.log('[EarlyCheck] No cache, redirecting to /');
         window.location.href = '/';
         return;
       }
       try {
         var data = JSON.parse(cached);
         var age = Date.now() - data.timestamp;
-        console.log('[EarlyCheck] Cache age:', age, 'ms');
         if (age > 300000) {
-          console.log('[EarlyCheck] Cache expired, redirecting to /');
           window.location.href = '/';
         }
       } catch(e) {
-        console.log('[EarlyCheck] Cache parse error, redirecting to /');
         window.location.href = '/';
       }
     })();
