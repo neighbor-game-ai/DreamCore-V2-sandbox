@@ -82,6 +82,7 @@
         <span class="brand-text">DreamCore</span>
       </div>
       <div class="list-header-right">
+        <div class="quota-display hidden" id="quotaDisplay"></div>
         <span class="connection-dot" id="listStatusIndicator"></span>
         <span class="user-id" id="userDisplayName"></span>
         <button class="notifications-btn" id="notificationsButton" title="通知">
@@ -244,6 +245,29 @@
       <div class="new-game-actions">
         <button id="cancelDelete" class="new-game-cancel">キャンセル</button>
         <button id="confirmDelete" class="new-game-confirm delete-confirm">削除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quota Limit Modal -->
+  <div class="new-game-modal hidden" id="quotaLimitModal">
+    <div class="new-game-content">
+      <div class="new-game-header">
+        <div class="new-game-icon quota-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+        </div>
+        <h2 id="quotaLimitTitle">本日の上限に達しました</h2>
+      </div>
+      <div class="new-game-body">
+        <p id="quotaLimitMessage" class="quota-limit-message"></p>
+        <p id="quotaLimitReset" class="quota-limit-reset"></p>
+      </div>
+      <div class="new-game-actions">
+        <button id="closeQuotaLimit" class="new-game-confirm">OK</button>
       </div>
     </div>
   </div>

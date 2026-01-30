@@ -224,6 +224,23 @@ const GCS_BUCKET_GAMES = process.env.GCS_BUCKET_GAMES || 'dreamcore-v2-games';
 // Check if GCS is configured
 const USE_GCS_BACKUP = !!GCS_PROJECT_ID;
 
+// ==================== Tier Limits (Quota) ====================
+
+const TIER_LIMITS = {
+  free: {
+    dailyProjectCreations: 3,
+    dailyMessages: 20,
+  },
+  pro: {
+    dailyProjectCreations: 100,
+    dailyMessages: 500,
+  },
+  team: {
+    dailyProjectCreations: -1,  // unlimited
+    dailyMessages: -1,          // unlimited
+  }
+};
+
 // ==================== Rate Limiting ====================
 
 const RATE_LIMIT = {
@@ -311,6 +328,9 @@ module.exports = {
   MODAL_DETECT_SKILLS_ENDPOINT,
   MODAL_GET_SKILL_CONTENT_ENDPOINT,
   MODAL_GEMINI_ENDPOINT,
+
+  // Tier Limits (Quota)
+  TIER_LIMITS,
 
   // Rate Limiting
   RATE_LIMIT,

@@ -7487,3 +7487,40 @@ body[data-page="notifications"] {
     font-size: 1.25rem;
   }
 }
+
+/* ===== Quota Display ===== */
+.quota-display {
+  display: flex;
+  gap: var(--s-8);
+  font-size: 0.75rem;
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.quota-display:hover {
+  opacity: 0.8;
+}
+
+.quota-item {
+  background: var(--gray-100);
+  padding: var(--s-4) var(--s-8);
+  border-radius: var(--r-full);
+  white-space: nowrap;
+}
+
+/* Quota Modal */
+.quota-icon {
+  color: #f59e0b;
+}
+
+.quota-limit-message {
+  color: var(--gray-600);
+  margin: var(--s-8) 0;
+  font-size: 0.9375rem;
+}
+
+.quota-limit-reset {
+  color: var(--gray-400);
+  font-size: 0.75rem;
+}

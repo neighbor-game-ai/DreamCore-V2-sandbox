@@ -27,6 +27,21 @@ const { supabaseAdmin } = require('./supabaseClient');
 const { ErrorCodes, createWsError, sendHttpError } = require('./errorResponse');
 const config = require('./config');
 const waitlist = require('./waitlist');
+const quotaService = require('./quotaService');
+
+/**
+ * Get next quota reset time (00:00 UTC = 09:00 JST)
+ */
+function getNextResetTime() {
+  const now = new Date();
+  const tomorrow = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() + 1,
+    0, 0, 0, 0
+  ));
+  return tomorrow.toISOString();
+}
 
 // Lazy-load Modal client (only when USE_MODAL=true)
 let modalClient = null;
@@ -170,6 +185,20 @@ app.get('/api/config', (req, res) => {
 waitlist.setupRoutes(app);
 
 // ==================== REST API Endpoints ====================
+
+// Get user's quota information
+app.get('/api/quota', authenticate, async (req, res) => {
+  try {
+    const info = await quotaService.getQuotaInfo(req.user.id);
+    res.json({
+      ...info,
+      resetAt: getNextResetTime()
+    });
+  } catch (err) {
+    console.error('[Quota] Failed to get quota:', err);
+    res.status(500).json({ error: 'Failed to get quota' });
+  }
+});
 
 // Get job status
 // Helper: check job ownership via user_id
@@ -1449,6 +1478,28 @@ wss.on('connection', (ws) => {
             safeSend({ type: 'error', message: 'Not initialized' });
             return;
           }
+
+          // Quota check for project creation
+          try {
+            const projectQuotaResult = await quotaService.tryConsumeProjectQuota(userId);
+            if (!projectQuotaResult.allowed) {
+              safeSend({
+                type: 'error',
+                error: {
+                  code: 'DAILY_PROJECT_LIMIT_EXCEEDED',
+                  message: `本日のプロジェクト作成上限（${projectQuotaResult.limit}回）に達しました`,
+                  remaining: 0,
+                  limit: projectQuotaResult.limit,
+                  resetAt: getNextResetTime()
+                }
+              });
+              return;
+            }
+          } catch (quotaErr) {
+            console.error('[Quota] Project check failed:', quotaErr);
+            // Fail-open: allow operation if quota check fails
+          }
+
           const newProject = await userManager.createProject(userSupabase, userId, data.name);
           currentProjectId = newProject.id;
           safeSend({
@@ -1572,6 +1623,27 @@ wss.on('connection', (ws) => {
           if (!userId || !currentProjectId) {
             safeSend({ type: 'error', message: 'No project selected' });
             return;
+          }
+
+          // Quota check for message sending
+          try {
+            const messageQuotaResult = await quotaService.tryConsumeMessageQuota(userId);
+            if (!messageQuotaResult.allowed) {
+              safeSend({
+                type: 'error',
+                error: {
+                  code: 'DAILY_MESSAGE_LIMIT_EXCEEDED',
+                  message: `本日のメッセージ上限（${messageQuotaResult.limit}回）に達しました`,
+                  remaining: 0,
+                  limit: messageQuotaResult.limit,
+                  resetAt: getNextResetTime()
+                }
+              });
+              return;
+            }
+          } catch (quotaErr) {
+            console.error('[Quota] Message check failed:', quotaErr);
+            // Fail-open: allow operation if quota check fails
           }
 
           let userMessage = data.content;

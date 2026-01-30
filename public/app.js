@@ -1765,6 +1765,9 @@ class GameCreatorApp {
           this.listStatusIndicator.textContent = '接続中';
         }
 
+        // Update quota display
+        this.updateQuotaDisplay();
+
         // Handle based on current page
         if (this.currentPage === 'create') {
           // Render project grid on create page
@@ -1990,7 +1993,14 @@ class GameCreatorApp {
         this.hideStreaming();
         this.hideRestoreModal();
         this.resetRestoreModal();
-        this.addMessage(data.message, 'error');
+
+        // Handle quota exceeded errors
+        if (data.error && (data.error.code === 'DAILY_PROJECT_LIMIT_EXCEEDED' || data.error.code === 'DAILY_MESSAGE_LIMIT_EXCEEDED')) {
+          this.showQuotaExceededError(data.error);
+        } else {
+          this.addMessage(data.message || (data.error && data.error.message) || 'エラーが発生しました', 'error');
+        }
+
         this.updateStatus('connected', '接続中');
         this.isProcessing = false;
         this.currentJobId = null;
@@ -3173,6 +3183,76 @@ class GameCreatorApp {
     if (!this.statusIndicator) return;
     this.statusIndicator.className = `status-indicator ${className}`;
     this.statusIndicator.textContent = text;
+  }
+
+  // ==================== Quota Display ====================
+
+  async updateQuotaDisplay() {
+    const el = document.getElementById('quotaDisplay');
+    if (!el) return;
+
+    try {
+      // Token null guard: skip if not logged in
+      const token = await DreamCoreAuth.getAccessToken();
+      if (!token) {
+        el.classList.add('hidden');
+        return;
+      }
+
+      const res = await fetch('/api/quota', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!res.ok) {
+        el.classList.add('hidden');
+        return;
+      }
+
+      const quota = await res.json();
+      this.currentQuota = quota;
+
+      el.innerHTML = `
+        <span class="quota-item" title="メッセージ残り">💬 ${quota.messages.remaining === -1 ? '∞' : quota.messages.remaining}</span>
+        <span class="quota-item" title="プロジェクト作成残り">📁 ${quota.projects.remaining === -1 ? '∞' : quota.projects.remaining}</span>
+      `;
+      el.classList.remove('hidden');
+      el.onclick = () => this.showQuotaPopup();
+    } catch (e) {
+      console.error('[Quota] Display update failed:', e);
+      el.classList.add('hidden');
+    }
+  }
+
+  showQuotaPopup() {
+    if (!this.currentQuota) return;
+    const q = this.currentQuota;
+    const reset = new Date(q.resetAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    const planLabel = { free: '無料', pro: 'Pro', team: 'Team' }[q.plan] || q.plan;
+    alert(`プラン: ${planLabel}\nメッセージ: ${q.messages.used}/${q.messages.limit === -1 ? '∞' : q.messages.limit}\nプロジェクト: ${q.projects.used}/${q.projects.limit === -1 ? '∞' : q.projects.limit}\nリセット: ${reset}`);
+  }
+
+  showQuotaLimitModal(type, limit, resetTime) {
+    const modal = document.getElementById('quotaLimitModal');
+    if (!modal) return;
+    document.getElementById('quotaLimitTitle').textContent = '本日の上限に達しました';
+    document.getElementById('quotaLimitMessage').textContent = `${type}の上限（${limit}回/日）に達しました`;
+    document.getElementById('quotaLimitReset').textContent = `リセット時刻: ${resetTime}`;
+    modal.classList.remove('hidden');
+    document.getElementById('closeQuotaLimit').onclick = () => modal.classList.add('hidden');
+  }
+
+  showQuotaExceededError(error) {
+    const isProject = error.code === 'DAILY_PROJECT_LIMIT_EXCEEDED';
+    const type = isProject ? 'プロジェクト作成' : 'メッセージ送信';
+    const reset = new Date(error.resetAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+
+    // Show modal if no chat is available (list view), otherwise show in chat
+    if (!this.chatMessages || !this.currentProjectId) {
+      this.showQuotaLimitModal(type, error.limit, reset);
+    } else {
+      this.addMessage(`本日の${type}上限（${error.limit}回）に達しました。リセット: ${reset}`, 'error');
+    }
+    this.updateQuotaDisplay();
   }
 
   showReconnectButton() {
