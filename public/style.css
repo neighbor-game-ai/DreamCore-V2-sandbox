@@ -1796,6 +1796,50 @@ body::before {
   transform: scale(1) translateY(0);
 }
 
+/* Token Expired Modal */
+.token-expired-modal {
+  padding: var(--s-32);
+  text-align: center;
+  max-width: 400px;
+}
+
+.token-expired-modal .modal-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--red-light, #FEE2E2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--s-24);
+}
+
+.token-expired-modal .modal-icon svg {
+  stroke: var(--red, #EF4444);
+}
+
+.token-expired-modal h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: var(--s-12);
+  color: var(--gray-900);
+}
+
+.token-expired-modal p {
+  color: var(--gray-600);
+  line-height: 1.6;
+  margin-bottom: var(--s-24);
+}
+
+.token-expired-modal .relogin-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-8);
+  padding: var(--s-12) var(--s-24);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
 .modal-header {
   padding: var(--s-24);
   border-bottom: 1px solid var(--gray-200);

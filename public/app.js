@@ -14,6 +14,7 @@ class GameCreatorApp {
     this.currentUser = null;
     this.accessToken = null;
     this.isAuthenticated = false;
+    this.tokenExpiredShown = false; // Prevent infinite Token expired popups
 
     // Current view state
     this.currentView = 'list'; // 'list', 'editor', 'discover', 'zapping'
@@ -1994,11 +1995,19 @@ class GameCreatorApp {
         this.hideRestoreModal();
         this.resetRestoreModal();
 
-        // Handle quota exceeded errors
-        if (data.error && (data.error.code === 'DAILY_PROJECT_LIMIT_EXCEEDED' || data.error.code === 'DAILY_MESSAGE_LIMIT_EXCEEDED')) {
+        // Handle token expired errors - show relogin modal once
+        const errorMessage = data.message || (data.error && data.error.message) || '';
+        if (errorMessage.includes('Token expired') || errorMessage.includes('expired token') || errorMessage.includes('Invalid or expired')) {
+          if (!this.tokenExpiredShown) {
+            this.tokenExpiredShown = true;
+            this.showTokenExpiredModal();
+          }
+          // Don't add to chat - modal is shown instead
+        } else if (data.error && (data.error.code === 'DAILY_PROJECT_LIMIT_EXCEEDED' || data.error.code === 'DAILY_MESSAGE_LIMIT_EXCEEDED')) {
+          // Handle quota exceeded errors
           this.showQuotaExceededError(data.error);
         } else {
-          this.addMessage(data.message || (data.error && data.error.message) || 'エラーが発生しました', 'error');
+          this.addMessage(errorMessage || 'エラーが発生しました', 'error');
         }
 
         this.updateStatus('connected', '接続中');
@@ -3391,6 +3400,60 @@ class GameCreatorApp {
 
     this.addMessage(errorHtml, 'system', { isHtml: true });
     this.updateQuotaDisplay();
+  }
+
+  showTokenExpiredModal() {
+    // Close WebSocket to stop further errors
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+
+    // Create modal overlay
+    const existingModal = document.getElementById('tokenExpiredModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'tokenExpiredModal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-content token-expired-modal">
+        <div class="modal-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </div>
+        <h2>セッションが切れました</h2>
+        <p>セキュリティのため、一定時間でセッションが終了します。<br>再度ログインしてください。</p>
+        <button class="btn-primary relogin-button" id="reloginButton">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <polyline points="10 17 15 12 10 7"></polyline>
+            <line x1="15" y1="12" x2="3" y2="12"></line>
+          </svg>
+          再ログイン
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Add click handler for relogin button
+    document.getElementById('reloginButton').addEventListener('click', async () => {
+      // Sign out and redirect to login
+      if (window.DreamCoreAuth) {
+        await window.DreamCoreAuth.signOut();
+      }
+      window.location.reload();
+    });
+
+    // Show modal with animation
+    requestAnimationFrame(() => {
+      modal.classList.add('visible');
+    });
   }
 
   showReconnectButton() {
