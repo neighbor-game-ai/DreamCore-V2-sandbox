@@ -95,106 +95,79 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* ===== Top Bar ===== */
-        .top-bar {
-            flex-shrink: 0;
-            height: 56px;
+        /* ===== Overlay Controls ===== */
+        .overlay-controls {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
             padding-top: env(safe-area-inset-top);
+            padding-left: var(--s-12);
+            padding-right: var(--s-12);
+            padding-bottom: var(--s-12);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding-left: var(--s-16);
-            padding-right: var(--s-16);
-            background: var(--white);
+            z-index: 100;
+            transition: opacity 0.25s ease, transform 0.25s ease;
         }
 
-        .back-button {
+        .overlay-controls.hidden {
+            opacity: 0;
+            transform: translateY(-8px);
+            pointer-events: none;
+        }
+
+        .overlay-btn {
             width: 40px;
             height: 40px;
             border-radius: var(--r-full);
-            background: transparent;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: none;
-            color: var(--gray-900);
+            color: var(--white);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.15s ease;
+            transition: all 0.2s ease;
         }
 
-        .back-button:hover {
-            opacity: 0.6;
+        .overlay-btn:active {
+            transform: scale(0.95);
+            background: rgba(0, 0, 0, 0.7);
         }
 
-        .back-button:active {
-            opacity: 0.4;
+        .overlay-btn.active {
+            color: var(--red);
         }
 
-        /* Action Buttons */
+        .overlay-btn.active svg {
+            fill: var(--red);
+        }
+
+        /* Action Buttons Group */
         .action-buttons {
             display: flex;
             align-items: center;
             gap: var(--s-8);
         }
 
-        .action-btn {
-            width: 44px;
-            height: 44px;
-            border-radius: var(--r-full);
-            background: transparent;
-            border: none;
-            color: var(--gray-900);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.15s ease;
-        }
 
-        .action-btn:hover {
-            opacity: 0.6;
-        }
-
-        .action-btn:active {
-            opacity: 0.4;
-        }
-
-        .action-btn.active {
-            color: var(--red);
-        }
-
-        .action-btn.active svg {
-            fill: var(--red);
-        }
-
-
-        /* ===== Game Section ===== */
+        /* ===== Game Section - Fullscreen ===== */
         .game-section {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            /* Generous whitespace - let the game breathe */
-            padding: var(--s-24);
-            padding-bottom: calc(var(--s-24) + 68px + env(safe-area-inset-bottom));
-            min-height: 0;
-            background: var(--white);
+            position: fixed;
+            inset: 0;
+            padding-bottom: calc(64px + env(safe-area-inset-bottom));
+            background: var(--black);
         }
 
         .game-container {
             width: 100%;
             height: 100%;
-            max-width: 100%;
-            max-height: 100%;
-            /* Refined radius */
-            border-radius: 20px;
             overflow: hidden;
             background: var(--black);
-            /* Premium layered shadow - subtle but sophisticated */
-            box-shadow:
-                0 1px 2px rgba(0, 0, 0, 0.04),
-                0 4px 8px rgba(0, 0, 0, 0.04),
-                0 16px 32px rgba(0, 0, 0, 0.08);
             position: relative;
             -webkit-user-select: none;
             -moz-user-select: none;
@@ -202,13 +175,6 @@
             user-select: none;
             -webkit-touch-callout: none;
             -webkit-tap-highlight-color: transparent;
-            /* Smooth fade in - no bounce */
-            animation: fadeIn 0.4s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
         }
 
         .game-frame {
@@ -230,17 +196,17 @@
             box-shadow: none !important;
         }
 
-        /* Remix Badge */
+        /* Remix Badge - positioned below overlay controls */
         .remix-badge {
             position: absolute;
-            top: var(--s-12);
+            top: calc(52px + env(safe-area-inset-top));
             left: var(--s-12);
             display: flex;
             align-items: center;
             gap: var(--s-8);
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             padding: var(--s-8) var(--s-12);
             border-radius: var(--r-8);
             color: var(--white);
@@ -248,6 +214,7 @@
             font-weight: 600;
             letter-spacing: 0.02em;
             z-index: 10;
+            transition: opacity 0.25s ease, transform 0.25s ease;
         }
 
         .remix-badge svg {
@@ -257,6 +224,7 @@
         .remix-badge.hidden {
             display: none;
         }
+
 
         /* ===== Bottom Navigation - Floating Pill ===== */
         .bottom-nav {
@@ -323,13 +291,13 @@
         .loading-overlay {
             position: fixed;
             inset: 0;
-            background: var(--white);
+            background: var(--black);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 50;
-            transition: opacity 0.2s ease;
+            transition: opacity 0.3s ease;
         }
 
         .loading-overlay.hidden {
@@ -340,8 +308,8 @@
         .loading-spinner {
             width: 32px;
             height: 32px;
-            border: 2.5px solid var(--gray-100);
-            border-top-color: var(--red);
+            border: 2.5px solid rgba(255, 255, 255, 0.2);
+            border-top-color: var(--white);
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
         }
@@ -354,7 +322,7 @@
         .error-overlay {
             position: fixed;
             inset: 0;
-            background: var(--white);
+            background: var(--black);
             display: none;
             flex-direction: column;
             align-items: center;
@@ -372,7 +340,7 @@
             width: 64px;
             height: 64px;
             border-radius: var(--r-full);
-            background: var(--gray-100);
+            background: rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -386,7 +354,7 @@
         .error-title {
             font-size: 18px;
             font-weight: 700;
-            color: var(--gray-900);
+            color: var(--white);
             margin-bottom: var(--s-8);
         }
 
@@ -399,8 +367,8 @@
         .error-back-btn {
             padding: var(--s-12) var(--s-24);
             border-radius: var(--r-full);
-            background: var(--red);
-            color: var(--white);
+            background: var(--white);
+            color: var(--black);
             border: none;
             font-size: 14px;
             font-weight: 600;
@@ -408,9 +376,9 @@
             transition: all 0.2s var(--ease-out);
         }
 
-        .error-back-btn:hover {
-            transform: scale(1.02);
-            box-shadow: 0 4px 16px var(--red-glow);
+        .error-back-btn:active {
+            transform: scale(0.98);
+            opacity: 0.9;
         }
 
         /* ===== Panels (Slide up) ===== */
@@ -610,40 +578,40 @@
         <button class="error-back-btn" onclick="goBack()">戻る</button>
     </div>
 
-    <!-- Top Bar -->
-    <header class="top-bar">
-        <button class="back-button" onclick="goBack()" aria-label="戻る">
+    <!-- Overlay Controls -->
+    <div class="overlay-controls" id="overlayControls">
+        <button class="overlay-btn" onclick="goBack()" aria-label="戻る">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m15 18-6-6 6-6"/>
             </svg>
         </button>
         <div class="action-buttons">
-            <button class="action-btn" id="likeBtn" aria-label="いいね">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <button class="overlay-btn" id="likeBtn" aria-label="いいね">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
             </button>
-            <button class="action-btn" id="commentBtn" aria-label="コメント">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <button class="overlay-btn" id="commentBtn" aria-label="コメント">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
             </button>
-            <button class="action-btn" id="shareBtn" aria-label="シェア">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <button class="overlay-btn" id="shareBtn" aria-label="シェア">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
                     <polyline points="16 6 12 2 8 6"/>
                     <line x1="12" y1="2" x2="12" y2="15"/>
                 </svg>
             </button>
-            <button class="action-btn" id="infoBtn" aria-label="情報">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <button class="overlay-btn" id="infoBtn" aria-label="情報">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="10"/>
                     <line x1="12" y1="16" x2="12" y2="12"/>
                     <line x1="12" y1="8" x2="12.01" y2="8"/>
                 </svg>
             </button>
         </div>
-    </header>
+    </div>
 
     <!-- Game Section -->
     <section class="game-section">
@@ -917,12 +885,33 @@
         // Prevent selection highlight on game area
         const gameContainer = document.querySelector('.game-container');
         const gameFrame = document.getElementById('gameFrame');
+        const overlayControls = document.getElementById('overlayControls');
+        let controlsVisible = true;
 
         function clearSelection() {
             if (window.getSelection) {
                 window.getSelection().removeAllRanges();
             }
         }
+
+        // Toggle controls visibility
+        function toggleControls() {
+            controlsVisible = !controlsVisible;
+            overlayControls.classList.toggle('hidden', !controlsVisible);
+            // Also toggle remix badge
+            const remixBadge = document.getElementById('remixBadge');
+            if (remixBadge && !remixBadge.classList.contains('hidden')) {
+                remixBadge.style.opacity = controlsVisible ? '1' : '0';
+                remixBadge.style.transform = controlsVisible ? 'translateY(0)' : 'translateY(-8px)';
+            }
+        }
+
+        // Tap on game area to toggle controls
+        gameContainer.addEventListener('click', (e) => {
+            // Don't toggle if clicking on controls
+            if (e.target.closest('.overlay-controls')) return;
+            toggleControls();
+        });
 
         // Prevent select start
         gameContainer.onselectstart = () => false;
