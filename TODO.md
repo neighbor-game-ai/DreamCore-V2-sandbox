@@ -113,6 +113,27 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 作業履歴
 
+### 2026-01-31: ゲームプレイページのタップハイライト無効化
+
+**詳細:** `.claude/logs/2026-01-31-game-play-page-tap-highlight.md`
+
+**問題:** `/game/:id` ページでiframe内をタッチすると、iframe枠全体が一瞬ハイライトされる
+
+**原因:**
+1. iframe要素自体がフォーカス時にハイライトされる
+2. iframe内のゲームHTMLにタップハイライト無効化CSSがない
+
+**実装内容:**
+- `game.html`: tap-highlight無効CSS、:focus outline無効、iframe blur on focus
+- `play-public.html`: 同上
+- `server/index.js`: `/g/` 配信時に tap-highlight 無効CSSを注入
+
+**学び:**
+- iframe内のスタイルは親ページから制御不可 → サーバーサイド注入が必要
+- ローカルテストの限界 → playDomainが本番を指すため、本番デプロイが必要
+
+---
+
 ### 2026-01-30: Git履歴表示問題の調査と自動初期化機能
 
 **詳細:** `.claude/logs/2026-01-30-git-history-auto-init.md`
@@ -725,4 +746,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-01-30 (Git履歴自動初期化機能)
+最終更新: 2026-01-31 (ゲームプレイページのタップハイライト無効化)
