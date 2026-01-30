@@ -113,6 +113,26 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 作業履歴
 
+### 2026-01-30: クォータ機能（日次利用制限）
+
+**詳細:** `.claude/logs/2026-01-30-quota-feature.md`
+
+**実装内容:**
+- 無料ユーザー向け日次利用制限（プロジェクト3回/日、メッセージ20回/日）
+- `GET /api/quota` エンドポイント追加
+- ヘッダーにクォータ表示 + ポップアップ
+- 制限到達時のモーダル/チャット内エラー表示
+- 事前クォータチェック（サーバー通信前）
+
+**変更ファイル:**
+- `server/quotaService.js` - 新規作成
+- `server/config.js` - TIER_LIMITS 追加
+- `server/index.js` - クォータチェック + API
+- `public/app.js`, `create.html`, `style.css` - UI実装
+- `docs/API-REFERENCE.md` - エンドポイントドキュメント
+
+---
+
 ### 2026-01-30: ウェイトリスト/アクセス管理
 
 **詳細:** `.claude/logs/2026-01-30-sandbox-architecture.md`（末尾セクション）
