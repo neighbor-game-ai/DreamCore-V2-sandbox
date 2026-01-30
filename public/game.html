@@ -6,244 +6,737 @@
     <title>ゲーム - DreamCore</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <style>
+        :root {
+            --white: #FFFFFF;
+            --gray-50: #F9FAFB;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-400: #9CA3AF;
+            --gray-500: #6B7280;
+            --gray-600: #4B5563;
+            --gray-700: #374151;
+            --gray-800: #1F2937;
+            --gray-900: #111827;
+            --red: #EF4444;
+            --red-light: #FEE2E2;
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: #0a0a0a;
-            color: #fff;
-            min-height: 100vh;
+        html, body {
+            height: 100%;
+            overflow: hidden;
         }
 
-        .header {
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #000;
+            color: var(--white);
+        }
+
+        /* Top Bar */
+        .top-bar {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             height: 56px;
-            background: rgba(10, 10, 10, 0.95);
-            border-bottom: 1px solid #222;
+            height: calc(56px + env(safe-area-inset-top));
+            padding-top: env(safe-area-inset-top);
             display: flex;
             align-items: center;
-            padding: 0 16px;
+            justify-content: space-between;
+            padding-left: 12px;
+            padding-right: 12px;
             z-index: 100;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%);
+        }
+
+        .back-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
             backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: none;
+            color: var(--white);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s var(--ease-out);
         }
 
-        .header-logo {
-            font-size: 18px;
-            font-weight: 700;
-            color: #ff4444;
-            text-decoration: none;
+        .back-button:hover {
+            background: rgba(255,255,255,0.25);
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 72px 16px 32px;
+        .back-button:active {
+            transform: scale(0.95);
         }
 
-        .game-layout {
-            display: grid;
-            grid-template-columns: 1fr 380px;
-            gap: 24px;
+        .action-buttons {
+            display: flex;
+            gap: 8px;
         }
 
-        @media (max-width: 900px) {
-            .game-layout {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .game-frame-container {
+        .action-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: none;
+            color: var(--white);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s var(--ease-out);
             position: relative;
-            width: 100%;
-            aspect-ratio: 9 / 16;
-            max-height: calc(100vh - 120px);
-            background: #111;
-            border-radius: 12px;
-            overflow: hidden;
         }
 
-        .game-frame-container iframe {
+        .action-btn:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+
+        .action-btn.liked {
+            color: var(--red);
+        }
+
+        .action-btn.liked svg {
+            fill: var(--red);
+        }
+
+        .action-btn .badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            border-radius: 9px;
+            background: var(--red);
+            color: var(--white);
+            font-size: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Game Container */
+        .game-container {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+        }
+
+        .game-frame {
             width: 100%;
             height: 100%;
+            max-width: 100vw;
+            max-height: 100vh;
             border: none;
-        }
-
-        .game-info {
-            padding: 16px;
             background: #111;
-            border-radius: 12px;
         }
 
-        .game-title {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 12px;
-        }
-
-        .game-meta {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 16px;
-            color: #888;
-            font-size: 14px;
-        }
-
-        .game-description {
-            color: #ccc;
-            line-height: 1.6;
-            margin-bottom: 16px;
-        }
-
-        .game-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-
-        .game-tag {
-            background: #222;
-            color: #aaa;
-            padding: 4px 12px;
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 12px;
+            bottom: calc(12px + env(safe-area-inset-bottom));
+            left: 50%;
+            transform: translateX(-50%);
+            height: 52px;
+            background: var(--white);
             border-radius: 16px;
-            font-size: 12px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.12);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            padding: 0 6px;
+            z-index: 100;
         }
 
-        .game-section-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #888;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-        }
-
-        .game-how-to-play {
-            background: #1a1a1a;
-            padding: 12px;
-            border-radius: 8px;
-            color: #ccc;
-            font-size: 14px;
-            line-height: 1.6;
-            white-space: pre-wrap;
-        }
-
-        .loading {
+        .nav-item {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 200px;
-            color: #888;
+            gap: 1px;
+            width: 52px;
+            height: 44px;
+            padding: 0;
+            background: transparent;
+            border: none;
+            border-radius: 12px;
+            color: var(--gray-400);
+            cursor: pointer;
+            transition: all 0.2s var(--ease-out);
+            text-decoration: none;
+        }
+
+        .nav-item svg {
+            width: 24px;
+            height: 24px;
+            stroke-width: 1.75;
+        }
+
+        .nav-item span {
+            font-size: 9px;
+            font-weight: 500;
+            opacity: 0.9;
+        }
+
+        .nav-item.active {
+            color: var(--gray-900);
+        }
+
+        .nav-item.active svg {
+            stroke-width: 2.25;
+        }
+
+        .nav-item:active {
+            transform: scale(0.95);
+        }
+
+        /* Loading */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
         }
 
         .loading-spinner {
             width: 32px;
             height: 32px;
-            border: 3px solid #333;
-            border-top-color: #ff4444;
+            border: 3px solid var(--gray-700);
+            border-top-color: var(--white);
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-bottom: 12px;
+        }
+
+        .loading-text {
+            color: var(--gray-400);
+            font-size: 14px;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
 
-        .error {
+        /* Error */
+        .error-overlay {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            padding: 24px;
             text-align: center;
-            padding: 48px;
-            color: #ff6b6b;
         }
 
-        .error h2 {
-            margin-bottom: 8px;
-        }
-
-        .share-buttons {
+        .error-overlay.visible {
             display: flex;
-            gap: 8px;
-            margin-top: 16px;
         }
 
-        .share-btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
+        .error-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: var(--gray-800);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            margin-bottom: 16px;
         }
 
-        .share-btn.copy {
-            background: #333;
-            color: #fff;
+        .error-icon svg {
+            color: var(--gray-400);
         }
 
-        .share-btn.copy:hover {
-            background: #444;
+        .error-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
         }
 
-        .share-btn.twitter {
-            background: #1da1f2;
-            color: #fff;
+        .error-message {
+            color: var(--gray-400);
+            font-size: 14px;
+            margin-bottom: 24px;
         }
 
-        .share-btn.twitter:hover {
-            background: #1a91da;
+        .error-back-btn {
+            padding: 12px 24px;
+            border-radius: 12px;
+            background: var(--white);
+            color: var(--gray-900);
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s var(--ease-out);
+        }
+
+        .error-back-btn:hover {
+            transform: scale(1.02);
+        }
+
+        /* Info Panel (Slide up from bottom) */
+        .info-panel-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .info-panel-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .info-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-height: 70vh;
+            background: var(--white);
+            border-radius: 24px 24px 0 0;
+            z-index: 201;
+            transform: translateY(100%);
+            transition: transform 0.3s var(--ease-out);
+            overflow: hidden;
+        }
+
+        .info-panel-overlay.visible .info-panel {
+            transform: translateY(0);
+        }
+
+        .info-panel-handle {
+            width: 36px;
+            height: 4px;
+            background: var(--gray-300);
+            border-radius: 2px;
+            margin: 12px auto;
+        }
+
+        .info-panel-content {
+            padding: 0 24px 24px;
+            padding-bottom: calc(24px + env(safe-area-inset-bottom));
+            max-height: calc(70vh - 28px);
+            overflow-y: auto;
+        }
+
+        .info-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .info-meta {
+            display: flex;
+            gap: 16px;
+            color: var(--gray-500);
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .info-description {
+            color: var(--gray-600);
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .info-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .info-how-to-play {
+            background: var(--gray-50);
+            padding: 16px;
+            border-radius: 12px;
+            color: var(--gray-700);
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            margin-bottom: 20px;
+        }
+
+        .info-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .info-tag {
+            background: var(--gray-100);
+            color: var(--gray-600);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        /* Share Panel */
+        .share-panel-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .share-panel-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .share-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--white);
+            border-radius: 24px 24px 0 0;
+            z-index: 201;
+            transform: translateY(100%);
+            transition: transform 0.3s var(--ease-out);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .share-panel-overlay.visible .share-panel {
+            transform: translateY(0);
+        }
+
+        .share-panel-handle {
+            width: 36px;
+            height: 4px;
+            background: var(--gray-300);
+            border-radius: 2px;
+            margin: 12px auto;
+        }
+
+        .share-panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--gray-900);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .share-options {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            padding: 0 24px 24px;
+        }
+
+        .share-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .share-option-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s var(--ease-out);
+        }
+
+        .share-option:active .share-option-icon {
+            transform: scale(0.95);
+        }
+
+        .share-option-icon.copy {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        .share-option-icon.x {
+            background: #000;
+            color: var(--white);
+        }
+
+        .share-option-icon.line {
+            background: #06C755;
+            color: var(--white);
+        }
+
+        .share-option span {
+            font-size: 12px;
+            color: var(--gray-600);
+        }
+
+        /* Comment Panel (Placeholder for future) */
+        .comment-panel-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .comment-panel-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .comment-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60vh;
+            background: var(--white);
+            border-radius: 24px 24px 0 0;
+            z-index: 201;
+            transform: translateY(100%);
+            transition: transform 0.3s var(--ease-out);
+        }
+
+        .comment-panel-overlay.visible .comment-panel {
+            transform: translateY(0);
+        }
+
+        .comment-panel-handle {
+            width: 36px;
+            height: 4px;
+            background: var(--gray-300);
+            border-radius: 2px;
+            margin: 12px auto;
+        }
+
+        .comment-panel-content {
+            padding: 0 24px;
+            text-align: center;
+        }
+
+        .comment-panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 16px;
+        }
+
+        .comment-coming-soon {
+            color: var(--gray-400);
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
-    <header class="header">
-        <a href="/create.html" class="header-logo">DreamCore</a>
+    <!-- Loading -->
+    <div class="loading-overlay" id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">読み込み中...</div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-overlay" id="error">
+        <div class="error-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+        </div>
+        <h2 class="error-title">ゲームが見つかりません</h2>
+        <p class="error-message">このゲームは存在しないか、削除された可能性があります。</p>
+        <button class="error-back-btn" onclick="goBack()">戻る</button>
+    </div>
+
+    <!-- Top Bar -->
+    <header class="top-bar">
+        <button class="back-button" onclick="goBack()" aria-label="戻る">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </button>
+        <div class="action-buttons">
+            <button class="action-btn" id="likeBtn" aria-label="いいね">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                <span class="badge" id="likeCount" style="display: none;">0</span>
+            </button>
+            <button class="action-btn" id="commentBtn" aria-label="コメント">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+            </button>
+            <button class="action-btn" id="shareBtn" aria-label="シェア">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                    <polyline points="16 6 12 2 8 6"/>
+                    <line x1="12" y1="2" x2="12" y2="15"/>
+                </svg>
+            </button>
+            <button class="action-btn" id="infoBtn" aria-label="情報">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+            </button>
+        </div>
     </header>
 
-    <div class="container">
-        <div id="loading" class="loading">
-            <div class="loading-spinner"></div>
-            <div>Loading...</div>
-        </div>
+    <!-- Game -->
+    <main class="game-container">
+        <iframe id="gameFrame" class="game-frame" sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups allow-orientation-lock allow-forms" allow="fullscreen; accelerometer; gyroscope; gamepad; camera; microphone; autoplay"></iframe>
+    </main>
 
-        <div id="error" class="error" style="display: none;">
-            <h2>Game not found</h2>
-            <p>The game you're looking for doesn't exist or has been removed.</p>
-        </div>
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="/create.html" class="nav-item" data-tab="discover">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <span>発見</span>
+        </a>
+        <a href="/create.html" class="nav-item" data-tab="create">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>作る</span>
+        </a>
+        <a href="/create.html" class="nav-item" data-tab="notifications">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span>通知</span>
+        </a>
+        <a href="/mypage.html" class="nav-item" data-tab="profile">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span>マイ</span>
+        </a>
+    </nav>
 
-        <div id="content" class="game-layout" style="display: none;">
-            <div class="game-frame-container">
-                <iframe id="gameFrame" sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups allow-orientation-lock allow-forms" allow="fullscreen; accelerometer; gyroscope; gamepad; camera; microphone; autoplay"></iframe>
+    <!-- Info Panel -->
+    <div class="info-panel-overlay" id="infoPanelOverlay">
+        <div class="info-panel">
+            <div class="info-panel-handle"></div>
+            <div class="info-panel-content">
+                <h1 class="info-title" id="infoTitle"></h1>
+                <div class="info-meta">
+                    <span id="infoPlayCount"></span>
+                </div>
+                <p class="info-description" id="infoDescription"></p>
+                <div id="infoHowToPlaySection" style="display: none;">
+                    <div class="info-section-title">遊び方</div>
+                    <div class="info-how-to-play" id="infoHowToPlay"></div>
+                </div>
+                <div id="infoTagsSection" style="display: none;">
+                    <div class="info-section-title">タグ</div>
+                    <div class="info-tags" id="infoTags"></div>
+                </div>
             </div>
-            <div class="game-info">
-                <h1 id="gameTitle" class="game-title"></h1>
-                <div class="game-meta">
-                    <span id="playCount"></span>
-                </div>
-                <p id="gameDescription" class="game-description"></p>
-                <div id="gameTags" class="game-tags"></div>
-                <div id="howToPlaySection" style="display: none;">
-                    <div class="game-section-title">遊び方</div>
-                    <div id="gameHowToPlay" class="game-how-to-play"></div>
-                </div>
-                <div class="share-buttons">
-                    <button class="share-btn copy" onclick="copyLink()">
-                        <span>URLをコピー</span>
-                    </button>
-                    <button class="share-btn twitter" onclick="shareTwitter()">
-                        <span>X でシェア</span>
-                    </button>
-                </div>
+        </div>
+    </div>
+
+    <!-- Share Panel -->
+    <div class="share-panel-overlay" id="sharePanelOverlay">
+        <div class="share-panel">
+            <div class="share-panel-handle"></div>
+            <div class="share-panel-title">シェア</div>
+            <div class="share-options">
+                <button class="share-option" onclick="copyLink()">
+                    <div class="share-option-icon copy">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </div>
+                    <span>コピー</span>
+                </button>
+                <button class="share-option" onclick="shareX()">
+                    <div class="share-option-icon x">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                    </div>
+                    <span>X</span>
+                </button>
+                <button class="share-option" onclick="shareLine()">
+                    <div class="share-option-icon line">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.349 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+                        </svg>
+                    </div>
+                    <span>LINE</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comment Panel -->
+    <div class="comment-panel-overlay" id="commentPanelOverlay">
+        <div class="comment-panel">
+            <div class="comment-panel-handle"></div>
+            <div class="comment-panel-content">
+                <div class="comment-panel-title">コメント</div>
+                <p class="comment-coming-soon">コメント機能は準備中です</p>
             </div>
         </div>
     </div>
@@ -251,8 +744,10 @@
     <script>
         const gameId = window.location.pathname.split('/')[2];
         let gameData = null;
-        let playDomain = 'https://play.dreamcore.gg'; // Default
+        let playDomain = 'https://play.dreamcore.gg';
+        let isLiked = false;
 
+        // Load game
         async function loadGame() {
             if (!gameId) {
                 showError();
@@ -260,13 +755,14 @@
             }
 
             try {
-                // Fetch config to get play domain
+                // Fetch config
                 const configResponse = await fetch('/api/config');
                 if (configResponse.ok) {
                     const config = await configResponse.json();
                     playDomain = config.playDomain || playDomain;
                 }
 
+                // Fetch game data
                 const response = await fetch(`/api/published-games/${gameId}`);
                 if (!response.ok) {
                     showError();
@@ -285,38 +781,47 @@
         }
 
         function displayGame(game) {
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('content').style.display = 'grid';
-
-            // Update page title
+            document.getElementById('loading').classList.add('hidden');
             document.title = `${game.title} - DreamCore`;
 
-            // Set game info
-            document.getElementById('gameTitle').textContent = game.title;
-            document.getElementById('playCount').textContent = `${game.play_count || 0} plays`;
-            document.getElementById('gameDescription').textContent = game.description || '';
-
-            // Tags
-            const tagsContainer = document.getElementById('gameTags');
-            if (game.tags && game.tags.length > 0) {
-                tagsContainer.innerHTML = game.tags.map(tag =>
-                    `<span class="game-tag">${escapeHtml(tag)}</span>`
-                ).join('');
-            }
-
-            // How to play
-            if (game.how_to_play) {
-                document.getElementById('howToPlaySection').style.display = 'block';
-                document.getElementById('gameHowToPlay').textContent = game.how_to_play;
-            }
-
-            // Load game iframe from play domain
+            // Load game iframe
             document.getElementById('gameFrame').src = `${playDomain}/g/${gameId}/index.html`;
+
+            // Populate info panel
+            document.getElementById('infoTitle').textContent = game.title;
+            document.getElementById('infoPlayCount').textContent = `${game.play_count || 0} plays`;
+            document.getElementById('infoDescription').textContent = game.description || '';
+
+            if (game.how_to_play) {
+                document.getElementById('infoHowToPlaySection').style.display = 'block';
+                document.getElementById('infoHowToPlay').textContent = game.how_to_play;
+            }
+
+            if (game.tags && game.tags.length > 0) {
+                document.getElementById('infoTagsSection').style.display = 'block';
+                document.getElementById('infoTags').innerHTML = game.tags
+                    .map(tag => `<span class="info-tag">${escapeHtml(tag)}</span>`)
+                    .join('');
+            }
+
+            // Show like count if available
+            if (game.like_count && game.like_count > 0) {
+                document.getElementById('likeCount').textContent = game.like_count;
+                document.getElementById('likeCount').style.display = 'flex';
+            }
         }
 
         function showError() {
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('error').style.display = 'block';
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('error').classList.add('visible');
+        }
+
+        function goBack() {
+            if (document.referrer && document.referrer.includes(window.location.host)) {
+                history.back();
+            } else {
+                window.location.href = '/create.html';
+            }
         }
 
         function escapeHtml(text) {
@@ -325,22 +830,73 @@
             return div.innerHTML;
         }
 
+        // Panel handlers
+        function openPanel(overlayId) {
+            document.getElementById(overlayId).classList.add('visible');
+        }
+
+        function closePanel(overlayId) {
+            document.getElementById(overlayId).classList.remove('visible');
+        }
+
+        // Like
+        document.getElementById('likeBtn').addEventListener('click', () => {
+            const btn = document.getElementById('likeBtn');
+            isLiked = !isLiked;
+            btn.classList.toggle('liked', isLiked);
+            // TODO: Send like to server
+        });
+
+        // Comment
+        document.getElementById('commentBtn').addEventListener('click', () => {
+            openPanel('commentPanelOverlay');
+        });
+
+        // Share
+        document.getElementById('shareBtn').addEventListener('click', () => {
+            openPanel('sharePanelOverlay');
+        });
+
+        // Info
+        document.getElementById('infoBtn').addEventListener('click', () => {
+            openPanel('infoPanelOverlay');
+        });
+
+        // Close panels on overlay click
+        ['infoPanelOverlay', 'sharePanelOverlay', 'commentPanelOverlay'].forEach(id => {
+            document.getElementById(id).addEventListener('click', (e) => {
+                if (e.target.id === id) {
+                    closePanel(id);
+                }
+            });
+        });
+
+        // Share functions
         function copyLink() {
             navigator.clipboard.writeText(window.location.href).then(() => {
-                const btn = document.querySelector('.share-btn.copy span');
-                btn.textContent = 'コピーしました!';
+                const btn = document.querySelector('.share-option-icon.copy');
+                btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>';
                 setTimeout(() => {
-                    btn.textContent = 'URLをコピー';
+                    btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
                 }, 2000);
+                closePanel('sharePanelOverlay');
             });
         }
 
-        function shareTwitter() {
-            const text = gameData ? `${gameData.title} - DreamCore` : 'DreamCore Game';
+        function shareX() {
+            const text = gameData ? `${gameData.title} - DreamCoreで作ったゲームで遊んでみて！` : 'DreamCore Game';
             const url = encodeURIComponent(window.location.href);
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${url}`, '_blank');
+            closePanel('sharePanelOverlay');
         }
 
+        function shareLine() {
+            const url = encodeURIComponent(window.location.href);
+            window.open(`https://line.me/R/msg/text/?${url}`, '_blank');
+            closePanel('sharePanelOverlay');
+        }
+
+        // Initialize
         loadGame();
     </script>
 </body>
