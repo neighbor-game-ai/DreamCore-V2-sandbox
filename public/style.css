@@ -7603,6 +7603,7 @@ body[data-page="notifications"] {
 
 .quota-error-content {
   flex: 1;
+  min-width: 0;
 }
 
 .quota-error-title {
@@ -7610,7 +7611,6 @@ body[data-page="notifications"] {
   font-weight: 600;
   color: #92400E;
   margin-bottom: 4px;
-  white-space: nowrap;
 }
 
 .quota-error-detail {
