@@ -7624,6 +7624,36 @@ body[data-page="notifications"] {
   color: #D97706;
 }
 
+/* Quota Error - Mobile: smaller font and icon to fit */
+@media (max-width: 480px) {
+  .quota-exceeded-error {
+    gap: var(--s-8);
+    padding: var(--s-12);
+  }
+
+  .quota-error-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .quota-error-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .quota-error-title {
+    font-size: 0.8125rem;
+  }
+
+  .quota-error-detail {
+    font-size: 0.75rem;
+  }
+
+  .quota-error-reset {
+    font-size: 0.6875rem;
+  }
+}
+
 /* Quota Limit Modal */
 #quotaLimitModal .new-game-content {
   max-width: 440px;
