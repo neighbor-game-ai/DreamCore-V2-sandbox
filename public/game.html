@@ -788,7 +788,21 @@
             document.getElementById('loading').classList.add('hidden');
             document.title = `${game.title} - DreamCore`;
 
-            document.getElementById('gameFrame').src = `${playDomain}/g/${gameId}/index.html`;
+            const iframe = document.getElementById('gameFrame');
+            iframe.src = `${playDomain}/g/${gameId}/index.html`;
+
+            // Inject user-select: none into iframe after load
+            iframe.onload = function() {
+                try {
+                    const doc = iframe.contentDocument || iframe.contentWindow.document;
+                    const style = doc.createElement('style');
+                    style.textContent = '*, *::before, *::after { -webkit-user-select: none !important; -moz-user-select: none !important; -ms-user-select: none !important; user-select: none !important; -webkit-touch-callout: none !important; }';
+                    doc.head.appendChild(style);
+                } catch (e) {
+                    // Cross-origin restriction - style injection not possible
+                    console.log('Cannot inject style into iframe (cross-origin)');
+                }
+            };
 
             if (game.remixed_from) {
                 const badge = document.getElementById('remixBadge');
