@@ -374,7 +374,8 @@ async function authFetch(url, options = {}) {
 async function checkAccess() {
   const token = await getAccessToken();
   if (!token) {
-    return { allowed: false, status: null };
+    // No token = auth error, should go to login
+    return { allowed: false, status: null, authError: true };
   }
 
   try {
@@ -384,14 +385,21 @@ async function checkAccess() {
       }
     });
 
+    if (response.status === 401) {
+      // Token expired/invalid = auth error, should go to login
+      return { allowed: false, status: null, authError: true };
+    }
+
     if (!response.ok) {
-      return { allowed: false, status: null };
+      // Other errors = treat as auth error to be safe
+      return { allowed: false, status: null, authError: true };
     }
 
     return await response.json();
   } catch (e) {
     console.error('[Auth] Access check error:', e);
-    return { allowed: false, status: null };
+    // Network error = treat as auth error
+    return { allowed: false, status: null, authError: true };
   }
 }
 

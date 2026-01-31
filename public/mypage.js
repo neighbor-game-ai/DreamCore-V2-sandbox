@@ -29,9 +29,13 @@ class MyPageApp {
     }
 
     // V2 Waitlist: Check access permission
-    const { allowed } = await DreamCoreAuth.checkAccess();
+    const { allowed, authError } = await DreamCoreAuth.checkAccess();
+    if (authError) {
+      window.location.href = '/';  // Auth error → login page
+      return;
+    }
     if (!allowed) {
-      window.location.href = '/waitlist.html';
+      window.location.href = '/waitlist.html';  // Not approved → waitlist
       return;
     }
 
