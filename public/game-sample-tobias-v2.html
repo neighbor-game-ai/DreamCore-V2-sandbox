@@ -580,6 +580,116 @@
             transform: translateX(2px);
         }
 
+        /* Expandable Visitors Group */
+        .gb-visitors-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            align-self: center;
+        }
+
+        .gb-visitors-group.expanded {
+            background: rgba(255, 255, 255, 0.7);
+            ring: 2px;
+            box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.15), 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .gb-visitors-group.expanded .gb-visitors-arrow {
+            transform: rotate(90deg);
+        }
+
+        .gb-visitors-group.expanded:hover .gb-visitors-arrow {
+            transform: rotate(90deg);
+        }
+
+        /* Individual visitors list (hidden by default) */
+        .gb-visitors-list {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            padding: 8px 0 4px 0;
+            width: 100%;
+            align-items: center;
+        }
+
+        .gb-visitors-list.visible {
+            display: flex;
+            animation: slideDown 0.2s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Individual visitor item */
+        .gb-visitor-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            width: fit-content;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+        }
+
+        .gb-visitor-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .gb-visitor-text {
+            font-size: 12px;
+            color: var(--gray-600);
+        }
+
+        .gb-visitor-text strong {
+            color: var(--gray-900);
+            font-weight: 700;
+        }
+
+        /* Collapse button */
+        .gb-collapse-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(0,0,0,0.06);
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--gray-400);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin-top: 4px;
+        }
+
+        .gb-collapse-btn:hover {
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--gray-600);
+        }
+
+        .gb-collapse-btn:active {
+            transform: scale(0.95);
+        }
+
         /* Chat Message Bubble - Left aligned */
         .gb-message {
             display: flex;
@@ -1090,16 +1200,41 @@
 
                 <!-- Feed - Organic layout -->
                 <div class="gb-feed">
-                    <!-- Grouped Visitors - Center -->
-                    <div class="gb-visitors-group">
-                        <div class="gb-stacked-avatars">
-                            <div class="gb-stacked-avatar">🐱</div>
-                            <div class="gb-stacked-avatar">🐰</div>
-                            <div class="gb-stacked-avatar">🦊</div>
-                            <div class="gb-stacked-avatar">🐻</div>
+                    <!-- Grouped Visitors - Expandable -->
+                    <div class="gb-visitors-container">
+                        <div class="gb-visitors-group" data-expandable="true">
+                            <div class="gb-stacked-avatars">
+                                <div class="gb-stacked-avatar">🐱</div>
+                                <div class="gb-stacked-avatar">🐰</div>
+                                <div class="gb-stacked-avatar">🦊</div>
+                                <div class="gb-stacked-avatar">🐻</div>
+                            </div>
+                            <span class="gb-visitors-text"><strong>ねこすき</strong>, <strong>うさぎ</strong> and 3 others visited.</span>
+                            <svg class="gb-visitors-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
                         </div>
-                        <span class="gb-visitors-text"><strong>ねこすき</strong>, <strong>うさぎ</strong> and 3 others visited.</span>
-                        <svg class="gb-visitors-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+                        <div class="gb-visitors-list">
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐱</div>
+                                <span class="gb-visitor-text"><strong>ねこすき</strong> visited</span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐰</div>
+                                <span class="gb-visitor-text"><strong>うさぎ</strong> visited</span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🦊</div>
+                                <span class="gb-visitor-text"><strong>きつね</strong> visited</span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐻</div>
+                                <span class="gb-visitor-text"><strong>くまさん</strong> visited</span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐼</div>
+                                <span class="gb-visitor-text"><strong>ぱんだ</strong> visited</span>
+                            </div>
+                            <button class="gb-collapse-btn">Collapse</button>
+                        </div>
                     </div>
 
                     <!-- Chat Message - Left aligned with sparkle -->
@@ -1124,16 +1259,45 @@
                         </div>
                     </div>
 
-                    <!-- Grouped Visitors - Center -->
-                    <div class="gb-visitors-group">
-                        <div class="gb-stacked-avatars">
-                            <div class="gb-stacked-avatar">🐶</div>
-                            <div class="gb-stacked-avatar">🦁</div>
-                            <div class="gb-stacked-avatar">🐧</div>
-                            <div class="gb-stacked-avatar">🐨</div>
+                    <!-- Grouped Visitors - Expandable -->
+                    <div class="gb-visitors-container">
+                        <div class="gb-visitors-group" data-expandable="true">
+                            <div class="gb-stacked-avatars">
+                                <div class="gb-stacked-avatar">🐶</div>
+                                <div class="gb-stacked-avatar">🦁</div>
+                                <div class="gb-stacked-avatar">🐧</div>
+                                <div class="gb-stacked-avatar">🐨</div>
+                            </div>
+                            <span class="gb-visitors-text"><strong>Glitch</strong>, <strong>Neon</strong> and 10 others visited.</span>
+                            <svg class="gb-visitors-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
                         </div>
-                        <span class="gb-visitors-text"><strong>Glitch</strong>, <strong>Neon</strong> and 10 others visited.</span>
-                        <svg class="gb-visitors-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+                        <div class="gb-visitors-list">
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐶</div>
+                                <span class="gb-visitor-text"><strong>Glitch</strong> visited</span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🦁</div>
+                                <span class="gb-visitor-text"><strong>Neon</strong> visited</span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐧</div>
+                                <span class="gb-visitor-text"><strong>Penguin</strong> visited</span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐨</div>
+                                <span class="gb-visitor-text"><strong>Koala</strong> visited</span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🦊</div>
+                                <span class="gb-visitor-text"><strong>Fox</strong> visited</span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐻</div>
+                                <span class="gb-visitor-text"><strong>Bear</strong> visited</span>
+                            </div>
+                            <button class="gb-collapse-btn">Collapse</button>
+                        </div>
                     </div>
 
                     <!-- Reaction - Right aligned -->
@@ -1501,6 +1665,40 @@
             if (isMenuOpen && !reactionMenu.contains(e.target) && e.target !== reactionBtn) {
                 closeMenu();
             }
+        });
+
+        // Expandable Visitors Groups
+        document.querySelectorAll('.gb-visitors-group[data-expandable="true"]').forEach(group => {
+            group.addEventListener('click', () => {
+                const container = group.closest('.gb-visitors-container');
+                const list = container.querySelector('.gb-visitors-list');
+                const isExpanded = group.classList.contains('expanded');
+
+                if (isExpanded) {
+                    // Collapse
+                    group.classList.remove('expanded');
+                    list.classList.remove('visible');
+                } else {
+                    // Expand
+                    group.classList.add('expanded');
+                    list.classList.add('visible');
+                    vibrate(10);
+                }
+            });
+        });
+
+        // Collapse buttons
+        document.querySelectorAll('.gb-collapse-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const container = btn.closest('.gb-visitors-container');
+                const group = container.querySelector('.gb-visitors-group');
+                const list = container.querySelector('.gb-visitors-list');
+
+                group.classList.remove('expanded');
+                list.classList.remove('visible');
+                vibrate(10);
+            });
         });
     </script>
 </body>
