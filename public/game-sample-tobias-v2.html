@@ -392,233 +392,511 @@
             white-space: pre-wrap;
         }
 
-        /* ===== Guestbook Panel ===== */
+        /* ===== Guestbook Panel - Organic Scrapbook Style ===== */
         .guestbook-panel {
-            max-height: 80vh;
+            max-height: 85vh;
+            background: #FAF9F6;
         }
 
         .guestbook-panel .panel-content {
-            max-height: calc(80vh - 28px);
-            padding-bottom: calc(80px + env(safe-area-inset-bottom));
+            max-height: calc(85vh - 28px);
+            padding: 0;
+            padding-bottom: calc(72px + env(safe-area-inset-bottom));
+            position: relative;
+            overflow-x: hidden;
         }
 
-        .guestbook-header {
+        /* Floating Feathers Background */
+        .gb-feathers {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .gb-feather {
+            position: absolute;
+            color: var(--border);
+            opacity: 0.08;
+        }
+
+        /* Header */
+        .gb-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 16px;
+            padding: 16px 20px;
+            position: sticky;
+            top: 0;
+            background: rgba(250, 249, 246, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 10;
         }
 
-        .guestbook-title {
-            font-size: 18px;
+        .gb-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .gb-title {
+            font-size: 16px;
             font-weight: 700;
             color: var(--gray-900);
         }
 
-        .guestbook-count {
-            font-size: 13px;
+        .gb-live-badge {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #34C759;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .gb-live-dot {
+            width: 6px;
+            height: 6px;
+            background: #34C759;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .gb-live-dot::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: #34C759;
+            border-radius: 50%;
+            animation: ping 1.5s ease-out infinite;
+        }
+
+        @keyframes ping {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+
+        .gb-online {
+            font-size: 11px;
             color: var(--gray-400);
             font-weight: 500;
+            background: rgba(255,255,255,0.6);
+            padding: 4px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(0,0,0,0.05);
         }
 
-        /* Timeline Feed */
-        .guestbook-feed {
+        /* Feed Container - Organic layout */
+        .gb-feed {
             display: flex;
             flex-direction: column;
-        }
-
-        /* Entry - Timeline style */
-        .guestbook-entry {
-            display: flex;
             gap: 12px;
-            padding: 16px 0;
-            animation: slideUp 0.4s ease-out forwards;
+            padding: 16px;
+            position: relative;
+            z-index: 1;
+            max-width: 400px;
+            margin: 0 auto;
         }
 
         @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(12px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .guestbook-entry + .guestbook-entry {
-            border-top: 1px solid var(--border);
+        .gb-feed > * {
+            animation: slideUp 0.4s ease-out forwards;
         }
 
-        .entry-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            flex-shrink: 0;
+        /* Grouped Visitors - Center aligned, glassmorphism */
+        .gb-visitors-group {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            padding: 8px 16px 8px 10px;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            gap: 10px;
+            align-self: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .gb-visitors-group:hover {
+            background: rgba(255, 255, 255, 0.7);
+            transform: scale(1.02);
+        }
+
+        .gb-visitors-group:active {
+            transform: scale(0.98);
+        }
+
+        .gb-stacked-avatars {
+            display: flex;
+        }
+
+        .gb-stacked-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            margin-left: -8px;
+            position: relative;
             overflow: hidden;
         }
 
-        .entry-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        .gb-stacked-avatar:first-child {
+            margin-left: 0;
         }
 
-        .entry-content {
+        .gb-visitors-text {
+            font-size: 10px;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .gb-visitors-text strong {
+            color: var(--gray-900);
+            font-weight: 600;
+        }
+
+        .gb-visitors-arrow {
+            color: var(--gray-400);
+            opacity: 0.5;
+            transition: transform 0.2s ease;
+        }
+
+        .gb-visitors-group:hover .gb-visitors-arrow {
+            transform: translateX(2px);
+        }
+
+        /* Chat Message Bubble - Left aligned */
+        .gb-message {
+            display: flex;
+            gap: 10px;
+            padding: 4px 0;
+            align-self: flex-start;
+            max-width: 90%;
+        }
+
+        .gb-message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .gb-message-avatar:hover {
+            transform: scale(1.05);
+        }
+
+        .gb-message-content {
             flex: 1;
             min-width: 0;
         }
 
-        .entry-header {
+        .gb-message-header {
             display: flex;
-            align-items: baseline;
-            gap: 8px;
-            margin-bottom: 2px;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+            padding-left: 4px;
         }
 
-        .entry-name {
+        .gb-message-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .gb-message-badge {
+            font-size: 9px;
+            font-weight: 700;
+            background: var(--red);
+            color: var(--bg);
+            padding: 2px 6px;
+            border-radius: 8px;
+            text-transform: uppercase;
+        }
+
+        .gb-message-time {
+            font-size: 10px;
+            color: var(--gray-400);
+            font-family: 'SF Mono', Monaco, monospace;
+        }
+
+        .gb-bubble-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .gb-message-bubble {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 18px;
+            border-top-left-radius: 4px;
+            font-size: 14px;
+            color: var(--gray-900);
+            line-height: 1.5;
+            display: inline-block;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border: 1px solid rgba(0,0,0,0.04);
+            position: relative;
+            transition: transform 0.15s ease;
+        }
+
+        .gb-message-bubble:active {
+            transform: scale(0.98);
+        }
+
+        /* Bubble tail */
+        .gb-bubble-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -6px;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-left: 1px solid rgba(0,0,0,0.04);
+            border-top: 1px solid rgba(0,0,0,0.04);
+            transform: skewX(-12deg);
+            clip-path: polygon(0 0, 100% 0, 100% 100%);
+        }
+
+        /* Sparkle decoration */
+        .gb-sparkle {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            color: #FFD60A;
+            transform: rotate(12deg);
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+            font-size: 18px;
+        }
+
+        /* Message actions */
+        .gb-message-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 6px;
+            padding-left: 4px;
+        }
+
+        .gb-action-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--gray-400);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            transition: color 0.15s ease;
+        }
+
+        .gb-action-btn:hover {
+            color: var(--red);
+        }
+
+        .gb-action-btn.liked {
+            color: var(--red);
+        }
+
+        .gb-action-btn svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        /* Reaction Entry - Right aligned, pill style */
+        .gb-reaction-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            align-self: flex-end;
+            gap: 4px;
+        }
+
+        .gb-reaction {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            padding: 6px 10px;
+            border-radius: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .gb-reaction:hover {
+            transform: scale(1.05);
+        }
+
+        .gb-reaction:active {
+            transform: scale(0.95);
+        }
+
+        .gb-reaction-emoji {
+            font-size: 20px;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+            transition: transform 0.2s ease;
+        }
+
+        .gb-reaction:hover .gb-reaction-emoji {
+            transform: scale(1.1);
+        }
+
+        .gb-reaction-divider {
+            width: 1px;
+            height: 20px;
+            background: var(--border);
+            opacity: 0.4;
+            margin: 0 10px;
+        }
+
+        .gb-reaction-user {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .gb-reaction-name {
             font-size: 12px;
             font-weight: 700;
             color: var(--gray-900);
         }
 
-        .entry-badge {
-            font-size: 10px;
-            font-weight: 600;
-            background: var(--red);
-            color: var(--bg);
-            padding: 1px 6px;
-            border-radius: 10px;
-        }
-
-        .entry-time {
-            font-size: 10px;
-            font-family: 'SF Mono', 'Monaco', monospace;
-            color: var(--gray-400);
-        }
-
-        .entry-action-label {
-            font-size: 12px;
-            color: var(--gray-400);
-            font-weight: 400;
-        }
-
-        .entry-text {
-            font-size: 14px;
-            color: rgba(23, 23, 23, 0.9);
-            line-height: 1.5;
-            font-weight: 500;
-        }
-
-        /* Visit only entry - more subtle */
-        .guestbook-entry.visit-only {
-            padding: 12px 0;
-        }
-
-        .guestbook-entry.visit-only .entry-avatar {
+        .gb-reaction-avatar {
             width: 28px;
             height: 28px;
-            font-size: 12px;
-        }
-
-        .guestbook-entry.visit-only .entry-header {
-            margin-bottom: 0;
-        }
-
-        .entry-actions {
+            border-radius: 50%;
+            background: var(--surface);
+            border: 1px solid rgba(0,0,0,0.06);
             display: flex;
             align-items: center;
-            gap: 16px;
+            justify-content: center;
+            font-size: 13px;
+            overflow: hidden;
         }
 
-        .entry-action {
+        .gb-reaction-meta {
             display: flex;
             align-items: center;
-            gap: 4px;
-            font-size: 12px;
+            gap: 10px;
+            padding-right: 8px;
+        }
+
+        .gb-reaction-time {
+            font-size: 9px;
             color: var(--gray-400);
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 4px 0;
-            transition: color 0.15s ease;
+            font-family: 'SF Mono', Monaco, monospace;
+            opacity: 0.6;
         }
 
-        .entry-action:hover {
-            color: var(--red);
+        .gb-reaction-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .entry-action svg {
-            width: 14px;
-            height: 14px;
+        .gb-reaction-actions .gb-action-btn {
+            font-size: 9px;
         }
 
-        .entry-action.liked {
-            color: var(--red);
+        /* Single Visit Entry - Center aligned */
+        .gb-visit {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            align-self: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.03);
         }
 
-        /* Nested replies */
-        .entry-replies {
-            margin-top: 12px;
-            padding-left: 48px;
+        .gb-visit:hover {
+            transform: scale(1.02);
         }
 
-        .entry-replies .guestbook-entry {
-            padding: 12px 0;
+        .gb-visit-avatar {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 1px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            overflow: hidden;
         }
 
-        .entry-replies .guestbook-entry:first-child {
-            padding-top: 0;
+        .gb-visit-text {
+            font-size: 10px;
+            color: var(--gray-400);
         }
 
-        /* Input fixed at bottom */
-        .guestbook-input-container {
+        .gb-visit-text strong {
+            color: var(--gray-900);
+            font-weight: 700;
+        }
+
+        /* Input Container */
+        .gb-input-container {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
             display: flex;
-            gap: 12px;
-            padding: 16px 24px;
-            padding-bottom: calc(16px + env(safe-area-inset-bottom));
-            background: var(--bg);
-            border-top: 1px solid var(--border);
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom));
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(0,0,0,0.06);
         }
 
-        .guestbook-input {
-            flex: 1;
-            height: 44px;
-            padding: 0 16px;
-            border: 1px solid var(--border);
-            border-radius: 22px;
-            background: var(--surface);
-            font-size: 14px;
-            color: var(--gray-900);
-            outline: none;
-            transition: border-color 0.15s ease;
-        }
-
-        .guestbook-input:focus {
-            border-color: var(--red);
-        }
-
-        .guestbook-input::placeholder {
-            color: var(--gray-400);
-        }
-
-        .guestbook-send-btn {
-            width: 44px;
-            height: 44px;
+        .gb-emoji-btn {
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
-            background: var(--red);
-            border: none;
-            color: var(--bg);
+            background: white;
+            border: 1px solid var(--border);
+            font-size: 18px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -626,7 +904,72 @@
             transition: all 0.15s ease;
         }
 
-        .guestbook-send-btn:active {
+        .gb-emoji-btn:hover {
+            background: var(--surface);
+        }
+
+        .gb-emoji-btn:active {
+            transform: scale(0.95);
+        }
+
+        .gb-input-wrapper {
+            flex: 1;
+            height: 48px;
+            background: #F8F9FA;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            transition: border-color 0.15s ease;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+        }
+
+        .gb-input-wrapper:focus-within {
+            border-color: var(--red);
+        }
+
+        .gb-input {
+            flex: 1;
+            height: 100%;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            color: var(--gray-900);
+            outline: none;
+        }
+
+        .gb-input::placeholder {
+            color: var(--gray-400);
+            opacity: 0.7;
+        }
+
+        .gb-send-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--gray-900);
+            border: none;
+            color: var(--bg);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .gb-send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .gb-send-btn:not(:disabled):hover {
+            transform: scale(1.05);
+            background: var(--red);
+        }
+
+        .gb-send-btn:not(:disabled):active {
             transform: scale(0.95);
         }
     </style>
@@ -725,148 +1068,207 @@
         </div>
     </div>
 
-    <!-- Guestbook Panel -->
+    <!-- Guestbook Panel - Organic Scrapbook Style -->
     <div class="panel-overlay" id="guestbookPanelOverlay">
         <div class="panel guestbook-panel">
             <div class="panel-handle"></div>
             <div class="panel-content">
-                <div class="guestbook-header">
-                    <h2 class="guestbook-title">ゲストブック</h2>
-                    <span class="guestbook-count">24人が訪問</span>
+                <!-- Floating Feathers Background -->
+                <div class="gb-feathers" id="gbFeathers"></div>
+
+                <!-- Header -->
+                <div class="gb-header">
+                    <div class="gb-header-left">
+                        <h2 class="gb-title">Guest Book</h2>
+                        <div class="gb-live-badge">
+                            <span class="gb-live-dot"></span>
+                            Live Feed (221)
+                        </div>
+                    </div>
+                    <span class="gb-online">84 online</span>
                 </div>
 
-                <!-- Timeline Feed -->
-                <div class="guestbook-feed">
-                    <!-- コメント付きエントリー -->
-                    <div class="guestbook-entry">
-                        <div class="entry-avatar">🐱</div>
-                        <div class="entry-content">
-                            <div class="entry-header">
-                                <span class="entry-name">ねこすき</span>
-                                <span class="entry-time">2m</span>
-                            </div>
-                            <p class="entry-text">めっちゃ面白い！ステージ3がむずかしい〜</p>
+                <!-- Feed - Organic layout -->
+                <div class="gb-feed">
+                    <!-- Grouped Visitors - Center -->
+                    <div class="gb-visitors-group">
+                        <div class="gb-stacked-avatars">
+                            <div class="gb-stacked-avatar">🐱</div>
+                            <div class="gb-stacked-avatar">🐰</div>
+                            <div class="gb-stacked-avatar">🦊</div>
+                            <div class="gb-stacked-avatar">🐻</div>
                         </div>
+                        <span class="gb-visitors-text"><strong>ねこすき</strong>, <strong>うさぎ</strong> and 3 others visited.</span>
+                        <svg class="gb-visitors-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
                     </div>
 
-                    <!-- 訪問のみ（プレイした） -->
-                    <div class="guestbook-entry visit-only">
-                        <div class="entry-avatar">🐰</div>
-                        <div class="entry-content">
-                            <div class="entry-header">
-                                <span class="entry-name">うさぎ</span>
-                                <span class="entry-action-label">が遊びに来ました</span>
-                                <span class="entry-time">3m</span>
+                    <!-- Chat Message - Left aligned with sparkle -->
+                    <div class="gb-message">
+                        <div class="gb-message-avatar">🐱</div>
+                        <div class="gb-message-content">
+                            <div class="gb-message-header">
+                                <span class="gb-message-name">ねこすき</span>
+                                <span class="gb-message-time">1m ago</span>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- 作者のコメント -->
-                    <div class="guestbook-entry">
-                        <div class="entry-avatar">🎮</div>
-                        <div class="entry-content">
-                            <div class="entry-header">
-                                <span class="entry-name">ゲーム作者</span>
-                                <span class="entry-badge">作者</span>
-                                <span class="entry-time">5m</span>
+                            <div class="gb-bubble-wrapper">
+                                <div class="gb-message-bubble">めっちゃ面白い！ステージ3がむずかしい〜</div>
+                                <span class="gb-sparkle">⚡</span>
                             </div>
-                            <p class="entry-text">遊んでくれてありがとう！🚀</p>
-                        </div>
-                    </div>
-
-                    <!-- 訪問のみ -->
-                    <div class="guestbook-entry visit-only">
-                        <div class="entry-avatar">🐻</div>
-                        <div class="entry-content">
-                            <div class="entry-header">
-                                <span class="entry-name">くまさん</span>
-                                <span class="entry-action-label">が遊びに来ました</span>
-                                <span class="entry-time">8m</span>
+                            <div class="gb-message-actions">
+                                <button class="gb-action-btn liked">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    99
+                                </button>
+                                <button class="gb-action-btn">Reply</button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- コメント付き -->
-                    <div class="guestbook-entry">
-                        <div class="entry-avatar">🐶</div>
-                        <div class="entry-content">
-                            <div class="entry-header">
-                                <span class="entry-name">わんこ</span>
-                                <span class="entry-time">12m</span>
-                            </div>
-                            <p class="entry-text">ハイスコア更新した！！🎉</p>
+                    <!-- Grouped Visitors - Center -->
+                    <div class="gb-visitors-group">
+                        <div class="gb-stacked-avatars">
+                            <div class="gb-stacked-avatar">🐶</div>
+                            <div class="gb-stacked-avatar">🦁</div>
+                            <div class="gb-stacked-avatar">🐧</div>
+                            <div class="gb-stacked-avatar">🐨</div>
                         </div>
+                        <span class="gb-visitors-text"><strong>Glitch</strong>, <strong>Neon</strong> and 10 others visited.</span>
+                        <svg class="gb-visitors-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
                     </div>
 
-                    <!-- 訪問のみ -->
-                    <div class="guestbook-entry visit-only">
-                        <div class="entry-avatar">🦁</div>
-                        <div class="entry-content">
-                            <div class="entry-header">
-                                <span class="entry-name">らいおん</span>
-                                <span class="entry-action-label">が遊びに来ました</span>
-                                <span class="entry-time">15m</span>
+                    <!-- Reaction - Right aligned -->
+                    <div class="gb-reaction-wrapper">
+                        <div class="gb-reaction">
+                            <span class="gb-reaction-emoji">🔥</span>
+                            <div class="gb-reaction-divider"></div>
+                            <div class="gb-reaction-user">
+                                <span class="gb-reaction-name">Glitch</span>
+                                <div class="gb-reaction-avatar">🐶</div>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- 訪問のみ -->
-                    <div class="guestbook-entry visit-only">
-                        <div class="entry-avatar">🐧</div>
-                        <div class="entry-content">
-                            <div class="entry-header">
-                                <span class="entry-name">ぺんぎん</span>
-                                <span class="entry-action-label">が遊びに来ました</span>
-                                <span class="entry-time">20m</span>
+                        <div class="gb-reaction-meta">
+                            <span class="gb-reaction-time">Reacted • 3m ago</span>
+                            <div class="gb-reaction-actions">
+                                <button class="gb-action-btn liked">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    12
+                                </button>
+                                <button class="gb-action-btn">Reply</button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- コメント付き -->
-                    <div class="guestbook-entry">
-                        <div class="entry-avatar">🦊</div>
-                        <div class="entry-content">
-                            <div class="entry-header">
-                                <span class="entry-name">きつねうどん</span>
-                                <span class="entry-time">1h</span>
+                    <!-- Single Visit - Center -->
+                    <div class="gb-visit">
+                        <div class="gb-visit-avatar">🐻</div>
+                        <span class="gb-visit-text"><strong>Beat</strong> visited</span>
+                    </div>
+
+                    <!-- Author Message - Left aligned -->
+                    <div class="gb-message">
+                        <div class="gb-message-avatar">🎮</div>
+                        <div class="gb-message-content">
+                            <div class="gb-message-header">
+                                <span class="gb-message-name">ゲーム作者</span>
+                                <span class="gb-message-badge">Author</span>
+                                <span class="gb-message-time">5m ago</span>
                             </div>
-                            <p class="entry-text">レトロな雰囲気がいいね👍</p>
+                            <div class="gb-bubble-wrapper">
+                                <div class="gb-message-bubble">遊んでくれてありがとう！</div>
+                            </div>
+                            <div class="gb-message-actions">
+                                <button class="gb-action-btn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    24
+                                </button>
+                                <button class="gb-action-btn">Reply</button>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- 訪問のみ -->
-                    <div class="guestbook-entry visit-only">
-                        <div class="entry-avatar">🐨</div>
-                        <div class="entry-content">
-                            <div class="entry-header">
-                                <span class="entry-name">こあら</span>
-                                <span class="entry-action-label">が遊びに来ました</span>
-                                <span class="entry-time">1h</span>
+                    <!-- Reaction - Right aligned -->
+                    <div class="gb-reaction-wrapper">
+                        <div class="gb-reaction">
+                            <span class="gb-reaction-emoji">❤️</span>
+                            <div class="gb-reaction-divider"></div>
+                            <div class="gb-reaction-user">
+                                <span class="gb-reaction-name">らいおん</span>
+                                <div class="gb-reaction-avatar">🦁</div>
+                            </div>
+                        </div>
+                        <div class="gb-reaction-meta">
+                            <span class="gb-reaction-time">Reacted • 8m ago</span>
+                            <div class="gb-reaction-actions">
+                                <button class="gb-action-btn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    5
+                                </button>
+                                <button class="gb-action-btn">Reply</button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 訪問のみ -->
-                    <div class="guestbook-entry visit-only">
-                        <div class="entry-avatar">🐼</div>
-                        <div class="entry-content">
-                            <div class="entry-header">
-                                <span class="entry-name">ぱんだ</span>
-                                <span class="entry-action-label">が遊びに来ました</span>
-                                <span class="entry-time">2h</span>
+                    <!-- Chat Message -->
+                    <div class="gb-message">
+                        <div class="gb-message-avatar">🐶</div>
+                        <div class="gb-message-content">
+                            <div class="gb-message-header">
+                                <span class="gb-message-name">わんこ</span>
+                                <span class="gb-message-time">12m ago</span>
+                            </div>
+                            <div class="gb-bubble-wrapper">
+                                <div class="gb-message-bubble">ハイスコア更新した！！</div>
+                            </div>
+                            <div class="gb-message-actions">
+                                <button class="gb-action-btn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    8
+                                </button>
+                                <button class="gb-action-btn">Reply</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Single Visit - Center -->
+                    <div class="gb-visit">
+                        <div class="gb-visit-avatar">🐼</div>
+                        <span class="gb-visit-text"><strong>ぱんだ</strong> visited</span>
+                    </div>
+
+                    <!-- Reaction - Right aligned -->
+                    <div class="gb-reaction-wrapper">
+                        <div class="gb-reaction">
+                            <span class="gb-reaction-emoji">😂</span>
+                            <div class="gb-reaction-divider"></div>
+                            <div class="gb-reaction-user">
+                                <span class="gb-reaction-name">きつね</span>
+                                <div class="gb-reaction-avatar">🦊</div>
+                            </div>
+                        </div>
+                        <div class="gb-reaction-meta">
+                            <span class="gb-reaction-time">Reacted • 20m ago</span>
+                            <div class="gb-reaction-actions">
+                                <button class="gb-action-btn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    3
+                                </button>
+                                <button class="gb-action-btn">Reply</button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Input fixed at bottom -->
-            <div class="guestbook-input-container">
-                <input type="text" class="guestbook-input" placeholder="コメントを書く..." id="commentInput">
-                <button class="guestbook-send-btn" id="commentSendBtn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            <!-- Input -->
+            <div class="gb-input-container">
+                <button class="gb-emoji-btn">☺</button>
+                <div class="gb-input-wrapper">
+                    <input type="text" class="gb-input" placeholder="Say something nice..." id="commentInput">
+                </div>
+                <button class="gb-send-btn" id="commentSendBtn" disabled>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/>
+                        <path d="m21.854 2.147-10.94 10.939"/>
                     </svg>
                 </button>
             </div>
@@ -897,22 +1299,91 @@
         const commentInput = document.getElementById('commentInput');
         const commentSendBtn = document.getElementById('commentSendBtn');
 
-        guestbookBtn.addEventListener('click', () => {
-            guestbookPanelOverlay.classList.add('visible');
-        });
-
         guestbookPanelOverlay.addEventListener('click', (e) => {
             if (e.target === guestbookPanelOverlay) {
                 guestbookPanelOverlay.classList.remove('visible');
             }
         });
 
+        // Generate floating feathers
+        function generateFeathers() {
+            const container = document.getElementById('gbFeathers');
+            if (!container) return;
+
+            const featherSVG = `<svg width="24" height="36" viewBox="0 0 24 36" fill="currentColor">
+                <path d="M7.5 2C9.5 0.5 13.5 0.5 15.5 2C18.5 4.5 20 9 20 15C20 23 18 28 16 32C14.5 35 9.5 35 8 32C6 28 4 23 4 15C4 9 5.5 4.5 7.5 2Z"/>
+                <path d="M8 8H16" stroke="white" stroke-width="1" stroke-opacity="0.5"/>
+                <path d="M7 14H17" stroke="white" stroke-width="1" stroke-opacity="0.5"/>
+                <path d="M8 20H16" stroke="white" stroke-width="1" stroke-opacity="0.5"/>
+            </svg>`;
+
+            for (let i = 0; i < 8; i++) {
+                const feather = document.createElement('div');
+                feather.className = 'gb-feather';
+                feather.innerHTML = featherSVG;
+
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                const rotation = Math.random() * 60 - 30;
+                const scale = Math.random() > 0.5 ? 1 : -1;
+                const opacity = 0.03 + Math.random() * 0.08;
+
+                feather.style.cssText = `
+                    left: ${x}%;
+                    top: ${y}%;
+                    transform: translate(-50%, -50%) rotate(${rotation}deg) scaleX(${scale});
+                    opacity: ${opacity};
+                `;
+
+                container.appendChild(feather);
+            }
+        }
+
+        // Initialize feathers when guestbook opens
+        guestbookBtn.addEventListener('click', () => {
+            guestbookPanelOverlay.classList.add('visible');
+            if (!document.getElementById('gbFeathers').hasChildNodes()) {
+                generateFeathers();
+            }
+        });
+
+        // Input activation
+        commentInput.addEventListener('input', () => {
+            const hasText = commentInput.value.trim().length > 0;
+            commentSendBtn.disabled = !hasText;
+        });
+
         // Comment send (demo)
         commentSendBtn.addEventListener('click', () => {
             if (commentInput.value.trim()) {
-                alert('コメントを送信しました: ' + commentInput.value);
+                // Add new message to feed (demo)
+                const feed = document.querySelector('.gb-feed');
+                const newMsg = document.createElement('div');
+                newMsg.className = 'gb-message';
+                newMsg.style.animationDelay = '0s';
+                newMsg.innerHTML = `
+                    <div class="gb-message-avatar">👤</div>
+                    <div class="gb-message-content">
+                        <div class="gb-message-header">
+                            <span class="gb-message-name">You</span>
+                            <span class="gb-message-time">now</span>
+                        </div>
+                        <div class="gb-bubble-wrapper">
+                            <div class="gb-message-bubble">${commentInput.value}</div>
+                            <span class="gb-sparkle">⚡</span>
+                        </div>
+                        <div class="gb-message-actions">
+                            <button class="gb-action-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                0
+                            </button>
+                            <button class="gb-action-btn">Reply</button>
+                        </div>
+                    </div>
+                `;
+                feed.insertBefore(newMsg, feed.firstChild);
                 commentInput.value = '';
-                guestbookPanelOverlay.classList.remove('visible');
+                commentSendBtn.disabled = true;
             }
         });
 
