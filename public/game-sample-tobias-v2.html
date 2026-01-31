@@ -391,6 +391,214 @@
             line-height: 1.6;
             white-space: pre-wrap;
         }
+
+        /* ===== Guestbook Panel ===== */
+        .guestbook-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .guestbook-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .guestbook-count {
+            font-size: 14px;
+            color: var(--gray-400);
+            font-weight: 500;
+        }
+
+        /* Players who played */
+        .players-section {
+            margin-bottom: 24px;
+        }
+
+        .players-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+        }
+
+        .players-avatars {
+            display: flex;
+            align-items: center;
+        }
+
+        .player-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 2px solid var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            margin-left: -8px;
+            position: relative;
+        }
+
+        .player-avatar:first-child {
+            margin-left: 0;
+        }
+
+        .player-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .player-avatar.more {
+            background: var(--gray-400);
+            color: var(--bg);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* Comments */
+        .comments-section {
+            margin-bottom: 20px;
+        }
+
+        .comment-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+
+        .comment-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--surface);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .comment-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .comment-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .comment-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .comment-username {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .comment-time {
+            font-size: 12px;
+            color: var(--gray-400);
+        }
+
+        .comment-text {
+            font-size: 14px;
+            color: var(--gray-600);
+            line-height: 1.5;
+        }
+
+        .comment-reaction {
+            font-size: 16px;
+            margin-top: 4px;
+        }
+
+        /* Comment Input */
+        .comment-input-container {
+            display: flex;
+            gap: 12px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .comment-input {
+            flex: 1;
+            height: 44px;
+            padding: 0 16px;
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            background: var(--surface);
+            font-size: 14px;
+            color: var(--gray-900);
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+
+        .comment-input:focus {
+            border-color: var(--red);
+        }
+
+        .comment-input::placeholder {
+            color: var(--gray-400);
+        }
+
+        .comment-send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--red);
+            border: none;
+            color: var(--bg);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+
+        .comment-send-btn:active {
+            transform: scale(0.95);
+        }
+
+        .comment-send-btn:disabled {
+            background: var(--gray-400);
+            cursor: not-allowed;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 32px 0;
+            color: var(--gray-400);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .empty-state-text {
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -415,7 +623,7 @@
                     <div class="reaction-item" data-reaction="clap">👏</div>
                 </div>
             </div>
-            <button class="action-btn">
+            <button class="action-btn" id="guestbookBtn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </button>
             <button class="action-btn">
@@ -487,6 +695,91 @@
         </div>
     </div>
 
+    <!-- Guestbook Panel -->
+    <div class="panel-overlay" id="guestbookPanelOverlay">
+        <div class="panel">
+            <div class="panel-handle"></div>
+            <div class="panel-content">
+                <div class="guestbook-header">
+                    <h2 class="guestbook-title">ゲストブック</h2>
+                    <span class="guestbook-count">24人がプレイ</span>
+                </div>
+
+                <!-- Players who played -->
+                <div class="players-section">
+                    <div class="players-label">最近のプレイヤー</div>
+                    <div class="players-avatars">
+                        <div class="player-avatar">🐱</div>
+                        <div class="player-avatar">🐶</div>
+                        <div class="player-avatar">🦊</div>
+                        <div class="player-avatar">🐼</div>
+                        <div class="player-avatar">🐨</div>
+                        <div class="player-avatar">🦁</div>
+                        <div class="player-avatar more">+18</div>
+                    </div>
+                </div>
+
+                <!-- Comments -->
+                <div class="comments-section">
+                    <div class="comment-item">
+                        <div class="comment-avatar">🐱</div>
+                        <div class="comment-content">
+                            <div class="comment-header">
+                                <span class="comment-username">ねこすき</span>
+                                <span class="comment-time">2分前</span>
+                            </div>
+                            <div class="comment-text">めっちゃ面白い！ステージ3がむずかしい〜</div>
+                            <div class="comment-reaction">🔥</div>
+                        </div>
+                    </div>
+                    <div class="comment-item">
+                        <div class="comment-avatar">🐶</div>
+                        <div class="comment-content">
+                            <div class="comment-header">
+                                <span class="comment-username">わんこ</span>
+                                <span class="comment-time">5分前</span>
+                            </div>
+                            <div class="comment-text">ハイスコア更新した！！</div>
+                            <div class="comment-reaction">❤️</div>
+                        </div>
+                    </div>
+                    <div class="comment-item">
+                        <div class="comment-avatar">🦊</div>
+                        <div class="comment-content">
+                            <div class="comment-header">
+                                <span class="comment-username">きつねうどん</span>
+                                <span class="comment-time">12分前</span>
+                            </div>
+                            <div class="comment-text">レトロな雰囲気がいいね👍</div>
+                        </div>
+                    </div>
+                    <div class="comment-item">
+                        <div class="comment-avatar">🐼</div>
+                        <div class="comment-content">
+                            <div class="comment-header">
+                                <span class="comment-username">ぱんだ</span>
+                                <span class="comment-time">1時間前</span>
+                            </div>
+                            <div class="comment-text">友達に教えてもらって来ました！楽しい</div>
+                            <div class="comment-reaction">😂</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comment Input -->
+                <div class="comment-input-container">
+                    <input type="text" class="comment-input" placeholder="コメントを書く..." id="commentInput">
+                    <button class="comment-send-btn" id="commentSendBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Reaction Toast -->
     <div class="reaction-toast" id="reactionToast"></div>
 
@@ -502,6 +795,37 @@
         infoPanelOverlay.addEventListener('click', (e) => {
             if (e.target === infoPanelOverlay) {
                 infoPanelOverlay.classList.remove('visible');
+            }
+        });
+
+        // Guestbook Panel
+        const guestbookBtn = document.getElementById('guestbookBtn');
+        const guestbookPanelOverlay = document.getElementById('guestbookPanelOverlay');
+        const commentInput = document.getElementById('commentInput');
+        const commentSendBtn = document.getElementById('commentSendBtn');
+
+        guestbookBtn.addEventListener('click', () => {
+            guestbookPanelOverlay.classList.add('visible');
+        });
+
+        guestbookPanelOverlay.addEventListener('click', (e) => {
+            if (e.target === guestbookPanelOverlay) {
+                guestbookPanelOverlay.classList.remove('visible');
+            }
+        });
+
+        // Comment send (demo)
+        commentSendBtn.addEventListener('click', () => {
+            if (commentInput.value.trim()) {
+                alert('コメントを送信しました: ' + commentInput.value);
+                commentInput.value = '';
+                guestbookPanelOverlay.classList.remove('visible');
+            }
+        });
+
+        commentInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && commentInput.value.trim()) {
+                commentSendBtn.click();
             }
         });
 
