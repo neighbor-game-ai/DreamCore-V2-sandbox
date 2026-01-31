@@ -7,16 +7,19 @@
 | キー名 | 保存場所 | 用途 |
 |--------|----------|------|
 | `BREVO_API_KEY` | Supabase Edge Function Secrets | Brevo API認証 |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Edge Function (自動設定) | DB更新 |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Edge Function Secrets | DB更新 |
 
-### BREVO_API_KEY の確認・更新
+**重要**: `SUPABASE_SERVICE_ROLE_KEY` は自動設定されません。手動で Secrets に設定する必要があります。
+
+### Secrets の確認・設定
 
 ```bash
 # 現在の設定を確認
 npx supabase secrets list --project-ref tcynrijrovktirsvwiqb
 
-# 新しいキーを設定
+# 必要な Secrets を設定
 npx supabase secrets set BREVO_API_KEY=xkeysib-xxxxx --project-ref tcynrijrovktirsvwiqb
+npx supabase secrets set SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi... --project-ref tcynrijrovktirsvwiqb
 ```
 
 ### Brevo Dashboard でのキー管理
@@ -27,11 +30,29 @@ npx supabase secrets set BREVO_API_KEY=xkeysib-xxxxx --project-ref tcynrijrovkti
 
 **注意**: APIキーは `xkeysib-` で始まる（`xsmtpsib-` はSMTP用で使用不可）
 
+## ⚠️ Brevo IP制限の無効化（必須）
+
+**Supabase Edge Function は動的IPを使用するため、Brevo の IP制限が有効だとメール送信が失敗します。**
+
+### 症状
+
+- Edge Function のログで `brevoStatus: 401` が返る
+- エラーメッセージ: `"We have detected you are using an unrecognised IP address"`
+
+### 解決方法
+
+1. [Brevo Dashboard](https://app.brevo.com/) にログイン
+2. 右上アイコン → **Security** → **Authorised IPs**
+3. **Deactivate blocking** をクリックしてIP制限を無効化
+
+**注意**: IP制限を無効化しないと、Edge Function からの全てのリクエストが 401 で拒否されます。
+
 ## 前提条件
 
 - Supabase プロジェクト設定済み
 - Brevo (旧Sendinblue) アカウント作成済み
 - Supabase CLI インストール済み
+- **Brevo の IP制限が無効化されている**
 
 ## 1. Brevo API キー取得
 
@@ -71,7 +92,11 @@ npx supabase link --project-ref tcynrijrovktirsvwiqb
 ### 3.3 Secrets を設定
 
 ```bash
+# Brevo API キー
 npx supabase secrets set BREVO_API_KEY=your-brevo-api-key-here
+
+# Supabase Service Role Key（自動設定されないため手動で設定）
+npx supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 ```
 
 ### 3.4 Edge Function をデプロイ
@@ -138,6 +163,26 @@ npx supabase functions logs waitlist-email
 
 ## 6. トラブルシューティング
 
+### 401 エラー / "Key not found" / "unrecognised IP address"
+
+**最も多い原因: Brevo の IP制限**
+
+Supabase Edge Function は動的IPを使用するため、Brevo の Authorized IPs 機能と互換性がありません。
+
+**解決方法:**
+1. Brevo Dashboard → Security → Authorised IPs
+2. **Deactivate blocking** をクリック
+
+**確認方法:**
+```sql
+-- pg_net レスポンスを確認
+SELECT id, status_code, content::text
+FROM net._http_response
+ORDER BY id DESC LIMIT 5;
+```
+
+レスポンスに `"unrecognised IP address"` が含まれていれば IP制限が原因です。
+
 ### メールが届かない場合
 
 1. **Edge Function ログを確認**
@@ -148,6 +193,7 @@ npx supabase functions logs waitlist-email
 2. **Brevo API キーを確認**
    - Secrets が正しく設定されているか
    - APIキーが有効か
+   - **IP制限が無効化されているか**
 
 3. **Webhook 設定を確認**
    - イベントタイプ（INSERT/UPDATE）が正しいか
@@ -166,32 +212,34 @@ npx supabase functions logs waitlist-email
 ### 保存場所
 
 ```
-public/images/email/hero-banner.png
+public/images/email/hero-banner.jpg
 ```
 
-本番URL: `https://v2.dreamcore.gg/images/email/hero-banner.png`
+本番URL: `https://v2.dreamcore.gg/images/email/hero-banner.jpg`
 
 ### 画像の要件
 
 | 項目 | 推奨値 |
 |------|--------|
 | 幅 | 600px（メールクライアント標準） |
-| ファイルサイズ | 50KB以下 |
-| 形式 | PNG または JPG |
+| ファイルサイズ | 30KB以下 |
+| 形式 | **JPG**（PNG より軽量） |
+
+**注意**: PNG 形式は同じ画像でも 5倍以上のサイズになることがあります。メール画像は **JPG** を使用してください。
 
 ### 画像の圧縮・リサイズ
 
 画像を追加・変更する際は必ず圧縮すること:
 
 ```bash
-# macOS: sips でリサイズ（幅600pxに縮小）
-sips -Z 600 public/images/email/hero-banner.png --out public/images/email/hero-banner.png
+# macOS: sips でリサイズ（幅600pxに縮小）+ JPEG圧縮
+sips -Z 600 -s format jpeg -s formatOptions 70 input.png --out public/images/email/hero-banner.jpg
 
-# サイズ確認
+# サイズ確認（30KB以下を目標）
 ls -lh public/images/email/
 ```
 
-**注意**: 元画像が大きいとメールの読み込みが遅くなり、ユーザー体験が悪化する。必ず50KB以下に圧縮すること。
+**注意**: 元画像が大きいとメールの読み込みが遅くなり、ユーザー体験が悪化する。必ず30KB以下に圧縮すること。
 
 ### デプロイ
 
@@ -210,8 +258,8 @@ git push
 
 `supabase/functions/waitlist-email/index.ts` の以下の関数を編集:
 
-- `getWelcomeEmailHtml()` - ウェルカムメール
-- `getApprovedEmailHtml()` - 承認メール
+- `getWelcomeEmailHtmlJa()` / `getWelcomeEmailHtmlEn()` - ウェルカムメール
+- `getApprovedEmailHtmlJa()` / `getApprovedEmailHtmlEn()` - 承認メール
 
 編集後、再デプロイ:
 
