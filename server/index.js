@@ -1265,6 +1265,13 @@ app.get('/g/:gameId', async (req, res) => {
   if (!req.isPlayDomain) {
     return res.status(404).send('Not found');
   }
+
+  // Block direct browser access - only allow iframe embedding
+  const secFetchDest = req.headers['sec-fetch-dest'];
+  if (secFetchDest === 'document') {
+    return res.status(403).send('This game can only be played within DreamCore');
+  }
+
   // Redirect to index.html
   return res.redirect(`/g/${req.params.gameId}/index.html`);
 });
@@ -1277,6 +1284,13 @@ app.get('/g/:gameId/*', async (req, res) => {
   // Only serve game files on play domain
   if (!req.isPlayDomain) {
     return res.status(404).send('Not found');
+  }
+
+  // Block direct browser access to HTML files - only allow iframe embedding
+  // Sub-resources (js, css, images, etc.) are allowed for the game to work
+  const secFetchDest = req.headers['sec-fetch-dest'];
+  if (secFetchDest === 'document' && filename.endsWith('.html')) {
+    return res.status(403).send('This game can only be played within DreamCore');
   }
 
   // Validate UUID
