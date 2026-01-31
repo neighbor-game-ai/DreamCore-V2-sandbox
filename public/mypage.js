@@ -141,9 +141,11 @@ class MyPageApp {
       const thumbnailUrl = `/api/projects/${game.id}/thumbnail?access_token=${encodeURIComponent(this.accessToken)}`;
       const gameName = this.escapeHtml(game.name);
       const gameDesc = this.escapeHtml(game.description || '');
+      // Use publishedGameId for public game URL
+      const gameId = game.publishedGameId;
 
       return `
-        <div class="mypage-game-case" data-project-id="${game.id}" style="animation-delay: ${index * 0.08}s">
+        <div class="mypage-game-case" data-game-id="${gameId}" style="animation-delay: ${index * 0.08}s">
           <div class="mypage-case-visual">
             <img src="${thumbnailUrl}" alt="${gameName}" loading="lazy" onerror="this.onerror=null;this.classList.add('img-error')">
           </div>
@@ -176,13 +178,14 @@ class MyPageApp {
 
     this.gamesGridEl.innerHTML = gameCases + emptyCases;
 
-    // Add click handlers - play game with card insert animation
+    // Add click handlers - open published game on play domain
     this.gamesGridEl.querySelectorAll('.mypage-game-case').forEach(card => {
       card.addEventListener('click', () => {
-        const projectId = card.dataset.projectId;
-        if (projectId) {
-          const thumbnailUrl = `/api/projects/${projectId}/thumbnail?access_token=${encodeURIComponent(this.accessToken)}`;
-          this.playCardInsertAnimation(projectId, thumbnailUrl);
+        const gameId = card.dataset.gameId;
+        if (gameId) {
+          // Public games are served from play.dreamcore.gg/g/:gameId
+          const publicGameUrl = `https://play.dreamcore.gg/g/${gameId}`;
+          window.open(publicGameUrl, '_blank');
         }
       });
     });
