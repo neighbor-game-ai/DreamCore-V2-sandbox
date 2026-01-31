@@ -161,7 +161,52 @@ npx supabase functions logs waitlist-email
 - 無料プラン: 300通/日
 - 超過した場合は翌日まで待つか、プランをアップグレード
 
-## 7. メールテンプレートのカスタマイズ
+## 7. メール画像
+
+### 保存場所
+
+```
+public/images/email/hero-banner.png
+```
+
+本番URL: `https://v2.dreamcore.gg/images/email/hero-banner.png`
+
+### 画像の要件
+
+| 項目 | 推奨値 |
+|------|--------|
+| 幅 | 600px（メールクライアント標準） |
+| ファイルサイズ | 50KB以下 |
+| 形式 | PNG または JPG |
+
+### 画像の圧縮・リサイズ
+
+画像を追加・変更する際は必ず圧縮すること:
+
+```bash
+# macOS: sips でリサイズ（幅600pxに縮小）
+sips -Z 600 public/images/email/hero-banner.png --out public/images/email/hero-banner.png
+
+# サイズ確認
+ls -lh public/images/email/
+```
+
+**注意**: 元画像が大きいとメールの読み込みが遅くなり、ユーザー体験が悪化する。必ず50KB以下に圧縮すること。
+
+### デプロイ
+
+画像を変更したら GCE にデプロイ:
+
+```bash
+git add public/images/email/
+git commit -m "chore: メール画像を更新"
+git push
+
+# GCE で pull（/gce-deploy スキル使用）
+/usr/local/bin/gcloud compute ssh notef@dreamcore-v2 --zone=asia-northeast1-a --command="cd /home/notef/DreamCore-V2-sandbox && git pull"
+```
+
+## 8. メールテンプレートのカスタマイズ
 
 `supabase/functions/waitlist-email/index.ts` の以下の関数を編集:
 
@@ -174,7 +219,7 @@ npx supabase functions logs waitlist-email
 npx supabase functions deploy waitlist-email
 ```
 
-## 8. 送信元メールアドレス
+## 9. 送信元メールアドレス
 
 現在の設定:
 - 送信元: `noreply@dreamcore.gg`
