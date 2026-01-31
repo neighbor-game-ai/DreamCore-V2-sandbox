@@ -107,6 +107,85 @@
             color: var(--bg);
         }
 
+        .action-btn.reacted {
+            color: var(--red);
+        }
+
+        /* ===== Reaction Menu ===== */
+        .reaction-container {
+            position: relative;
+        }
+
+        .reaction-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%) scale(0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .reaction-menu.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) scale(1);
+            pointer-events: auto;
+        }
+
+        .reaction-item {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            border-radius: 50%;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+
+        .reaction-item.hovered {
+            transform: scale(1.3);
+            background: var(--surface);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Toast for reaction feedback */
+        .reaction-toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 16px;
+            font-size: 48px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 4000;
+        }
+
+        .reaction-toast.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
         /* Game Area */
         .game-area {
             flex: 1;
@@ -322,9 +401,20 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <div class="actions">
-            <button class="action-btn active">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            </button>
+            <!-- Reaction Button -->
+            <div class="reaction-container" id="reactionContainer">
+                <button class="action-btn" id="reactionBtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </button>
+                <div class="reaction-menu" id="reactionMenu">
+                    <div class="reaction-item" data-reaction="love">❤️</div>
+                    <div class="reaction-item" data-reaction="fire">🔥</div>
+                    <div class="reaction-item" data-reaction="laugh">😂</div>
+                    <div class="reaction-item" data-reaction="wow">😮</div>
+                    <div class="reaction-item" data-reaction="sad">😢</div>
+                    <div class="reaction-item" data-reaction="clap">👏</div>
+                </div>
+            </div>
             <button class="action-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </button>
@@ -397,6 +487,9 @@
         </div>
     </div>
 
+    <!-- Reaction Toast -->
+    <div class="reaction-toast" id="reactionToast"></div>
+
     <script>
         // Info Panel
         const infoBtn = document.getElementById('infoBtn');
@@ -409,6 +502,116 @@
         infoPanelOverlay.addEventListener('click', (e) => {
             if (e.target === infoPanelOverlay) {
                 infoPanelOverlay.classList.remove('visible');
+            }
+        });
+
+        // Reaction Button
+        const reactionBtn = document.getElementById('reactionBtn');
+        const reactionMenu = document.getElementById('reactionMenu');
+        const reactionItems = document.querySelectorAll('.reaction-item');
+        const reactionToast = document.getElementById('reactionToast');
+
+        let isMenuOpen = false;
+        let hoveredIndex = -1;
+        let hasReacted = false;
+
+        function vibrate(ms) {
+            if (navigator.vibrate) {
+                navigator.vibrate(ms);
+            }
+        }
+
+        function openMenu() {
+            isMenuOpen = true;
+            reactionMenu.classList.add('visible');
+            vibrate(10);
+        }
+
+        function closeMenu() {
+            isMenuOpen = false;
+            reactionMenu.classList.remove('visible');
+            clearHover();
+        }
+
+        function clearHover() {
+            hoveredIndex = -1;
+            reactionItems.forEach(item => item.classList.remove('hovered'));
+        }
+
+        function updateHover(clientY) {
+            const menuRect = reactionMenu.getBoundingClientRect();
+            const relativeY = clientY - menuRect.top;
+            const itemHeight = menuRect.height / reactionItems.length;
+            const newIndex = Math.floor(relativeY / itemHeight);
+
+            if (newIndex >= 0 && newIndex < reactionItems.length && newIndex !== hoveredIndex) {
+                hoveredIndex = newIndex;
+                reactionItems.forEach((item, i) => {
+                    item.classList.toggle('hovered', i === hoveredIndex);
+                });
+                vibrate(8);
+            } else if (newIndex < 0 || newIndex >= reactionItems.length) {
+                clearHover();
+            }
+        }
+
+        function selectReaction() {
+            if (hoveredIndex >= 0 && hoveredIndex < reactionItems.length) {
+                const selectedItem = reactionItems[hoveredIndex];
+                const emoji = selectedItem.textContent;
+                showToast(emoji);
+                reactionBtn.classList.add('reacted');
+                hasReacted = true;
+                vibrate(30);
+            }
+            closeMenu();
+        }
+
+        function showToast(emoji) {
+            reactionToast.textContent = emoji;
+            reactionToast.classList.add('visible');
+            setTimeout(() => {
+                reactionToast.classList.remove('visible');
+            }, 800);
+        }
+
+        // Touch events
+        reactionBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            openMenu();
+        }, { passive: false });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!isMenuOpen) return;
+            const touch = e.touches[0];
+            updateHover(touch.clientY);
+        }, { passive: true });
+
+        document.addEventListener('touchend', () => {
+            if (!isMenuOpen) return;
+            selectReaction();
+        });
+
+        // Mouse events (for desktop testing)
+        reactionBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            openMenu();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isMenuOpen) return;
+            updateHover(e.clientY);
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!isMenuOpen) return;
+            selectReaction();
+        });
+
+        // Close menu if clicked outside
+        document.addEventListener('click', (e) => {
+            if (isMenuOpen && !reactionMenu.contains(e.target) && e.target !== reactionBtn) {
+                closeMenu();
             }
         });
     </script>
