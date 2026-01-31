@@ -5906,6 +5906,149 @@ body::before {
 }
 
 /* ============================================
+   Hamburger Menu & Side Navigation (Mobile Browser)
+   ============================================ */
+.hamburger-menu-btn {
+  display: none; /* Hidden by default, shown in mobile browser mode */
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-8);
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-items: center;
+  justify-content: center;
+}
+
+.hamburger-menu-btn:hover {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+.hamburger-menu-btn:active {
+  transform: scale(0.95);
+}
+
+/* Side Menu Overlay */
+.side-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s var(--ease-out);
+  z-index: 2100;
+}
+
+.side-menu-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Side Menu Panel */
+.side-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  max-width: 85vw;
+  height: 100%;
+  height: 100dvh;
+  background: var(--white);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  transform: translateX(-100%);
+  transition: transform 0.3s var(--ease-out);
+  z-index: 2200;
+  display: flex;
+  flex-direction: column;
+}
+
+.side-menu.active {
+  transform: translateX(0);
+}
+
+.side-menu-header {
+  display: flex;
+  align-items: center;
+  gap: var(--s-12);
+  padding: var(--s-16) var(--s-24);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.side-menu-header .brand-mark {
+  width: 28px;
+  height: 28px;
+  background: var(--red);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.side-menu-header .brand-text {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  flex: 1;
+}
+
+.side-menu-close {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-8);
+  color: var(--gray-400);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.side-menu-close:hover {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+.side-menu-items {
+  flex: 1;
+  padding: var(--s-16) var(--s-12);
+  overflow-y: auto;
+}
+
+.side-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-16);
+  padding: var(--s-16) var(--s-16);
+  border-radius: var(--r-12);
+  color: var(--gray-600);
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.side-menu-item:hover {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+.side-menu-item.active {
+  background: var(--red-light);
+  color: var(--red);
+}
+
+.side-menu-item svg {
+  flex-shrink: 0;
+}
+
+/* ============================================
    Bottom Navigation Bar (SNS-style)
    ============================================ */
 .bottom-nav {
@@ -5926,10 +6069,14 @@ body::before {
   z-index: 2000;
 }
 
-/* Hide bottom nav in mobile browser (not PWA/standalone) */
+/* Mobile browser mode: hide bottom nav, show hamburger menu */
 @media (display-mode: browser) and (max-width: 768px) {
   .bottom-nav {
     display: none;
+  }
+
+  .hamburger-menu-btn {
+    display: flex;
   }
 }
 

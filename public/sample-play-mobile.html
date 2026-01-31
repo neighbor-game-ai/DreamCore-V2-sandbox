@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sample - Mobile Play Screen</title>
+  <style>
+    :root {
+      --red: #FF3B30;
+      --red-light: rgba(255, 59, 48, 0.1);
+      --white: #FFFFFF;
+      --gray-100: #F5F5F5;
+      --gray-200: #E5E5E5;
+      --gray-400: #A3A3A3;
+      --gray-600: #525252;
+      --gray-900: #171717;
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    body {
+      background: #1a1a2e;
+    }
+
+    /* ===== Top Header Bar ===== */
+    .play-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 52px;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      z-index: 1000;
+    }
+
+    .play-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .play-header-title {
+      color: white;
+      font-size: 0.875rem;
+      font-weight: 600;
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .play-header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ===== Hamburger Button ===== */
+    .hamburger-btn {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .hamburger-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .hamburger-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* ===== Header Buttons ===== */
+    .header-btn {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .header-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .header-btn.fullscreen-btn {
+      background: var(--red);
+    }
+
+    .header-btn.fullscreen-btn:hover {
+      background: #e6352b;
+    }
+
+    /* ===== Side Menu Overlay ===== */
+    .side-menu-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s var(--ease-out);
+      z-index: 2100;
+    }
+
+    .side-menu-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* ===== Side Menu Panel ===== */
+    .side-menu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 280px;
+      max-width: 85vw;
+      height: 100%;
+      height: 100dvh;
+      background: var(--white);
+      box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+      transform: translateX(-100%);
+      transition: transform 0.3s var(--ease-out);
+      z-index: 2200;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .side-menu.active {
+      transform: translateX(0);
+    }
+
+    .side-menu-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      background: var(--red);
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    .brand-text {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      flex: 1;
+    }
+
+    .side-menu-close {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      color: var(--gray-400);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .side-menu-close:hover {
+      background: var(--gray-100);
+      color: var(--gray-600);
+    }
+
+    /* ===== Game Info Section ===== */
+    .game-info-section {
+      padding: 20px;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .game-thumbnail {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 2rem;
+    }
+
+    .game-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 4px;
+    }
+
+    .game-author {
+      font-size: 0.875rem;
+      color: var(--gray-600);
+    }
+
+    /* ===== Menu Items ===== */
+    .side-menu-items {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+    }
+
+    .side-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      color: var(--gray-600);
+      text-decoration: none;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+
+    .side-menu-item:hover {
+      background: var(--gray-100);
+      color: var(--gray-900);
+    }
+
+    .side-menu-item.active {
+      background: var(--red-light);
+      color: var(--red);
+    }
+
+    .side-menu-item.danger {
+      color: #dc2626;
+    }
+
+    .side-menu-item.danger:hover {
+      background: #fef2f2;
+    }
+
+    .side-menu-item svg {
+      flex-shrink: 0;
+    }
+
+    .menu-divider {
+      height: 1px;
+      background: var(--gray-200);
+      margin: 8px 16px;
+    }
+
+    /* ===== Game Container ===== */
+    .game-container {
+      position: fixed;
+      top: 52px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #1a1a2e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .game-placeholder {
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 1.25rem;
+      text-align: center;
+      padding: 20px;
+    }
+
+    /* ===== Fullscreen Mode ===== */
+    body.fullscreen .play-header {
+      display: none;
+    }
+
+    body.fullscreen .game-container {
+      top: 0;
+    }
+
+    /* Exit fullscreen button (shown in fullscreen mode) */
+    .exit-fullscreen-btn {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      width: 44px;
+      height: 44px;
+      background: rgba(0, 0, 0, 0.7);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+      transition: all 0.2s;
+    }
+
+    body.fullscreen .exit-fullscreen-btn {
+      display: flex;
+    }
+
+    .exit-fullscreen-btn:hover {
+      background: rgba(0, 0, 0, 0.9);
+      transform: scale(1.05);
+    }
+
+    /* ===== PWA Mode: Show bottom nav instead ===== */
+    @media (display-mode: standalone) {
+      .hamburger-btn {
+        display: none;
+      }
+      /* In standalone mode, you'd show a bottom nav instead */
+    }
+  </style>
+</head>
+<body>
+  <!-- Side Menu Overlay -->
+  <div class="side-menu-overlay" id="sideMenuOverlay"></div>
+
+  <!-- Side Menu Panel -->
+  <nav class="side-menu" id="sideMenu">
+    <div class="side-menu-header">
+      <div class="brand-mark"></div>
+      <span class="brand-text">DreamCore</span>
+      <button class="side-menu-close" id="sideMenuClose" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Game Info -->
+    <div class="game-info-section">
+      <div class="game-thumbnail">🎮</div>
+      <div class="game-title">Sample Game Title</div>
+      <div class="game-author">by Creator Name</div>
+    </div>
+
+    <!-- Menu Items -->
+    <div class="side-menu-items">
+      <button class="side-menu-item" onclick="alert('Restart game')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="1 4 1 10 7 10"></polyline>
+          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+        </svg>
+        <span>最初からプレイ</span>
+      </button>
+
+      <button class="side-menu-item" onclick="toggleFullscreen()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <polyline points="9 21 3 21 3 15"></polyline>
+          <line x1="21" y1="3" x2="14" y2="10"></line>
+          <line x1="3" y1="21" x2="10" y2="14"></line>
+        </svg>
+        <span>フルスクリーン</span>
+      </button>
+
+      <button class="side-menu-item" onclick="alert('Share')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="5" r="3"></circle>
+          <circle cx="6" cy="12" r="3"></circle>
+          <circle cx="18" cy="19" r="3"></circle>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+        </svg>
+        <span>シェアする</span>
+      </button>
+
+      <div class="menu-divider"></div>
+
+      <a href="/create.html" class="side-menu-item">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>つくる</span>
+      </a>
+
+      <a href="/discover.html" class="side-menu-item">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span>さがす</span>
+      </a>
+
+      <a href="/mypage.html" class="side-menu-item">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <span>マイページ</span>
+      </a>
+
+      <div class="menu-divider"></div>
+
+      <button class="side-menu-item danger" onclick="alert('Report')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+          <line x1="4" y1="22" x2="4" y2="15"></line>
+        </svg>
+        <span>報告する</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Top Header Bar -->
+  <header class="play-header">
+    <div class="play-header-left">
+      <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menu">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      <span class="play-header-title">Sample Game Title</span>
+    </div>
+    <div class="play-header-right">
+      <button class="header-btn" onclick="alert('Share')" title="Share">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="18" cy="5" r="3"></circle>
+          <circle cx="6" cy="12" r="3"></circle>
+          <circle cx="18" cy="19" r="3"></circle>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+        </svg>
+      </button>
+      <button class="header-btn fullscreen-btn" onclick="toggleFullscreen()" title="Fullscreen">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <polyline points="9 21 3 21 3 15"></polyline>
+          <line x1="21" y1="3" x2="14" y2="10"></line>
+          <line x1="3" y1="21" x2="10" y2="14"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Exit Fullscreen Button (visible only in fullscreen) -->
+  <button class="exit-fullscreen-btn" onclick="toggleFullscreen()" title="Exit Fullscreen">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="4 14 10 14 10 20"></polyline>
+      <polyline points="20 10 14 10 14 4"></polyline>
+      <line x1="14" y1="10" x2="21" y2="3"></line>
+      <line x1="3" y1="21" x2="10" y2="14"></line>
+    </svg>
+  </button>
+
+  <!-- Game Container -->
+  <div class="game-container">
+    <div class="game-placeholder">
+      Game iframe would be here<br>
+      <small style="opacity: 0.5; font-size: 0.875rem;">Tap hamburger menu (top-left) to open navigation</small>
+    </div>
+  </div>
+
+  <script>
+    // Side Menu Toggle
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const sideMenu = document.getElementById('sideMenu');
+    const sideMenuOverlay = document.getElementById('sideMenuOverlay');
+    const sideMenuClose = document.getElementById('sideMenuClose');
+
+    function openMenu() {
+      sideMenu.classList.add('active');
+      sideMenuOverlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeMenu() {
+      sideMenu.classList.remove('active');
+      sideMenuOverlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    hamburgerBtn.addEventListener('click', openMenu);
+    sideMenuClose.addEventListener('click', closeMenu);
+    sideMenuOverlay.addEventListener('click', closeMenu);
+
+    // Fullscreen Toggle
+    function toggleFullscreen() {
+      document.body.classList.toggle('fullscreen');
+      closeMenu();
+    }
+
+    // Close menu on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeMenu();
+        if (document.body.classList.contains('fullscreen')) {
+          document.body.classList.remove('fullscreen');
+        }
+      }
+    });
+  </script>
+</body>
+</html>
