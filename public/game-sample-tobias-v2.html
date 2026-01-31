@@ -393,11 +393,20 @@
         }
 
         /* ===== Guestbook Panel ===== */
+        .guestbook-panel {
+            max-height: 80vh;
+        }
+
+        .guestbook-panel .panel-content {
+            max-height: calc(80vh - 28px);
+            padding-bottom: calc(80px + env(safe-area-inset-bottom));
+        }
+
         .guestbook-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .guestbook-title {
@@ -407,140 +416,162 @@
         }
 
         .guestbook-count {
-            font-size: 14px;
+            font-size: 13px;
             color: var(--gray-400);
             font-weight: 500;
         }
 
-        /* Players who played */
-        .players-section {
-            margin-bottom: 24px;
-        }
-
-        .players-label {
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--gray-400);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 12px;
-        }
-
-        .players-avatars {
+        /* Timeline Feed */
+        .guestbook-feed {
             display: flex;
-            align-items: center;
+            flex-direction: column;
         }
 
-        .player-avatar {
+        /* Entry - Timeline style */
+        .guestbook-entry {
+            display: flex;
+            gap: 12px;
+            padding: 16px 0;
+            animation: slideUp 0.4s ease-out forwards;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .guestbook-entry + .guestbook-entry {
+            border-top: 1px solid var(--border);
+        }
+
+        .entry-avatar {
             width: 36px;
             height: 36px;
             border-radius: 50%;
             background: var(--surface);
-            border: 2px solid var(--bg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            margin-left: -8px;
-            position: relative;
-        }
-
-        .player-avatar:first-child {
-            margin-left: 0;
-        }
-
-        .player-avatar img {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-
-        .player-avatar.more {
-            background: var(--gray-400);
-            color: var(--bg);
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        /* Comments */
-        .comments-section {
-            margin-bottom: 20px;
-        }
-
-        .comment-item {
-            display: flex;
-            gap: 12px;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .comment-item:last-child {
-            border-bottom: none;
-        }
-
-        .comment-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: var(--surface);
+            border: 1px solid var(--border);
             flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 16px;
+            overflow: hidden;
         }
 
-        .comment-avatar img {
+        .entry-avatar img {
             width: 100%;
             height: 100%;
-            border-radius: 50%;
             object-fit: cover;
         }
 
-        .comment-content {
+        .entry-content {
             flex: 1;
             min-width: 0;
         }
 
-        .comment-header {
+        .entry-header {
             display: flex;
-            align-items: center;
+            align-items: baseline;
             gap: 8px;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
-        .comment-username {
-            font-size: 13px;
-            font-weight: 600;
+        .entry-name {
+            font-size: 12px;
+            font-weight: 700;
             color: var(--gray-900);
         }
 
-        .comment-time {
-            font-size: 12px;
+        .entry-badge {
+            font-size: 10px;
+            font-weight: 600;
+            background: var(--red);
+            color: var(--bg);
+            padding: 1px 6px;
+            border-radius: 10px;
+        }
+
+        .entry-time {
+            font-size: 10px;
+            font-family: 'SF Mono', 'Monaco', monospace;
             color: var(--gray-400);
         }
 
-        .comment-text {
+        .entry-text {
             font-size: 14px;
-            color: var(--gray-600);
+            color: rgba(23, 23, 23, 0.9);
             line-height: 1.5;
+            font-weight: 500;
+            margin-bottom: 8px;
         }
 
-        .comment-reaction {
-            font-size: 16px;
-            margin-top: 4px;
+        .entry-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
         }
 
-        /* Comment Input */
-        .comment-input-container {
+        .entry-action {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--gray-400);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px 0;
+            transition: color 0.15s ease;
+        }
+
+        .entry-action:hover {
+            color: var(--red);
+        }
+
+        .entry-action svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .entry-action.liked {
+            color: var(--red);
+        }
+
+        /* Nested replies */
+        .entry-replies {
+            margin-top: 12px;
+            padding-left: 48px;
+        }
+
+        .entry-replies .guestbook-entry {
+            padding: 12px 0;
+        }
+
+        .entry-replies .guestbook-entry:first-child {
+            padding-top: 0;
+        }
+
+        /* Input fixed at bottom */
+        .guestbook-input-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
             display: flex;
             gap: 12px;
-            padding-top: 16px;
+            padding: 16px 24px;
+            padding-bottom: calc(16px + env(safe-area-inset-bottom));
+            background: var(--bg);
             border-top: 1px solid var(--border);
         }
 
-        .comment-input {
+        .guestbook-input {
             flex: 1;
             height: 44px;
             padding: 0 16px;
@@ -553,15 +584,15 @@
             transition: border-color 0.15s ease;
         }
 
-        .comment-input:focus {
+        .guestbook-input:focus {
             border-color: var(--red);
         }
 
-        .comment-input::placeholder {
+        .guestbook-input::placeholder {
             color: var(--gray-400);
         }
 
-        .comment-send-btn {
+        .guestbook-send-btn {
             width: 44px;
             height: 44px;
             border-radius: 50%;
@@ -575,29 +606,8 @@
             transition: all 0.15s ease;
         }
 
-        .comment-send-btn:active {
+        .guestbook-send-btn:active {
             transform: scale(0.95);
-        }
-
-        .comment-send-btn:disabled {
-            background: var(--gray-400);
-            cursor: not-allowed;
-        }
-
-        /* Empty state */
-        .empty-state {
-            text-align: center;
-            padding: 32px 0;
-            color: var(--gray-400);
-        }
-
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 12px;
-        }
-
-        .empty-state-text {
-            font-size: 14px;
         }
     </style>
 </head>
@@ -697,85 +707,138 @@
 
     <!-- Guestbook Panel -->
     <div class="panel-overlay" id="guestbookPanelOverlay">
-        <div class="panel">
+        <div class="panel guestbook-panel">
             <div class="panel-handle"></div>
             <div class="panel-content">
                 <div class="guestbook-header">
                     <h2 class="guestbook-title">ゲストブック</h2>
-                    <span class="guestbook-count">24人がプレイ</span>
+                    <span class="guestbook-count">24人が訪問</span>
                 </div>
 
-                <!-- Players who played -->
-                <div class="players-section">
-                    <div class="players-label">最近のプレイヤー</div>
-                    <div class="players-avatars">
-                        <div class="player-avatar">🐱</div>
-                        <div class="player-avatar">🐶</div>
-                        <div class="player-avatar">🦊</div>
-                        <div class="player-avatar">🐼</div>
-                        <div class="player-avatar">🐨</div>
-                        <div class="player-avatar">🦁</div>
-                        <div class="player-avatar more">+18</div>
+                <!-- Timeline Feed -->
+                <div class="guestbook-feed">
+                    <!-- Entry 1 -->
+                    <div class="guestbook-entry">
+                        <div class="entry-avatar">🐱</div>
+                        <div class="entry-content">
+                            <div class="entry-header">
+                                <span class="entry-name">ねこすき</span>
+                                <span class="entry-time">2m</span>
+                            </div>
+                            <p class="entry-text">めっちゃ面白い！ステージ3がむずかしい〜</p>
+                            <div class="entry-actions">
+                                <button class="entry-action liked">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    <span>12</span>
+                                </button>
+                                <button class="entry-action">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                    <span>返信</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Comments -->
-                <div class="comments-section">
-                    <div class="comment-item">
-                        <div class="comment-avatar">🐱</div>
-                        <div class="comment-content">
-                            <div class="comment-header">
-                                <span class="comment-username">ねこすき</span>
-                                <span class="comment-time">2分前</span>
+                    <!-- Entry 2 - with author badge -->
+                    <div class="guestbook-entry">
+                        <div class="entry-avatar">🎮</div>
+                        <div class="entry-content">
+                            <div class="entry-header">
+                                <span class="entry-name">ゲーム作者</span>
+                                <span class="entry-badge">作者</span>
+                                <span class="entry-time">5m</span>
                             </div>
-                            <div class="comment-text">めっちゃ面白い！ステージ3がむずかしい〜</div>
-                            <div class="comment-reaction">🔥</div>
+                            <p class="entry-text">遊んでくれてありがとう！次のアップデートでステージ追加予定です🚀</p>
+                            <div class="entry-actions">
+                                <button class="entry-action">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    <span>8</span>
+                                </button>
+                                <button class="entry-action">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                    <span>返信</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div class="comment-item">
-                        <div class="comment-avatar">🐶</div>
-                        <div class="comment-content">
-                            <div class="comment-header">
-                                <span class="comment-username">わんこ</span>
-                                <span class="comment-time">5分前</span>
-                            </div>
-                            <div class="comment-text">ハイスコア更新した！！</div>
-                            <div class="comment-reaction">❤️</div>
-                        </div>
-                    </div>
-                    <div class="comment-item">
-                        <div class="comment-avatar">🦊</div>
-                        <div class="comment-content">
-                            <div class="comment-header">
-                                <span class="comment-username">きつねうどん</span>
-                                <span class="comment-time">12分前</span>
-                            </div>
-                            <div class="comment-text">レトロな雰囲気がいいね👍</div>
-                        </div>
-                    </div>
-                    <div class="comment-item">
-                        <div class="comment-avatar">🐼</div>
-                        <div class="comment-content">
-                            <div class="comment-header">
-                                <span class="comment-username">ぱんだ</span>
-                                <span class="comment-time">1時間前</span>
-                            </div>
-                            <div class="comment-text">友達に教えてもらって来ました！楽しい</div>
-                            <div class="comment-reaction">😂</div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Comment Input -->
-                <div class="comment-input-container">
-                    <input type="text" class="comment-input" placeholder="コメントを書く..." id="commentInput">
-                    <button class="comment-send-btn" id="commentSendBtn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="22" y1="2" x2="11" y2="13"></line>
-                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                        </svg>
-                    </button>
+                    <!-- Entry 3 -->
+                    <div class="guestbook-entry">
+                        <div class="entry-avatar">🐶</div>
+                        <div class="entry-content">
+                            <div class="entry-header">
+                                <span class="entry-name">わんこ</span>
+                                <span class="entry-time">12m</span>
+                            </div>
+                            <p class="entry-text">ハイスコア更新した！！🎉</p>
+                            <div class="entry-actions">
+                                <button class="entry-action">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    <span>5</span>
+                                </button>
+                                <button class="entry-action">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                    <span>返信</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Entry 4 -->
+                    <div class="guestbook-entry">
+                        <div class="entry-avatar">🦊</div>
+                        <div class="entry-content">
+                            <div class="entry-header">
+                                <span class="entry-name">きつねうどん</span>
+                                <span class="entry-time">1h</span>
+                            </div>
+                            <p class="entry-text">レトロな雰囲気がいいね👍 友達にも教えた</p>
+                            <div class="entry-actions">
+                                <button class="entry-action">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    <span>3</span>
+                                </button>
+                                <button class="entry-action">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                    <span>返信</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Entry 5 - プレイのみ（コメントなし） -->
+                    <div class="guestbook-entry">
+                        <div class="entry-avatar">🐼</div>
+                        <div class="entry-content">
+                            <div class="entry-header">
+                                <span class="entry-name">ぱんだ</span>
+                                <span class="entry-time">2h</span>
+                            </div>
+                            <p class="entry-text">プレイしました 🎮</p>
+                            <div class="entry-actions">
+                                <button class="entry-action">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    <span>1</span>
+                                </button>
+                                <button class="entry-action">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                    <span>返信</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Input fixed at bottom -->
+            <div class="guestbook-input-container">
+                <input type="text" class="guestbook-input" placeholder="コメントを書く..." id="commentInput">
+                <button class="guestbook-send-btn" id="commentSendBtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
             </div>
         </div>
     </div>
