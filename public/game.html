@@ -103,32 +103,31 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding-left: var(--s-12);
-            padding-right: var(--s-12);
+            padding-left: var(--s-16);
+            padding-right: var(--s-16);
             background: var(--white);
-            border-bottom: 1px solid var(--gray-100);
         }
 
         .back-button {
             width: 40px;
             height: 40px;
             border-radius: var(--r-full);
-            background: var(--gray-100);
+            background: transparent;
             border: none;
             color: var(--gray-900);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease;
+            transition: opacity 0.15s ease;
         }
 
         .back-button:hover {
-            background: var(--gray-200);
+            opacity: 0.6;
         }
 
         .back-button:active {
-            transform: scale(0.95);
+            opacity: 0.4;
         }
 
         /* Action Buttons */
@@ -142,27 +141,25 @@
             width: 44px;
             height: 44px;
             border-radius: var(--r-full);
-            background: var(--gray-100);
+            background: transparent;
             border: none;
-            color: var(--gray-600);
+            color: var(--gray-900);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease;
+            transition: opacity 0.15s ease;
         }
 
         .action-btn:hover {
-            background: var(--gray-200);
-            color: var(--gray-900);
+            opacity: 0.6;
         }
 
         .action-btn:active {
-            transform: scale(0.95);
+            opacity: 0.4;
         }
 
         .action-btn.active {
-            background: var(--red-light);
             color: var(--red);
         }
 
@@ -178,11 +175,10 @@
             align-items: center;
             justify-content: center;
             /* Generous whitespace - let the game breathe */
-            padding: var(--s-16);
-            padding-bottom: calc(var(--s-16) + 68px + env(safe-area-inset-bottom));
+            padding: var(--s-24);
+            padding-bottom: calc(var(--s-24) + 68px + env(safe-area-inset-bottom));
             min-height: 0;
-            /* Subtle gradient for depth */
-            background: linear-gradient(180deg, var(--gray-50) 0%, var(--white) 100%);
+            background: var(--white);
         }
 
         .game-container {
@@ -190,15 +186,15 @@
             height: 100%;
             max-width: 100%;
             max-height: 100%;
-            /* Bold radius */
-            border-radius: 24px;
+            /* Refined radius */
+            border-radius: 20px;
             overflow: hidden;
             background: var(--black);
-            /* Strong shadow for depth + subtle red glow */
+            /* Premium layered shadow - subtle but sophisticated */
             box-shadow:
-                0 0 0 1px rgba(0, 0, 0, 0.1),
-                0 4px 12px rgba(0, 0, 0, 0.15),
-                0 20px 40px rgba(0, 0, 0, 0.2);
+                0 1px 2px rgba(0, 0, 0, 0.04),
+                0 4px 8px rgba(0, 0, 0, 0.04),
+                0 16px 32px rgba(0, 0, 0, 0.08);
             position: relative;
             -webkit-user-select: none;
             -moz-user-select: none;
@@ -269,18 +265,15 @@
             bottom: calc(12px + env(safe-area-inset-bottom));
             left: 50%;
             transform: translateX(-50%);
-            height: 56px;
+            height: 52px;
             background: var(--white);
-            border-radius: 18px;
-            box-shadow:
-                0 0 0 1px rgba(0, 0, 0, 0.06),
-                0 4px 16px rgba(0, 0, 0, 0.12),
-                0 12px 32px rgba(0, 0, 0, 0.08);
+            border-radius: 16px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.12);
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 4px;
-            padding: 0 8px;
+            padding: 0 6px;
             z-index: 2000;
         }
 
@@ -289,13 +282,13 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 2px;
-            width: 56px;
-            height: 48px;
+            gap: 1px;
+            width: 52px;
+            height: 44px;
             padding: 0;
             background: transparent;
             border: none;
-            border-radius: 14px;
+            border-radius: 12px;
             color: var(--gray-400);
             cursor: pointer;
             transition: all 0.2s var(--ease-out);
@@ -303,19 +296,19 @@
         }
 
         .nav-item svg {
-            width: 22px;
-            height: 22px;
-            stroke-width: 2;
+            width: 24px;
+            height: 24px;
+            stroke-width: 1.75;
         }
 
         .nav-item span {
-            font-size: 10px;
-            font-weight: 600;
+            font-size: 9px;
+            font-weight: 500;
+            opacity: 0.9;
         }
 
         .nav-item.active {
-            color: var(--red);
-            background: var(--red-light);
+            color: var(--gray-900);
         }
 
         .nav-item.active svg {
