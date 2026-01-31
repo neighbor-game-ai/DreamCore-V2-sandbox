@@ -693,7 +693,7 @@
             opacity: 0.08;
         }
 
-        /* Header - Creator focused */
+        /* Header */
         .gb-header {
             display: flex;
             align-items: center;
@@ -713,33 +713,10 @@
             gap: 10px;
         }
 
-        .gb-creator-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: var(--gray-100);
-            border: 2px solid white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .gb-creator-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .gb-creator-name {
-            font-size: 14px;
+        .gb-title {
+            font-size: 16px;
             font-weight: 700;
             color: var(--gray-900);
-        }
-
-        .gb-title {
-            font-size: 11px;
-            color: var(--gray-400);
         }
 
         .gb-live-badge {
@@ -1248,6 +1225,209 @@
             transform: scale(1.05);
             background: var(--red);
         }
+
+        /* Grouped Visitors - Expandable */
+        .gb-visitors-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            align-self: center;
+        }
+
+        .gb-visitors-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 16px 8px 10px;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            gap: 10px;
+            align-self: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .gb-visitors-group:hover {
+            background: rgba(255, 255, 255, 0.7);
+            transform: scale(1.02);
+        }
+
+        .gb-visitors-group:active {
+            transform: scale(0.98);
+        }
+
+        .gb-visitors-group.expanded {
+            background: rgba(255, 255, 255, 0.7);
+            box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.15), 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .gb-visitors-group.expanded .gb-visitors-arrow {
+            transform: rotate(90deg);
+        }
+
+        .gb-stacked-avatars {
+            display: flex;
+        }
+
+        .gb-stacked-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--gray-100);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            margin-left: -8px;
+            position: relative;
+        }
+
+        .gb-stacked-avatar:first-child {
+            margin-left: 0;
+        }
+
+        .gb-visitors-text {
+            font-size: 10px;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .gb-visitors-text strong {
+            color: var(--gray-900);
+            font-weight: 600;
+        }
+
+        .gb-visitors-arrow {
+            color: var(--gray-400);
+            opacity: 0.5;
+            transition: transform 0.2s ease;
+        }
+
+        .gb-visitors-group:hover .gb-visitors-arrow {
+            transform: translateX(2px);
+        }
+
+        /* Expanded Visitors List */
+        .gb-visitors-list {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            padding: 8px 0 4px 0;
+            width: 100%;
+            align-items: center;
+        }
+
+        .gb-visitors-list.visible {
+            display: flex;
+            animation: slideDown 0.2s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .gb-visitor-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            width: fit-content;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+        }
+
+        .gb-visitor-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--gray-100);
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .gb-visitor-text {
+            font-size: 12px;
+            color: var(--gray-600);
+        }
+
+        .gb-visitor-text strong {
+            color: var(--gray-900);
+            font-weight: 700;
+        }
+
+        .gb-visitor-game {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 9px;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+
+        .gb-visitor-game.blue {
+            background: rgba(0, 122, 255, 0.12);
+            color: #007AFF;
+        }
+
+        .gb-visitor-game.purple {
+            background: rgba(175, 82, 222, 0.12);
+            color: #AF52DE;
+        }
+
+        .gb-visitor-game.green {
+            background: rgba(52, 199, 89, 0.12);
+            color: #34C759;
+        }
+
+        .gb-visitor-game.orange {
+            background: rgba(255, 149, 0, 0.12);
+            color: #FF9500;
+        }
+
+        .gb-collapse-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(0,0,0,0.06);
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--gray-400);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin-top: 4px;
+        }
+
+        .gb-collapse-btn:hover {
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--gray-600);
+        }
+
+        .gb-collapse-btn:active {
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
@@ -1426,25 +1606,58 @@
                 <!-- Floating Feathers Background -->
                 <div class="gb-feathers" id="gbFeathers"></div>
 
-                <!-- Header - Creator focused -->
+                <!-- Header -->
                 <div class="gb-header">
                     <div class="gb-header-left">
-                        <div class="gb-creator-avatar" id="gbCreatorAvatar">🎮</div>
-                        <div class="gb-creator-info">
-                            <span class="gb-creator-name" id="gbCreatorName">Creator</span>
-                            <span class="gb-title">Guest Book</span>
-                        </div>
+                        <h2 class="gb-title">Guest Book</h2>
                         <div class="gb-live-badge">
                             <span class="gb-live-dot"></span>
-                            <span id="gbLiveCount">0</span>
+                            Live Feed (<span id="gbLiveCount">221</span>)
                         </div>
                     </div>
-                    <span class="gb-online" id="gbOnlineCount">0 online</span>
+                    <span class="gb-online" id="gbOnlineCount">84 online</span>
                 </div>
 
-                <!-- Feed with Game Tags -->
+                <!-- Feed - Organic layout -->
                 <div class="gb-feed" id="gbFeed">
-                    <!-- Sample entries - will be replaced with real data -->
+                    <!-- Grouped Visitors - Expandable -->
+                    <div class="gb-visitors-container">
+                        <div class="gb-visitors-group" data-expandable="true">
+                            <div class="gb-stacked-avatars">
+                                <div class="gb-stacked-avatar">🐱</div>
+                                <div class="gb-stacked-avatar">🐰</div>
+                                <div class="gb-stacked-avatar">🦊</div>
+                                <div class="gb-stacked-avatar">🐻</div>
+                            </div>
+                            <span class="gb-visitors-text"><strong>ねこすき</strong>, <strong>うさぎ</strong> and 3 others visited.</span>
+                            <svg class="gb-visitors-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+                        </div>
+                        <div class="gb-visitors-list">
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐱</div>
+                                <span class="gb-visitor-text"><strong>ねこすき</strong> visited <span class="gb-visitor-game blue">このゲーム</span></span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐰</div>
+                                <span class="gb-visitor-text"><strong>うさぎ</strong> visited <span class="gb-visitor-game blue">このゲーム</span></span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🦊</div>
+                                <span class="gb-visitor-text"><strong>きつね</strong> visited <span class="gb-visitor-game purple">別のゲーム</span></span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐻</div>
+                                <span class="gb-visitor-text"><strong>くまさん</strong> visited <span class="gb-visitor-game green">冒険RPG</span></span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐼</div>
+                                <span class="gb-visitor-text"><strong>ぱんだ</strong> visited <span class="gb-visitor-game orange">パズル</span></span>
+                            </div>
+                            <button class="gb-collapse-btn">Collapse</button>
+                        </div>
+                    </div>
+
+                    <!-- Chat Message - Left aligned with sparkle -->
                     <div class="gb-message">
                         <div class="gb-message-avatar">🐱</div>
                         <div class="gb-message-content">
@@ -1472,14 +1685,49 @@
                         </div>
                     </div>
 
-                    <div class="gb-reaction-wrapper">
-                        <div class="gb-reaction-game">
-                            <span class="gb-reaction-game-text">reacted to</span>
-                            <a href="#" class="gb-game-tag purple">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M18 12h.01"/></svg>
-                                <span class="gb-game-tag-text">別のゲーム</span>
-                            </a>
+                    <!-- Grouped Visitors - Expandable -->
+                    <div class="gb-visitors-container">
+                        <div class="gb-visitors-group" data-expandable="true">
+                            <div class="gb-stacked-avatars">
+                                <div class="gb-stacked-avatar">🐶</div>
+                                <div class="gb-stacked-avatar">🦁</div>
+                                <div class="gb-stacked-avatar">🐧</div>
+                                <div class="gb-stacked-avatar">🐨</div>
+                            </div>
+                            <span class="gb-visitors-text"><strong>Glitch</strong>, <strong>Neon</strong> and 10 others visited.</span>
+                            <svg class="gb-visitors-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
                         </div>
+                        <div class="gb-visitors-list">
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐶</div>
+                                <span class="gb-visitor-text"><strong>Glitch</strong> visited <span class="gb-visitor-game blue">このゲーム</span></span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🦁</div>
+                                <span class="gb-visitor-text"><strong>Neon</strong> visited <span class="gb-visitor-game blue">このゲーム</span></span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐧</div>
+                                <span class="gb-visitor-text"><strong>Penguin</strong> visited <span class="gb-visitor-game purple">別のゲーム</span></span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐨</div>
+                                <span class="gb-visitor-text"><strong>Koala</strong> visited <span class="gb-visitor-game green">冒険RPG</span></span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🦊</div>
+                                <span class="gb-visitor-text"><strong>Fox</strong> visited <span class="gb-visitor-game orange">パズル</span></span>
+                            </div>
+                            <div class="gb-visitor-item">
+                                <div class="gb-visitor-avatar">🐻</div>
+                                <span class="gb-visitor-text"><strong>Bear</strong> visited <span class="gb-visitor-game blue">このゲーム</span></span>
+                            </div>
+                            <button class="gb-collapse-btn">Collapse</button>
+                        </div>
+                    </div>
+
+                    <!-- Reaction - Right aligned -->
+                    <div class="gb-reaction-wrapper">
                         <div class="gb-reaction">
                             <span class="gb-reaction-emoji">🔥</span>
                             <div class="gb-reaction-divider"></div>
@@ -1500,17 +1748,13 @@
                         </div>
                     </div>
 
+                    <!-- Single Visit - Center -->
                     <div class="gb-visit">
-                        <div class="gb-visit-main">
-                            <div class="gb-visit-avatar">🐻</div>
-                            <span class="gb-visit-text"><strong>Beat</strong> visited</span>
-                            <a href="#" class="gb-game-tag green">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M18 12h.01"/></svg>
-                                <span class="gb-game-tag-text">このゲーム</span>
-                            </a>
-                        </div>
+                        <div class="gb-visit-avatar">🐻</div>
+                        <span class="gb-visit-text"><strong>Beat</strong> visited</span>
                     </div>
 
+                    <!-- Author Message - Left aligned -->
                     <div class="gb-message">
                         <div class="gb-message-avatar">🎮</div>
                         <div class="gb-message-content">
@@ -1522,14 +1766,89 @@
                             <div class="gb-bubble-wrapper">
                                 <div class="gb-message-bubble">遊んでくれてありがとう！</div>
                             </div>
+                            <div class="gb-message-actions">
+                                <button class="gb-action-btn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    24
+                                </button>
+                                <button class="gb-action-btn">Reply</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reaction - Right aligned -->
+                    <div class="gb-reaction-wrapper">
+                        <div class="gb-reaction">
+                            <span class="gb-reaction-emoji">❤️</span>
+                            <div class="gb-reaction-divider"></div>
+                            <div class="gb-reaction-user">
+                                <span class="gb-reaction-name">らいおん</span>
+                                <div class="gb-reaction-avatar">🦁</div>
+                            </div>
+                        </div>
+                        <div class="gb-reaction-meta">
+                            <span class="gb-reaction-time">Reacted • 8m ago</span>
+                            <div class="gb-reaction-actions">
+                                <button class="gb-action-btn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    5
+                                </button>
+                                <button class="gb-action-btn">Reply</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Message -->
+                    <div class="gb-message">
+                        <div class="gb-message-avatar">🐶</div>
+                        <div class="gb-message-content">
+                            <div class="gb-message-header">
+                                <span class="gb-message-name">わんこ</span>
+                                <span class="gb-message-time">12m ago</span>
+                            </div>
+                            <div class="gb-bubble-wrapper">
+                                <div class="gb-message-bubble">ハイスコア更新した！！</div>
+                            </div>
                             <div class="gb-message-footer">
+                                <a href="#" class="gb-game-tag purple">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M18 12h.01"/></svg>
+                                    <span class="gb-game-tag-text">別のゲーム</span>
+                                </a>
                                 <div class="gb-message-actions">
                                     <button class="gb-action-btn">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                                        24
+                                        8
                                     </button>
                                     <button class="gb-action-btn">Reply</button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Single Visit - Center -->
+                    <div class="gb-visit">
+                        <div class="gb-visit-avatar">🐼</div>
+                        <span class="gb-visit-text"><strong>ぱんだ</strong> visited</span>
+                    </div>
+
+                    <!-- Reaction - Right aligned -->
+                    <div class="gb-reaction-wrapper">
+                        <div class="gb-reaction">
+                            <span class="gb-reaction-emoji">😂</span>
+                            <div class="gb-reaction-divider"></div>
+                            <div class="gb-reaction-user">
+                                <span class="gb-reaction-name">きつね</span>
+                                <div class="gb-reaction-avatar">🦊</div>
+                            </div>
+                        </div>
+                        <div class="gb-reaction-meta">
+                            <span class="gb-reaction-time">Reacted • 20m ago</span>
+                            <div class="gb-reaction-actions">
+                                <button class="gb-action-btn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    3
+                                </button>
+                                <button class="gb-action-btn">Reply</button>
                             </div>
                         </div>
                     </div>
@@ -1923,6 +2242,46 @@
                 gbCommentInput.value = '';
                 gbSendBtn.disabled = true;
             }
+        });
+
+        gbCommentInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && gbCommentInput.value.trim()) {
+                gbSendBtn.click();
+            }
+        });
+
+        // ===== Expandable Visitors Groups =====
+        document.querySelectorAll('.gb-visitors-group[data-expandable="true"]').forEach(group => {
+            group.addEventListener('click', () => {
+                const container = group.closest('.gb-visitors-container');
+                const list = container.querySelector('.gb-visitors-list');
+                const isExpanded = group.classList.contains('expanded');
+
+                if (isExpanded) {
+                    // Collapse
+                    group.classList.remove('expanded');
+                    list.classList.remove('visible');
+                } else {
+                    // Expand
+                    group.classList.add('expanded');
+                    list.classList.add('visible');
+                    vibrate(10);
+                }
+            });
+        });
+
+        // Collapse buttons
+        document.querySelectorAll('.gb-collapse-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const container = btn.closest('.gb-visitors-container');
+                const group = container.querySelector('.gb-visitors-group');
+                const list = container.querySelector('.gb-visitors-list');
+
+                group.classList.remove('expanded');
+                list.classList.remove('visible');
+                vibrate(10);
+            });
         });
 
         loadGame();
