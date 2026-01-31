@@ -12,6 +12,49 @@
 const { supabaseAdmin } = require('./supabaseClient');
 
 /**
+ * IPアドレスから国コードを取得
+ * @param {string} ip - IPアドレス
+ * @returns {Promise<string|null>} 国コード (例: 'JP', 'US')
+ */
+async function getCountryFromIP(ip) {
+  // ローカルIPやプライベートIPはスキップ
+  if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+    return null;
+  }
+
+  try {
+    // ip-api.com (無料、レート制限あり: 45req/min)
+    const response = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode`);
+    if (response.ok) {
+      const data = await response.json();
+      return data.countryCode || null;
+    }
+  } catch (e) {
+    console.error('[Waitlist] IP Geolocation error:', e.message);
+  }
+  return null;
+}
+
+/**
+ * リクエストからクライアントIPを取得
+ * @param {Request} req - Express リクエスト
+ * @returns {string|null}
+ */
+function getClientIP(req) {
+  // プロキシ経由の場合
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  // Cloudflare
+  if (req.headers['cf-connecting-ip']) {
+    return req.headers['cf-connecting-ip'];
+  }
+  // 直接接続
+  return req.socket?.remoteAddress || null;
+}
+
+/**
  * ユーザーのアクセス権を確認
  * @param {string} email - ユーザーのメールアドレス
  * @returns {Promise<{allowed: boolean, status: string|null}>}
@@ -44,26 +87,67 @@ async function checkUserAccess(email) {
  * @param {string} userInfo.email - メールアドレス
  * @param {string} userInfo.displayName - 表示名
  * @param {string} userInfo.avatarUrl - アバターURL
+ * @param {object} userInfo.analytics - 分析用データ
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 async function registerToWaitlist(userInfo) {
-  const { email, displayName, avatarUrl } = userInfo;
+  const { email, displayName, avatarUrl, analytics = {} } = userInfo;
 
   if (!email) {
     return { success: false, error: 'Email is required' };
   }
 
+  // まず既存レコードを確認
+  const { data: existing } = await supabaseAdmin
+    .from('user_access')
+    .select('status, language')
+    .eq('email', email.toLowerCase())
+    .single();
+
+  if (existing) {
+    // 既存ユーザー: analytics のみ更新（status は変更しない）
+    // language が null の場合のみ更新（既存データを上書きしない）
+    const updates = {};
+    if (!existing.language && analytics.language) updates.language = analytics.language;
+    if (analytics.country) updates.country = analytics.country;
+    if (analytics.timezone) updates.timezone = analytics.timezone;
+    if (analytics.referrer) updates.referrer = analytics.referrer;
+    if (analytics.utmSource) updates.utm_source = analytics.utmSource;
+    if (analytics.utmCampaign) updates.utm_campaign = analytics.utmCampaign;
+    if (analytics.deviceType) updates.device_type = analytics.deviceType;
+    if (analytics.screenResolution) updates.screen_resolution = analytics.screenResolution;
+
+    if (Object.keys(updates).length > 0) {
+      const { error: updateError } = await supabaseAdmin
+        .from('user_access')
+        .update(updates)
+        .eq('email', email.toLowerCase());
+
+      if (updateError) {
+        console.error('[Waitlist] Analytics update error:', updateError.message);
+      }
+    }
+    return { success: true, existing: true };
+  }
+
+  // 新規ユーザー: 全データを挿入
   const { error } = await supabaseAdmin
     .from('user_access')
-    .upsert({
+    .insert({
       email: email.toLowerCase(),
       display_name: displayName || null,
       avatar_url: avatarUrl || null,
       status: 'pending',
-      requested_at: new Date().toISOString()
-    }, {
-      onConflict: 'email',
-      ignoreDuplicates: true  // 既に存在する場合は更新しない
+      requested_at: new Date().toISOString(),
+      // 分析用データ
+      language: analytics.language || null,
+      country: analytics.country || null,
+      timezone: analytics.timezone || null,
+      referrer: analytics.referrer || null,
+      utm_source: analytics.utmSource || null,
+      utm_campaign: analytics.utmCampaign || null,
+      device_type: analytics.deviceType || null,
+      screen_resolution: analytics.screenResolution || null
     });
 
   if (error) {
@@ -122,6 +206,7 @@ function setupRoutes(app) {
    * ウェイトリストに登録
    *
    * Headers: Authorization: Bearer <access_token>
+   * Body: { analytics?: { language, country, timezone, referrer, utmSource, utmCampaign, deviceType, screenResolution } }
    * Response: { success: boolean, error?: string }
    */
   app.post('/api/waitlist/register', async (req, res) => {
@@ -139,10 +224,22 @@ function setupRoutes(app) {
         return res.status(401).json({ error: 'Invalid token' });
       }
 
+      // リクエストボディから分析データを取得
+      const analytics = req.body?.analytics || {};
+
+      // IPアドレスから国を取得（フロントエンドで取得できないため）
+      if (!analytics.country) {
+        const clientIP = getClientIP(req);
+        if (clientIP) {
+          analytics.country = await getCountryFromIP(clientIP);
+        }
+      }
+
       const result = await registerToWaitlist({
         email: user.email,
         displayName: user.user_metadata?.full_name || user.user_metadata?.name,
-        avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture
+        avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+        analytics
       });
 
       res.json(result);
