@@ -2553,9 +2553,7 @@ class GameCreatorApp {
     if (this.sendButton) {
       this.sendButton.disabled = processing;
     }
-    if (this.chatInput) {
-      this.chatInput.disabled = processing;
-    }
+    // Note: chatInput remains enabled so user can type while AI is processing
   }
 
   stopGeneration() {
