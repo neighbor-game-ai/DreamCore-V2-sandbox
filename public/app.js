@@ -186,9 +186,14 @@ class GameCreatorApp {
     // Mobile plus menu elements
     this.plusMenuButton = document.getElementById('plusMenuButton');
     this.plusMenuPopup = document.getElementById('plusMenuPopup');
-    this.plusMenuAsset = document.getElementById('plusMenuAsset');
-    this.plusMenuUpload = document.getElementById('plusMenuUpload');
-    this.plusMenuImageGen = document.getElementById('plusMenuImageGen');
+    this.plusMenuHistory = document.getElementById('plusMenuHistory');
+
+    // Mobile image menu elements
+    this.imageMenuButton = document.getElementById('imageMenuButton');
+    this.imageMenuPopup = document.getElementById('imageMenuPopup');
+    this.imageMenuAsset = document.getElementById('imageMenuAsset');
+    this.imageMenuUpload = document.getElementById('imageMenuUpload');
+    this.imageMenuImageGen = document.getElementById('imageMenuImageGen');
 
     // Debug toggles
     this.disableSkillsToggle = document.getElementById('disableSkillsToggle');
@@ -418,6 +423,7 @@ class GameCreatorApp {
     this.setupAssetListeners();
     this.setupImageGenListeners();
     this.setupPlusMenuListeners();
+    this.setupImageMenuListeners();
     this.setupStyleSelectListeners();
     this.setupRouting();
     this.setupErrorListeners();
@@ -517,6 +523,7 @@ class GameCreatorApp {
     this.setupAssetListeners();
     this.setupImageGenListeners();
     this.setupPlusMenuListeners();
+    this.setupImageMenuListeners();
     this.setupStyleSelectListeners();
     this.setupRouting();
     this.setupErrorListeners();
@@ -5002,25 +5009,14 @@ class GameCreatorApp {
     // Toggle menu on button click
     this.plusMenuButton.addEventListener('click', (e) => {
       e.stopPropagation();
+      this.closeImageMenu(); // Close image menu if open
       this.togglePlusMenu();
     });
 
-    // Menu item: Asset
-    this.plusMenuAsset?.addEventListener('click', () => {
+    // Menu item: History (Version Panel)
+    this.plusMenuHistory?.addEventListener('click', () => {
       this.closePlusMenu();
-      this.openAssetModal();
-    });
-
-    // Menu item: Upload
-    this.plusMenuUpload?.addEventListener('click', () => {
-      this.closePlusMenu();
-      this.triggerUpload();
-    });
-
-    // Menu item: Image Generation
-    this.plusMenuImageGen?.addEventListener('click', () => {
-      this.closePlusMenu();
-      this.openImageGenModal();
+      this.toggleVersionPanel();
     });
 
     // Close menu when clicking outside
@@ -5047,6 +5043,62 @@ class GameCreatorApp {
   closePlusMenu() {
     this.plusMenuPopup?.classList.add('hidden');
     this.plusMenuButton?.classList.remove('active');
+  }
+
+  // ==================== Mobile Image Menu ====================
+
+  setupImageMenuListeners() {
+    if (!this.imageMenuButton || !this.imageMenuPopup) return;
+
+    // Toggle menu on button click
+    this.imageMenuButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closePlusMenu(); // Close plus menu if open
+      this.toggleImageMenu();
+    });
+
+    // Menu item: Asset
+    this.imageMenuAsset?.addEventListener('click', () => {
+      this.closeImageMenu();
+      this.openAssetModal();
+    });
+
+    // Menu item: Upload
+    this.imageMenuUpload?.addEventListener('click', () => {
+      this.closeImageMenu();
+      this.triggerUpload();
+    });
+
+    // Menu item: Image Generation
+    this.imageMenuImageGen?.addEventListener('click', () => {
+      this.closeImageMenu();
+      this.openImageGenModal();
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (this.imageMenuPopup && !this.imageMenuPopup.classList.contains('hidden')) {
+        if (!this.imageMenuButton.contains(e.target) && !this.imageMenuPopup.contains(e.target)) {
+          this.closeImageMenu();
+        }
+      }
+    });
+  }
+
+  toggleImageMenu() {
+    if (!this.imageMenuPopup || !this.imageMenuButton) return;
+    const isHidden = this.imageMenuPopup.classList.contains('hidden');
+    if (isHidden) {
+      this.imageMenuPopup.classList.remove('hidden');
+      this.imageMenuButton.classList.add('active');
+    } else {
+      this.closeImageMenu();
+    }
+  }
+
+  closeImageMenu() {
+    this.imageMenuPopup?.classList.add('hidden');
+    this.imageMenuButton?.classList.remove('active');
   }
 
   openImageGenModal() {

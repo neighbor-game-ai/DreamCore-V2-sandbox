@@ -1469,10 +1469,69 @@ body::before {
   color: #DDA0DD;
 }
 
+/* Image button - hidden on desktop, shown on mobile */
+.image-menu-btn {
+  display: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-full);
+  border: none;
+  background: linear-gradient(135deg, #87CEEB 0%, #98D8C8 100%);
+  color: var(--white);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(135, 206, 235, 0.3);
+}
+
+.image-menu-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(135, 206, 235, 0.4);
+}
+
+.image-menu-btn:active {
+  transform: scale(0.95);
+}
+
+.image-menu-btn.active {
+  background: linear-gradient(135deg, #98D8C8 0%, #87CEEB 100%);
+}
+
+/* Image menu popup */
+.image-menu-popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 48px;
+  background: var(--glass-white-strong);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  border-radius: var(--r-16);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  padding: var(--s-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  z-index: 100;
+  min-width: 160px;
+  animation: slideUp 0.2s var(--ease-out);
+}
+
+.image-menu-popup.hidden {
+  display: none;
+}
+
 /* Mobile styles */
 @media (max-width: 768px) {
   /* Show plus button on mobile */
   .plus-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Show image button on mobile */
+  .image-menu-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1604,7 +1663,7 @@ body::before {
 
 /* ===== Version Panel ===== */
 .version-panel {
-  position: absolute;
+  position: fixed;
   right: 0;
   top: 0;
   bottom: 0;
@@ -1615,7 +1674,7 @@ body::before {
   border-left: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
-  z-index: 20;
+  z-index: 1000;
   transform: translateX(0);
   transition: transform var(--duration) var(--ease-out);
 }
@@ -1623,6 +1682,20 @@ body::before {
 .version-panel.hidden {
   transform: translateX(100%);
   pointer-events: none;
+}
+
+/* Mobile: Version panel as full-screen overlay */
+@media (max-width: 768px) {
+  .version-panel {
+    left: 0;
+    width: 100%;
+    border-left: none;
+    background: var(--white);
+  }
+
+  .version-panel.hidden {
+    transform: translateY(100%);
+  }
 }
 
 .version-header {
