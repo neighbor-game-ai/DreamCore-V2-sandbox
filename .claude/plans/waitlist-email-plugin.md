@@ -213,13 +213,17 @@ supabase secrets set BREVO_API_KEY=your-api-key
 
 ## 実装順序
 
-1. [ ] user_access テーブルにカラム追加（マイグレーション）
-2. [ ] Edge Function 作成（waitlist-email/index.ts）
-3. [ ] Brevo APIクライアント作成
-4. [ ] Edge Function デプロイ
-5. [ ] Supabase Database Webhook 設定
-6. [ ] テスト（INSERT/UPDATE両方）
-7. [ ] 本番動作確認
+1. [x] user_access テーブルにカラム追加（マイグレーション）- 完了 2026-01-31
+2. [x] Edge Function 作成（waitlist-email/index.ts）- 完了 2026-01-31
+3. [x] Brevo APIクライアント作成 - Edge Function に統合
+4. [x] Edge Function デプロイ - 完了 2026-01-31
+5. [x] Supabase Database Webhook 設定 - 完了 2026-01-31
+   - `supabase_functions.http_request` を使用
+   - INSERT/UPDATE 両方のトリガー作成
+6. [x] テスト（INSERT/UPDATE両方）- 完了 2026-01-31
+   - INSERT トリガー: ウェルカムメール処理確認
+   - UPDATE トリガー: 承認メール処理確認
+7. [ ] 本番動作確認（実際のメールアドレスでテスト）
 
 ## テスト方法
 

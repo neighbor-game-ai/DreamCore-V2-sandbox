@@ -1103,14 +1103,19 @@ app.get('/game/:userId/:projectId/*', optionalAuth, async (req, res) => {
 
 // GET /api/published-games/:id - Get published game info (public access)
 // Note: Does NOT increment play count (use POST /api/published-games/:id/play for that)
+// Supports both UUID and public_id (e.g., g_abc123XYZ0)
 app.get('/api/published-games/:id', async (req, res) => {
   const { id } = req.params;
 
-  if (!isValidUUID(id)) {
+  const isUUID = isValidUUID(id);
+  const isPublicId = /^g_[A-Za-z0-9]{10}$/.test(id);
+  if (!isUUID && !isPublicId) {
     return res.status(400).json({ error: 'Invalid game ID' });
   }
 
-  const game = await db.getPublishedGameById(id);
+  const game = isUUID
+    ? await db.getPublishedGameById(id)
+    : await db.getPublishedGameByPublicId(id);
   if (!game) {
     return res.status(404).json({ error: 'Game not found' });
   }
@@ -1119,21 +1124,26 @@ app.get('/api/published-games/:id', async (req, res) => {
 });
 
 // POST /api/published-games/:id/play - Increment play count (call when game actually starts)
+// Supports both UUID and public_id (e.g., g_abc123XYZ0)
 app.post('/api/published-games/:id/play', async (req, res) => {
   const { id } = req.params;
 
-  if (!isValidUUID(id)) {
+  const isUUID = isValidUUID(id);
+  const isPublicId = /^g_[A-Za-z0-9]{10}$/.test(id);
+  if (!isUUID && !isPublicId) {
     return res.status(400).json({ error: 'Invalid game ID' });
   }
 
   // Verify game exists and is public/unlisted
-  const game = await db.getPublishedGameById(id);
+  const game = isUUID
+    ? await db.getPublishedGameById(id)
+    : await db.getPublishedGameByPublicId(id);
   if (!game) {
     return res.status(404).json({ error: 'Game not found' });
   }
 
-  // Increment play count
-  await db.incrementPlayCount(id);
+  // Increment play count (use internal UUID, not public_id)
+  await db.incrementPlayCount(game.id);
 
   res.json({ success: true });
 });
@@ -1251,6 +1261,101 @@ const injectPublicGameHtml = (html) => {
   return content;
 };
 
+// ==================== Public ID Routes ====================
+
+// GET /u/:publicId - User profile page (public)
+// Supports both UUID and public_id (e.g., u_abc123XYZ0)
+app.get('/u/:id', async (req, res) => {
+  const { id } = req.params;
+
+  // Only serve on v2 domain
+  if (req.isPlayDomain) {
+    return res.status(404).send('Not found');
+  }
+
+  const isUUID = isValidUUID(id);
+  const isPublicId = /^u_[A-Za-z0-9]{10}$/.test(id);
+  if (!isUUID && !isPublicId) {
+    return res.status(400).send('Invalid user ID');
+  }
+
+  // Get user - for now just serve the profile page, frontend will fetch data
+  // TODO: Add user.html page or serve with SSR
+  return res.sendFile(path.join(__dirname, '..', 'public', 'user.html'));
+});
+
+// GET /api/users/:id/public - Get public user profile
+// Supports both UUID and public_id
+app.get('/api/users/:id/public', async (req, res) => {
+  const { id } = req.params;
+
+  const isUUID = isValidUUID(id);
+  const isPublicId = /^u_[A-Za-z0-9]{10}$/.test(id);
+  if (!isUUID && !isPublicId) {
+    return res.status(400).json({ error: 'Invalid user ID' });
+  }
+
+  let user;
+  if (isPublicId) {
+    user = await db.getUserByPublicId(id);
+  } else {
+    // For UUID, use admin client to get public fields only
+    const { data } = await db.supabaseAdmin
+      .from('users')
+      .select('id, display_name, avatar_url, public_id, created_at')
+      .eq('id', id)
+      .single();
+    user = data;
+  }
+
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  res.json(user);
+});
+
+// GET /p/:publicId - Project page (redirects to game if published)
+// Supports both UUID and public_id (e.g., p_abc123XYZ0)
+app.get('/p/:id', async (req, res) => {
+  const { id } = req.params;
+
+  // Only serve on v2 domain
+  if (req.isPlayDomain) {
+    return res.status(404).send('Not found');
+  }
+
+  const isUUID = isValidUUID(id);
+  const isPublicId = /^p_[A-Za-z0-9]{10}$/.test(id);
+  if (!isUUID && !isPublicId) {
+    return res.status(400).send('Invalid project ID');
+  }
+
+  // Get project with published game (public or unlisted)
+  let project;
+  if (isPublicId) {
+    project = await db.getProjectByPublicId(id);
+  } else {
+    const { data } = await db.supabaseAdmin
+      .from('projects')
+      .select('id, name, public_id, user_id, published_games!inner(id, public_id, visibility)')
+      .eq('id', id)
+      .in('published_games.visibility', ['public', 'unlisted'])
+      .single();
+    project = data;
+  }
+
+  if (!project || !project.published_games || project.published_games.length === 0) {
+    return res.status(404).send('Project not found or not published');
+  }
+
+  // Redirect to game page using game's public_id
+  const gamePublicId = project.published_games[0].public_id;
+  return res.redirect(`/game/${gamePublicId}`);
+});
+
+// ==================== Game Routes ====================
+
 // GET /game/:gameId - Game detail page on v2.dreamcore.gg
 app.get('/game/:gameId', async (req, res) => {
   // Only serve on v2 domain (not play domain)
@@ -1277,6 +1382,7 @@ app.get('/g/:gameId', async (req, res) => {
 });
 
 // GET /g/:gameId/* - Public game file serving on play.dreamcore.gg only
+// Supports both UUID and public_id (e.g., g_abc123XYZ0)
 app.get('/g/:gameId/*', async (req, res) => {
   const { gameId } = req.params;
   const filename = req.params[0] || 'index.html';
@@ -1293,8 +1399,10 @@ app.get('/g/:gameId/*', async (req, res) => {
     return res.status(403).send('This game can only be played within DreamCore');
   }
 
-  // Validate UUID
-  if (!isValidUUID(gameId)) {
+  // Validate ID format: UUID or public_id (g_xxxxxxxxxx)
+  const isUUID = isValidUUID(gameId);
+  const isPublicId = /^g_[A-Za-z0-9]{10}$/.test(gameId);
+  if (!isUUID && !isPublicId) {
     return res.status(400).send('Invalid game ID');
   }
 
@@ -1304,7 +1412,9 @@ app.get('/g/:gameId/*', async (req, res) => {
   }
 
   // Get published game info (uses admin client, returns public/unlisted only)
-  const game = await db.getPublishedGameById(gameId);
+  const game = isUUID
+    ? await db.getPublishedGameById(gameId)
+    : await db.getPublishedGameByPublicId(gameId);
   if (!game || !['public', 'unlisted'].includes(game.visibility)) {
     return res.status(404).send('Game not found');
   }
@@ -2894,6 +3004,12 @@ app.get('/create', (req, res) => {
 // Editor page (project detail)
 app.get('/project/:id', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'editor.html'));
+});
+
+// Zap page (game discovery with specific game)
+// Supports both UUID and public_id (e.g., g_abc123XYZ0)
+app.get('/zap/:id', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'discover.html'));
 });
 
 // ==================== Server Start ====================

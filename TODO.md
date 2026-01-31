@@ -6,6 +6,30 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ---
 
+## 最近の作業
+
+### 2026-01-31: ID 規格整備（UUID v7 + public_id）
+
+**詳細:** `.claude/logs/2026-01-31-id-format-strategy.md`
+
+100万ユーザー規模に向けた ID 設計:
+
+- **UUID v7**: 新規レコードのデフォルト（時間順ソート可能、インデックス効率向上）
+- **public_id**: 公開 URL 用短縮 ID（`g_xxx`, `u_xxx`, `p_xxx`）
+
+| 完了項目 |
+|----------|
+| `uuid_generate_v7()` 関数作成 |
+| 10テーブルのデフォルトを UUID v7 に変更 |
+| public_id カラム追加（published_games, users, projects）|
+| 既存データのバックフィル（100件）|
+| API ルーティング更新（UUID / public_id 両対応）|
+| 公開 URL ルート追加（`/u/:id`, `/p/:id`, `/zap/:id`）|
+| フロントエンド共有 URL を public_id に切り替え |
+| アクセス制御確認（public / unlisted）|
+
+---
+
 ## 残タスク
 
 ### 中優先度（100人イベント前に必須）
@@ -112,6 +136,71 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 ---
 
 ## 作業履歴
+
+### 2026-01-31: セッション再接続時のトークン更新修正
+
+**詳細:** `.claude/logs/2026-01-31-session-reconnect-fix.md`
+
+**問題:** セッション切れ後の再接続でGoogleログイン画面に飛ばされる
+
+**原因:** 再接続時に古い（期限切れ）トークンを使っていた
+
+**修正内容:**
+- `auth.js`: `getFreshSession()` 追加（Refresh Tokenでトークン更新）
+- `app.js`: `forceReconnect()` / `reconnectWithFreshToken()` でトークン更新後に再接続
+
+**関連:** Supabase カスタムドメイン `auth.dreamcore.gg` 設定、Google OAuth更新
+
+---
+
+### 2026-01-31: モバイルUI改善 - 画像ボタン分離とバージョンパネル修正
+
+**詳細:** `.claude/logs/2026-01-31-mobile-ui-image-button.md`
+
+**背景:** WhatsApp/LINEのUIパターンを参考に、モバイルのチャット入力エリアを改善
+
+**変更内容:**
+- プラスメニューを変更履歴専用に変更
+- 画像アイコンボタンを新設（素材、アップロード、画像生成）
+- バージョンパネルをbody直下に移動（タブ無視でオーバーレイ表示）
+
+**UI構成（モバイル）:**
+```
+[+プラス] → 変更履歴
+[画像] → 素材、アップロード、画像生成
+[テキストエリア] [送信]
+```
+
+**変更ファイル:**
+- `public/editor.html` - 画像ボタン・メニュー追加、バージョンパネル移動
+- `public/style.css` - 画像ボタンスタイル、バージョンパネルfixed化
+- `public/app.js` - 画像メニューのイベントリスナー追加
+
+---
+
+### 2026-01-31: マイページ公開ゲームリンク修正 & iframe 専用制限
+
+**詳細:** `.claude/logs/2026-01-31-mypage-published-game-link.md`
+
+**問題:**
+- マイページから公開ゲームをクリックしても正しいページに遷移しない
+- `play.dreamcore.gg` に直接アクセスできてしまう
+
+**修正内容:**
+1. **リンク先修正** (`public/mypage.js`)
+   - `/play/${projectId}` → `/game/${gameId}` に変更
+   - `project_id` → `published_games.id` を使用
+
+2. **iframe 専用制限** (`server/index.js`)
+   - `Sec-Fetch-Dest` ヘッダーで直接アクセスをブロック
+   - `document`（直接アクセス）→ 403 エラー
+   - `iframe`（v2.dreamcore.gg からの埋め込み）→ 許可
+
+**セキュリティ:**
+- `Sec-Fetch-*` ヘッダーは Forbidden header（JavaScript で偽装不可）
+- Referer より信頼性が高い
+
+---
 
 ### 2026-01-31: ウェイトリスト通知システム構築（メール + Discord）
 
@@ -818,4 +907,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-01-31 (ウェイトリスト通知システム構築 - メール + Discord)
+最終更新: 2026-01-31 (モバイルUI改善 - 画像ボタン分離とバージョンパネル修正)

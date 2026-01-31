@@ -718,21 +718,23 @@ class GameCreatorApp {
       return;
     }
 
-    // Find the game index
+    // Find the game index (support both UUID and public_id)
     let startIndex = 0;
     if (gameId) {
-      const index = this.publicGames.findIndex(g => g.id === gameId);
+      const index = this.publicGames.findIndex(g => g.id === gameId || g.public_id === gameId);
       if (index !== -1) {
         startIndex = index;
       } else {
-        // Game not found, update URL to first game
+        // Game not found, update URL to first game (use public_id if available)
         const firstGame = this.publicGames[0];
-        history.replaceState({ view: 'zapping', gameId: firstGame.id }, '', `/zap/${firstGame.id}`);
+        const firstGameId = firstGame.public_id || firstGame.id;
+        history.replaceState({ view: 'zapping', gameId: firstGameId }, '', `/zap/${firstGameId}`);
       }
     } else {
-      // No gameId specified, use first game and update URL
+      // No gameId specified, use first game and update URL (use public_id if available)
       const firstGame = this.publicGames[0];
-      history.replaceState({ view: 'zapping', gameId: firstGame.id }, '', `/zap/${firstGame.id}`);
+      const firstGameId = firstGame.public_id || firstGame.id;
+      history.replaceState({ view: 'zapping', gameId: firstGameId }, '', `/zap/${firstGameId}`);
     }
 
     this.enterZappingMode(startIndex, false); // Don't update URL, already done
@@ -1152,7 +1154,7 @@ class GameCreatorApp {
       const delay = Math.min(1000 * Math.pow(1.5, this.reconnectAttempts || 0), 10000);
       this.reconnectAttempts = (this.reconnectAttempts || 0) + 1;
       console.log(`[Reconnect] Attempting in ${delay}ms (attempt ${this.reconnectAttempts})`);
-      setTimeout(() => this.connectWebSocket(), delay);
+      setTimeout(() => this.reconnectWithFreshToken(), delay);
     };
 
     this.ws.onerror = (error) => {
@@ -1279,14 +1281,37 @@ class GameCreatorApp {
     }
   }
 
-  forceReconnect() {
-    // Close existing connection and reconnect
+  async forceReconnect() {
+    // Close existing connection
     if (this.ws) {
       this.ws.onclose = null; // Prevent double reconnect
       this.ws.close();
     }
     this.reconnectAttempts = 0;
-    this.connectWebSocket();
+
+    // Get fresh session before reconnecting
+    const session = await DreamCoreAuth.getFreshSession();
+    if (session) {
+      console.log('[forceReconnect] Got fresh session, reconnecting...');
+      this.accessToken = session.access_token;
+      this.connectWebSocket();
+    } else {
+      console.log('[forceReconnect] No valid session, redirecting to login');
+      window.location.href = '/';
+    }
+  }
+
+  async reconnectWithFreshToken() {
+    // Auto-reconnect with fresh token (preserves reconnectAttempts for backoff)
+    const session = await DreamCoreAuth.getFreshSession();
+    if (session) {
+      console.log('[reconnectWithFreshToken] Got fresh session, reconnecting...');
+      this.accessToken = session.access_token;
+      this.connectWebSocket();
+    } else {
+      console.log('[reconnectWithFreshToken] No valid session, redirecting to login');
+      window.location.href = '/';
+    }
   }
 
   setupEventListeners() {
@@ -1587,11 +1612,12 @@ class GameCreatorApp {
     this.zappingMode.classList.remove('hidden');
     this.showBottomNav();
 
-    // Update URL if requested
+    // Update URL if requested (use public_id for cleaner URLs)
     if (updateUrl) {
       const currentGame = this.zappingGames[this.zappingIndex];
       if (currentGame) {
-        history.pushState({ view: 'zapping', gameId: currentGame.id }, '', `/zap/${currentGame.id}`);
+        const gameId = currentGame.public_id || currentGame.id;
+        history.pushState({ view: 'zapping', gameId }, '', `/zap/${gameId}`);
       }
     }
 
@@ -1649,7 +1675,8 @@ class GameCreatorApp {
   updateZappingUrl() {
     const currentGame = this.zappingGames[this.zappingIndex];
     if (currentGame) {
-      history.replaceState({ view: 'zapping', gameId: currentGame.id }, '', `/zap/${currentGame.id}`);
+      const gameId = currentGame.public_id || currentGame.id;
+      history.replaceState({ view: 'zapping', gameId }, '', `/zap/${gameId}`);
     }
   }
 
@@ -1679,7 +1706,9 @@ class GameCreatorApp {
     const game = this.zappingGames[this.zappingIndex];
     if (!game) return;
 
-    const shareUrl = `${window.location.origin}/zap/${game.id}`;
+    // Use public_id for shorter, cleaner URLs (fallback to UUID)
+    const gameId = game.public_id || game.id;
+    const shareUrl = `${window.location.origin}/zap/${gameId}`;
 
     if (navigator.share) {
       navigator.share({

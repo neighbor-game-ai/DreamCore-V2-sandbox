@@ -206,6 +206,72 @@ async function signOut() {
 }
 
 /**
+ * Check if a JWT token is expired or about to expire
+ * @param {Object} session - Session object with expires_at
+ * @returns {boolean} True if expired or expiring within 60 seconds
+ */
+function isSessionExpired(session) {
+  if (!session?.expires_at) return true;
+  // expires_at is Unix timestamp in seconds
+  const expiresAt = session.expires_at * 1000;
+  const now = Date.now();
+  const bufferMs = 60 * 1000; // 60 seconds buffer
+  return now >= (expiresAt - bufferMs);
+}
+
+/**
+ * Get a fresh session, refreshing if expired
+ * Use this for reconnection scenarios where a valid token is required
+ * @returns {Object|null} Fresh session or null if unable to refresh
+ */
+async function getFreshSession() {
+  if (!supabaseClient) await initAuth();
+
+  // If current session is valid, return it
+  if (currentSession && !isSessionExpired(currentSession)) {
+    console.log('[Auth] Current session is valid');
+    return currentSession;
+  }
+
+  console.log('[Auth] Session expired or missing, attempting refresh...');
+
+  // Try to refresh the session
+  try {
+    const { data, error } = await supabaseClient.auth.refreshSession();
+    if (data?.session) {
+      console.log('[Auth] Session refreshed successfully');
+      currentSession = data.session;
+      setCachedSession(data.session);
+      return data.session;
+    }
+    if (error) {
+      console.log('[Auth] Refresh failed:', error.message);
+    }
+  } catch (e) {
+    console.error('[Auth] Refresh exception:', e);
+  }
+
+  // Fallback: try getSession (might return a valid session from Supabase)
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session && !isSessionExpired(session)) {
+      console.log('[Auth] Got valid session from getSession');
+      currentSession = session;
+      setCachedSession(session);
+      return session;
+    }
+  } catch (e) {
+    console.error('[Auth] getSession exception:', e);
+  }
+
+  // Unable to get a valid session
+  console.log('[Auth] Unable to get fresh session');
+  currentSession = null;
+  setCachedSession(null);
+  return null;
+}
+
+/**
  * Get current session
  * Optimized: Uses memory cache, then localStorage cache, then Supabase
  * @returns {Object|null} Current session or null if not authenticated
@@ -369,6 +435,7 @@ window.DreamCoreAuth = {
   signInWithGoogle,
   signOut,
   getSession,
+  getFreshSession,   // For reconnection: always returns fresh token
   getSessionSync,    // SYNC: instant session check (no SDK)
   hasSessionSync,    // SYNC: instant boolean check (no SDK)
   getUser,

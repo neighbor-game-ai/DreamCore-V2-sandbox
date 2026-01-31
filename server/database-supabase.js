@@ -55,6 +55,26 @@ const getUserByEmail = async (client, email) => {
 };
 
 /**
+ * Get user by public_id (for public profile pages)
+ * @param {string} publicId - Public ID (e.g., u_abc123XYZ0)
+ * @returns {Promise<Object|null>} User or null
+ */
+const getUserByPublicId = async (publicId) => {
+  const { data, error } = await supabaseAdmin
+    .from('users')
+    .select('id, display_name, avatar_url, public_id, created_at')
+    .eq('public_id', publicId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    console.error('[DB] getUserByPublicId error:', error.message);
+    return null;
+  }
+  return data;
+};
+
+/**
  * Get or create user from Supabase Auth
  * Note: User is auto-created by trigger, this just ensures it exists
  */
@@ -139,6 +159,28 @@ const getProjectById = async (client, projectId) => {
   if (error) {
     if (error.code === 'PGRST116') return null;
     console.error('[DB] getProjectById error:', error.message);
+    return null;
+  }
+  return data;
+};
+
+/**
+ * Get project by public_id (for public sharing)
+ * Note: Only returns if project has a published game (public or unlisted)
+ * @param {string} publicId - Public ID (e.g., p_abc123XYZ0)
+ * @returns {Promise<Object|null>} Project with published game info or null
+ */
+const getProjectByPublicId = async (publicId) => {
+  const { data, error } = await supabaseAdmin
+    .from('projects')
+    .select('id, name, public_id, user_id, published_games!inner(id, public_id, visibility)')
+    .eq('public_id', publicId)
+    .in('published_games.visibility', ['public', 'unlisted'])
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    console.error('[DB] getProjectByPublicId error:', error.message);
     return null;
   }
   return data;
@@ -1276,6 +1318,27 @@ const getPublishedGameById = async (gameId) => {
 };
 
 /**
+ * Get published game by public_id (short URL-friendly ID)
+ * @param {string} publicId - Public ID (e.g., g_abc123XYZ0)
+ * @returns {Promise<Object|null>} Published game or null
+ */
+const getPublishedGameByPublicId = async (publicId) => {
+  const { data, error } = await supabaseAdmin
+    .from('published_games')
+    .select('*, projects(id, name)')
+    .eq('public_id', publicId)
+    .in('visibility', ['public', 'unlisted'])
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    console.error('[DB] getPublishedGameByPublicId error:', error.message);
+    return null;
+  }
+  return data;
+};
+
+/**
  * Get published game by project ID (owner access)
  * @param {Object} client - Supabase client with user JWT
  * @param {string} projectId - Project ID
@@ -1390,6 +1453,7 @@ const getPublicGames = async (limit = 50, offset = 0) => {
     .from('published_games')
     .select(`
       id,
+      public_id,
       title,
       description,
       tags,
@@ -1555,6 +1619,7 @@ module.exports = {
   getOrCreateUser,
   getUserById,
   getUserByEmail,
+  getUserByPublicId,
   getUserByVisitorId,
   getProfileById,
   getProfileByEmail,
@@ -1562,6 +1627,7 @@ module.exports = {
   // Project operations
   getProjectsByUserId,
   getProjectById,
+  getProjectByPublicId,
   getPublicProjectById,
   createProject,
   updateProject,
@@ -1649,6 +1715,7 @@ module.exports = {
 
   // Published games operations
   getPublishedGameById,
+  getPublishedGameByPublicId,
   getPublishedGameByProjectId,
   publishGame,
   unpublishGame,

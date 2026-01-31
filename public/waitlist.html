@@ -306,13 +306,41 @@
         document.getElementById('avatarPlaceholder').style.display = 'none';
       }
 
+      // 分析データを収集
+      function collectAnalytics() {
+        // デバイスタイプ判定
+        const ua = navigator.userAgent;
+        let deviceType = 'desktop';
+        if (/Mobi|Android/i.test(ua)) {
+          deviceType = /Tablet|iPad/i.test(ua) ? 'tablet' : 'mobile';
+        }
+
+        // UTMパラメータ取得
+        const urlParams = new URLSearchParams(window.location.search);
+
+        return {
+          language: navigator.language || navigator.userLanguage || null,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
+          referrer: document.referrer || null,
+          utmSource: urlParams.get('utm_source') || null,
+          utmCampaign: urlParams.get('utm_campaign') || null,
+          deviceType: deviceType,
+          screenResolution: `${screen.width}x${screen.height}`
+        };
+      }
+
       // ウェイトリストに登録
       try {
+        const analytics = collectAnalytics();
+        console.log('[Waitlist] Analytics:', analytics);
+
         const response = await fetch('/api/waitlist/register', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${session.access_token}`
-          }
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ analytics })
         });
         console.log('[Waitlist] Registration response:', await response.json());
       } catch (e) {
