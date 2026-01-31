@@ -129,11 +129,11 @@ if (payload.type === "INSERT") {
 
 ## 実装手順
 
-1. [ ] Discord サーバーで Webhook URL を取得
-2. [ ] Supabase Secret に `DISCORD_WEBHOOK_URL` を設定
-3. [ ] Edge Function に Discord 通知コードを追加
-4. [ ] Edge Function を再デプロイ
-5. [ ] テスト INSERT で動作確認
+1. [x] Discord サーバーで Webhook URL を取得 ✅ 2026-01-31
+2. [x] Supabase Secret に `DISCORD_WEBHOOK_URL` を設定 ✅ 2026-01-31
+3. [x] Edge Function に Discord 通知コードを追加 ✅ 2026-01-31
+4. [x] Edge Function を再デプロイ（v9） ✅ 2026-01-31
+5. [x] テスト INSERT で動作確認 ✅ 2026-01-31
 
 ## テスト方法
 
