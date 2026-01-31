@@ -2,6 +2,31 @@
 
 ウェイトリスト登録・承認時に自動でメール通知を送信する機能。
 
+## キー・シークレット管理
+
+| キー名 | 保存場所 | 用途 |
+|--------|----------|------|
+| `BREVO_API_KEY` | Supabase Edge Function Secrets | Brevo API認証 |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Edge Function (自動設定) | DB更新 |
+
+### BREVO_API_KEY の確認・更新
+
+```bash
+# 現在の設定を確認
+npx supabase secrets list --project-ref tcynrijrovktirsvwiqb
+
+# 新しいキーを設定
+npx supabase secrets set BREVO_API_KEY=xkeysib-xxxxx --project-ref tcynrijrovktirsvwiqb
+```
+
+### Brevo Dashboard でのキー管理
+
+1. [Brevo Dashboard](https://app.brevo.com/) にログイン
+2. 右上アイコン → **SMTP & API** → **API Keys**
+3. 既存キーの確認・新規作成
+
+**注意**: APIキーは `xkeysib-` で始まる（`xsmtpsib-` はSMTP用で使用不可）
+
 ## 前提条件
 
 - Supabase プロジェクト設定済み

@@ -122,6 +122,26 @@ V2 初期リリース用。詳細: `docs/WAITLIST.md`
 - Google OAuth でログイン → `user_access` テーブルで管理
 - 無効化: `server/index.js` で `waitlist.setupRoutes(app);` をコメントアウト
 
+### メール通知
+
+登録・承認時に自動メール送信。詳細: `docs/WAITLIST-EMAIL-SETUP.md`
+
+| 項目 | 値 |
+|------|-----|
+| メールサービス | Brevo (旧Sendinblue) |
+| APIキー保存場所 | Supabase Edge Function Secrets (`BREVO_API_KEY`) |
+| Edge Function | `waitlist-email` |
+| トリガー | Database Webhook (user_access INSERT/UPDATE) |
+
+**キー管理コマンド:**
+```bash
+# 確認
+npx supabase secrets list --project-ref tcynrijrovktirsvwiqb
+
+# 更新
+npx supabase secrets set BREVO_API_KEY=xkeysib-xxx --project-ref tcynrijrovktirsvwiqb
+```
+
 ---
 
 ## Supabase 設定（DreamCore-V2 と共有）
