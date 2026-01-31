@@ -16,8 +16,21 @@
       if (!cached) { window.location.href = '/'; return; }
       try {
         var data = JSON.parse(cached);
-        if (Date.now() - data.timestamp > 300000) { window.location.href = '/'; }
-      } catch(e) { window.location.href = '/'; }
+        if (Date.now() - data.timestamp > 300000) {
+          localStorage.removeItem('dreamcore_session_cache');
+          window.location.href = '/';
+          return;
+        }
+        var session = data.session;
+        if (session && session.expires_at && Date.now() / 1000 > session.expires_at - 60) {
+          localStorage.removeItem('dreamcore_session_cache');
+          window.location.href = '/';
+          return;
+        }
+      } catch(e) {
+        localStorage.removeItem('dreamcore_session_cache');
+        window.location.href = '/';
+      }
     })();
     window.__SUPABASE__ = {
       url: 'https://tcynrijrovktirsvwiqb.supabase.co',

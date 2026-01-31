@@ -20,11 +20,23 @@
       if (!cached) { window.location.href = '/'; return; }
       try {
         var data = JSON.parse(cached);
+        // Check cache TTL (5 min)
         if (Date.now() - data.timestamp > 300000) {
           localStorage.removeItem('dreamcore_session_cache');
           window.location.href = '/';
+          return;
         }
-      } catch(e) { window.location.href = '/'; }
+        // Check session token expiry
+        var session = data.session;
+        if (session && session.expires_at && Date.now() / 1000 > session.expires_at - 60) {
+          localStorage.removeItem('dreamcore_session_cache');
+          window.location.href = '/';
+          return;
+        }
+      } catch(e) {
+        localStorage.removeItem('dreamcore_session_cache');
+        window.location.href = '/';
+      }
     })();
     // Supabase config + lazy loader (SDK loads on first use, not at page load)
     window.__SUPABASE__ = {
