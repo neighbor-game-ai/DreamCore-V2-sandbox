@@ -103,31 +103,32 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding-left: var(--s-16);
-            padding-right: var(--s-16);
+            padding-left: var(--s-12);
+            padding-right: var(--s-12);
             background: var(--white);
+            border-bottom: 1px solid var(--gray-100);
         }
 
         .back-button {
             width: 40px;
             height: 40px;
             border-radius: var(--r-full);
-            background: transparent;
+            background: var(--gray-100);
             border: none;
             color: var(--gray-900);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.15s ease;
+            transition: all 0.2s ease;
         }
 
         .back-button:hover {
-            opacity: 0.6;
+            background: var(--gray-200);
         }
 
         .back-button:active {
-            opacity: 0.4;
+            transform: scale(0.95);
         }
 
         /* Action Buttons */
@@ -141,25 +142,27 @@
             width: 44px;
             height: 44px;
             border-radius: var(--r-full);
-            background: transparent;
+            background: var(--gray-100);
             border: none;
-            color: var(--gray-900);
+            color: var(--gray-600);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.15s ease;
+            transition: all 0.2s ease;
         }
 
         .action-btn:hover {
-            opacity: 0.6;
+            background: var(--gray-200);
+            color: var(--gray-900);
         }
 
         .action-btn:active {
-            opacity: 0.4;
+            transform: scale(0.95);
         }
 
         .action-btn.active {
+            background: var(--red-light);
             color: var(--red);
         }
 
@@ -175,10 +178,11 @@
             align-items: center;
             justify-content: center;
             /* Generous whitespace - let the game breathe */
-            padding: var(--s-24);
-            padding-bottom: calc(var(--s-24) + 68px + env(safe-area-inset-bottom));
+            padding: var(--s-16);
+            padding-bottom: calc(var(--s-16) + 68px + env(safe-area-inset-bottom));
             min-height: 0;
-            background: var(--white);
+            /* Subtle gradient for depth */
+            background: linear-gradient(180deg, var(--gray-50) 0%, var(--white) 100%);
         }
 
         .game-container {
@@ -186,15 +190,15 @@
             height: 100%;
             max-width: 100%;
             max-height: 100%;
-            /* Refined radius */
-            border-radius: 20px;
+            /* Bold radius */
+            border-radius: 24px;
             overflow: hidden;
             background: var(--black);
-            /* Premium layered shadow - subtle but sophisticated */
+            /* Strong shadow for depth + subtle red glow */
             box-shadow:
-                0 1px 2px rgba(0, 0, 0, 0.04),
-                0 4px 8px rgba(0, 0, 0, 0.04),
-                0 16px 32px rgba(0, 0, 0, 0.08);
+                0 0 0 1px rgba(0, 0, 0, 0.1),
+                0 4px 12px rgba(0, 0, 0, 0.15),
+                0 20px 40px rgba(0, 0, 0, 0.2);
             position: relative;
             -webkit-user-select: none;
             -moz-user-select: none;
@@ -265,15 +269,18 @@
             bottom: calc(12px + env(safe-area-inset-bottom));
             left: 50%;
             transform: translateX(-50%);
-            height: 52px;
+            height: 56px;
             background: var(--white);
-            border-radius: 16px;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.12);
+            border-radius: 18px;
+            box-shadow:
+                0 0 0 1px rgba(0, 0, 0, 0.06),
+                0 4px 16px rgba(0, 0, 0, 0.12),
+                0 12px 32px rgba(0, 0, 0, 0.08);
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 4px;
-            padding: 0 6px;
+            padding: 0 8px;
             z-index: 2000;
         }
 
@@ -282,13 +289,13 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 1px;
-            width: 52px;
-            height: 44px;
+            gap: 2px;
+            width: 56px;
+            height: 48px;
             padding: 0;
             background: transparent;
             border: none;
-            border-radius: 12px;
+            border-radius: 14px;
             color: var(--gray-400);
             cursor: pointer;
             transition: all 0.2s var(--ease-out);
@@ -296,19 +303,19 @@
         }
 
         .nav-item svg {
-            width: 24px;
-            height: 24px;
-            stroke-width: 1.75;
+            width: 22px;
+            height: 22px;
+            stroke-width: 2;
         }
 
         .nav-item span {
-            font-size: 9px;
-            font-weight: 500;
-            opacity: 0.9;
+            font-size: 10px;
+            font-weight: 600;
         }
 
         .nav-item.active {
-            color: var(--gray-900);
+            color: var(--red);
+            background: var(--red-light);
         }
 
         .nav-item.active svg {
