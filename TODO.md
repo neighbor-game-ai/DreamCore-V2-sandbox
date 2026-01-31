@@ -113,6 +113,28 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 作業履歴
 
+### 2026-01-31: ウェイトリストメール通知システム構築
+
+**詳細:** `.claude/logs/2026-01-31-waitlist-email-notification.md`
+
+**実装内容:**
+- Supabase Database Webhook + Edge Function + Brevo によるメール自動送信
+- ウェルカムメール（登録時）/ 承認メール（approved時）
+- 日本語/英語の自動判定
+- 二重送信防止
+
+**発見した問題と解決:**
+- Brevo IP制限が Edge Function をブロック → **Deactivate blocking** で解決
+- `supabase_functions.http_request` が空ペイロード → `net.http_post` + PL/pgSQL で解決
+- 画像サイズ 155KB → **29KB JPG** に圧縮
+
+**ドキュメント更新:**
+- `docs/WAITLIST-EMAIL-SETUP.md` を実際の手順に更新
+- `SUPABASE_SERVICE_ROLE_KEY` は手動設定必須と明記
+- Brevo IP制限の無効化（必須）セクション追加
+
+---
+
 ### 2026-01-31: ゲストブックv4デザイン（本番採用版）
 
 **詳細:** `.claude/logs/2026-01-31-guestbook-v4-design.md`
@@ -792,4 +814,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-01-31 (ゲストブックv4デザイン本番採用)
+最終更新: 2026-01-31 (ウェイトリストメール通知システム構築)
