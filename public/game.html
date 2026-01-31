@@ -30,6 +30,11 @@
             --gray-600: #525252;
             --gray-900: #171717;
 
+            /* Surface Colors (v3 style) */
+            --surface: #F8F8F8;
+            --surface-hover: #F0F0F0;
+            --border: #E5E5E5;
+
             /* Glass */
             --glass-white: rgba(255, 255, 255, 0.72);
             --glass-white-strong: rgba(255, 255, 255, 0.88);
@@ -104,7 +109,7 @@
         /* ===== Top Bar ===== */
         .top-bar {
             flex-shrink: 0;
-            height: 56px;
+            height: 60px;
             padding-top: env(safe-area-inset-top);
             display: flex;
             align-items: center;
@@ -112,28 +117,26 @@
             padding-left: var(--s-16);
             padding-right: var(--s-16);
             background: var(--white);
+            border-bottom: 1px solid var(--border);
         }
 
         .back-button {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border-radius: var(--r-full);
-            background: transparent;
+            background: var(--surface);
             border: none;
-            color: var(--gray-900);
+            color: var(--black);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.15s ease;
-        }
-
-        .back-button:hover {
-            opacity: 0.6;
+            transition: all 0.15s ease;
         }
 
         .back-button:active {
-            opacity: 0.4;
+            background: var(--surface-hover);
+            transform: scale(0.96);
         }
 
         /* Action Buttons */
@@ -147,30 +150,27 @@
             width: 44px;
             height: 44px;
             border-radius: var(--r-full);
-            background: transparent;
+            background: var(--surface);
             border: none;
-            color: var(--gray-900);
+            color: var(--gray-600);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.15s ease;
-        }
-
-        .action-btn:hover {
-            opacity: 0.6;
+            transition: all 0.15s ease;
         }
 
         .action-btn:active {
-            opacity: 0.4;
+            transform: scale(0.96);
         }
 
         .action-btn.active {
-            color: var(--red);
+            background: var(--red);
+            color: var(--white);
         }
 
         .action-btn.active svg {
-            fill: var(--red);
+            fill: currentColor;
         }
 
 
@@ -180,9 +180,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            /* Generous whitespace - let the game breathe */
-            padding: var(--s-24);
-            padding-bottom: calc(var(--s-24) + 68px + env(safe-area-inset-bottom));
+            padding: var(--s-16);
+            padding-bottom: calc(76px + env(safe-area-inset-bottom));
             min-height: 0;
             background: var(--white);
         }
@@ -192,8 +191,7 @@
             height: 100%;
             max-width: 100%;
             max-height: 100%;
-            /* Refined radius */
-            border-radius: 20px;
+            border-radius: 16px;
             overflow: hidden;
             background: var(--black);
             /* Premium layered shadow - subtle but sophisticated */
