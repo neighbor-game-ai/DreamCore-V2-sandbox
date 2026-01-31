@@ -2462,6 +2462,11 @@ class GameCreatorApp {
 
   autoResizeTextarea(textarea) {
     if (!textarea) return;
+    // If empty, reset to single line
+    if (!textarea.value.trim()) {
+      textarea.style.height = '';
+      return;
+    }
     // Reset height to auto to get the correct scrollHeight
     textarea.style.height = 'auto';
     // Set height to scrollHeight (content height)
