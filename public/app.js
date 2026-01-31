@@ -2052,14 +2052,15 @@ class GameCreatorApp {
         this.hideRestoreModal();
         this.resetRestoreModal();
 
-        // Handle token expired errors - show relogin modal once
+        // Handle token expired errors - try refresh first, then show relogin modal
         const errorMessage = data.message || (data.error && data.error.message) || '';
         if (errorMessage.includes('Token expired') || errorMessage.includes('expired token') || errorMessage.includes('Invalid or expired')) {
           if (!this.tokenExpiredShown) {
             this.tokenExpiredShown = true;
-            this.showTokenExpiredModal();
+            // Try to refresh token first
+            this.handleTokenExpired();
           }
-          // Don't add to chat - modal is shown instead
+          // Don't add to chat - handled by refresh or modal
         } else if (data.error && (data.error.code === 'DAILY_PROJECT_LIMIT_EXCEEDED' || data.error.code === 'DAILY_MESSAGE_LIMIT_EXCEEDED')) {
           // Handle quota exceeded errors
           this.showQuotaExceededError(data.error);
@@ -3517,6 +3518,37 @@ class GameCreatorApp {
 
     this.addMessage(errorHtml, 'system', { isHtml: true });
     this.updateQuotaDisplay();
+  }
+
+  async handleTokenExpired() {
+    console.log('[App] Token expired, attempting refresh...');
+
+    // Close current WebSocket
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+
+    // Try to refresh the session
+    if (window.DreamCoreAuth) {
+      try {
+        const freshSession = await window.DreamCoreAuth.getFreshSession();
+        if (freshSession) {
+          console.log('[App] Session refreshed successfully, reconnecting...');
+          this.tokenExpiredShown = false;  // Reset so we can show modal if it fails again
+          this.updateStatus('connecting', '再接続中...');
+          await this.connectWebSocket();
+          this.addMessage('セッションを更新しました', 'system');
+          return;
+        }
+      } catch (e) {
+        console.error('[App] Session refresh failed:', e);
+      }
+    }
+
+    // Refresh failed, show re-login modal
+    console.log('[App] Session refresh failed, showing re-login modal');
+    this.showTokenExpiredModal();
   }
 
   showTokenExpiredModal() {
