@@ -178,14 +178,12 @@ class MyPageApp {
 
     this.gamesGridEl.innerHTML = gameCases + emptyCases;
 
-    // Add click handlers - open published game on play domain
+    // Add click handlers - open published game
     this.gamesGridEl.querySelectorAll('.mypage-game-case').forEach(card => {
       card.addEventListener('click', () => {
         const gameId = card.dataset.gameId;
         if (gameId) {
-          // Public games are served from play.dreamcore.gg/g/:gameId
-          const publicGameUrl = `https://play.dreamcore.gg/g/${gameId}`;
-          window.open(publicGameUrl, '_blank');
+          window.location.href = `/game/${gameId}`;
         }
       });
     });
