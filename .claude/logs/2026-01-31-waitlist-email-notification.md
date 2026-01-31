@@ -118,8 +118,86 @@
 
 ---
 
+---
+
+## Discord 通知追加（同日）
+
+### 実装内容
+
+- 既存 Edge Function (`waitlist-email`) に Discord 通知を追加
+- メール送信と並行実行（await なし、失敗しても互いに影響しない）
+- **プライバシー保護**: メールアドレスは表示しない（表示名と言語のみ）
+
+### 設定
+
+```bash
+npx supabase secrets set DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/xxx/yyy
+```
+
+### 通知内容
+
+| 項目 | 表示 |
+|------|------|
+| タイトル | 📝 新規ウェイトリスト登録 |
+| 表示名 | display_name（未設定時は「(未設定)」） |
+| 言語 | 🇯🇵 日本語 / 🇺🇸 English |
+| タイムスタンプ | 登録日時 |
+
+### Edge Function 変更（v9）
+
+```typescript
+const DISCORD_WEBHOOK_URL = Deno.env.get("DISCORD_WEBHOOK_URL");
+
+async function notifyDiscord(record: UserAccessRecord): Promise<void> {
+  if (!DISCORD_WEBHOOK_URL) {
+    console.log("[waitlist-email] DISCORD_WEBHOOK_URL not set, skipping");
+    return;
+  }
+
+  const lang = detectLanguage(record);
+  const embed = {
+    title: "📝 新規ウェイトリスト登録",
+    color: 0xE60012, // DreamCore red
+    fields: [
+      { name: "表示名", value: record.display_name || "(未設定)", inline: true },
+      { name: "言語", value: lang === "ja" ? "🇯🇵 日本語" : "🇺🇸 English", inline: true }
+    ],
+    timestamp: new Date().toISOString()
+  };
+
+  try {
+    const response = await fetch(DISCORD_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ embeds: [embed] })
+    });
+    console.log(`[waitlist-email] Discord notification: ${response.status}`);
+  } catch (error) {
+    console.error(`[waitlist-email] Discord notification failed: ${error}`);
+  }
+}
+```
+
+### ドキュメント統合
+
+- `docs/WAITLIST-EMAIL-SETUP.md` → `docs/WAITLIST-NOTIFICATIONS.md` にリネーム
+- Discord 通知セクションを追加
+- 両方の通知を管理する統合ドキュメント化
+
+### 最終状態
+
+| 項目 | 状態 |
+|------|------|
+| Edge Function | v9 デプロイ済み（メール + Discord） |
+| Discord 通知 | ✅ 動作確認済み |
+| ドキュメント | 統合・更新済み |
+
+---
+
 ## 今後の改善案
 
 1. **メールテンプレートの外部化** - 現在は Edge Function 内にハードコード
 2. **Brevo テンプレート機能の活用** - Brevo 側でテンプレート管理
 3. **送信ログの可視化** - 管理画面で送信履歴を確認できるように
+4. **承認時 Discord 通知** - 「✅ {name} さんを承認しました」
+5. **日次サマリー通知** - 「本日の新規登録: X件」

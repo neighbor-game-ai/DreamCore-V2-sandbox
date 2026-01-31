@@ -113,7 +113,7 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 作業履歴
 
-### 2026-01-31: ウェイトリストメール通知システム構築
+### 2026-01-31: ウェイトリスト通知システム構築（メール + Discord）
 
 **詳細:** `.claude/logs/2026-01-31-waitlist-email-notification.md`
 
@@ -122,16 +122,20 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 - ウェルカムメール（登録時）/ 承認メール（approved時）
 - 日本語/英語の自動判定
 - 二重送信防止
+- **Discord 通知**: 登録時に管理者向け通知を送信
 
 **発見した問題と解決:**
 - Brevo IP制限が Edge Function をブロック → **Deactivate blocking** で解決
 - `supabase_functions.http_request` が空ペイロード → `net.http_post` + PL/pgSQL で解決
 - 画像サイズ 155KB → **29KB JPG** に圧縮
 
-**ドキュメント更新:**
-- `docs/WAITLIST-EMAIL-SETUP.md` を実際の手順に更新
+**ドキュメント統合:**
+- `docs/WAITLIST-EMAIL-SETUP.md` → `docs/WAITLIST-NOTIFICATIONS.md` にリネーム
+- メール + Discord の統合ドキュメント化
 - `SUPABASE_SERVICE_ROLE_KEY` は手動設定必須と明記
 - Brevo IP制限の無効化（必須）セクション追加
+
+**Edge Function:** v9（メール + Discord 対応）
 
 ---
 
@@ -814,4 +818,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-01-31 (ウェイトリストメール通知システム構築)
+最終更新: 2026-01-31 (ウェイトリスト通知システム構築 - メール + Discord)
