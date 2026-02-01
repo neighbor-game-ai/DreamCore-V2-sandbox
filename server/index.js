@@ -61,6 +61,7 @@ const createRateLimiter = (windowMs, max, message) => rateLimit({
   legacyHeaders: false,
   message: { error: message },
   keyGenerator: (req) => req.user?.id || req.ip,  // 認証済みはuserIdで、未認証はIPでレート制限
+  validate: false,  // カスタムkeyGeneratorのバリデーション警告を抑制
 });
 
 // AI系API用（高コスト）: 5 req/min
@@ -2649,10 +2650,10 @@ ${limitedAssetPaths.length > 0 ? `- 参照画像が${limitedAssetPaths.length}�
     try {
       const haikuResult = await modal.chatHaiku({
         message: promptGeneratorPrompt,
-        game_spec: '',
-        conversation_history: [],
+        system_prompt: 'あなたは画像生成AIへのプロンプトを作成する専門家です。ゲームのサムネイル画像用の高品質なプロンプトを生成してください。プロンプトのみを出力し、説明は不要です。',
+        raw_output: true,
       });
-      imagePrompt = (haikuResult.message || '')
+      imagePrompt = (haikuResult.result || '')
         .replace(/^["'`]+|["'`]+$/g, '')
         .replace(/^\*+|\*+$/g, '')
         .trim();
