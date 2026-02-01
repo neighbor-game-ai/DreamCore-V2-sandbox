@@ -868,7 +868,7 @@ body[data-page="publish"] {
   flex: 1;
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--gray-800);
+  color: #262626;
   line-height: 1.45;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -959,13 +959,13 @@ body[data-page="publish"] {
 .share-btn.share-threads .share-btn-icon { background: #000; color: #fff; }
 .share-btn.share-qr .share-btn-icon {
   background: var(--gray-100);
-  color: var(--gray-700);
+  color: #404040;
 }
 .share-btn.share-copy .share-btn-icon {
   background: var(--gray-100);
-  color: var(--gray-700);
+  color: #404040;
 }
-.share-btn.share-native .share-btn-icon { background: var(--gray-800); color: #fff; }
+.share-btn.share-native .share-btn-icon { background: #262626; color: #fff; }
 
 /* Copied state */
 .share-btn.share-copy.copied .share-btn-icon {
@@ -1077,7 +1077,7 @@ body[data-page="publish"] {
   border-radius: 8px;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--gray-700);
+  color: #404040;
   cursor: pointer;
   transition: background 0.2s;
 }
