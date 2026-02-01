@@ -468,6 +468,61 @@ class ModalClient {
   }
 
   /**
+   * Handle chat using Sonnet on Modal (for complex tasks)
+   * @param {Object} params
+   * @param {string} params.message - User's question
+   * @param {string} [params.game_spec] - SPEC.md content
+   * @param {Array} [params.conversation_history] - Previous messages
+   * @param {string} [params.system_prompt] - Custom system prompt (overrides default)
+   * @param {boolean} [params.raw_output] - If true, return raw text without JSON parsing
+   * @returns {Promise<Object>} { message, suggestions } or { result } if raw_output
+   */
+  async chatSonnet({ message, game_spec = '', conversation_history = [], system_prompt = '', raw_output = false }) {
+    const endpoint = getEndpoint(
+      null,
+      this.baseEndpoint,
+      'chat_sonnet'
+    );
+    if (!endpoint) {
+      throw new Error('Modal chat_sonnet endpoint is not configured');
+    }
+
+    const body = { message, game_spec, conversation_history };
+    if (system_prompt) {
+      body.system_prompt = system_prompt;
+    }
+    if (raw_output) {
+      body.raw_output = true;
+    }
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`Modal chat_sonnet error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+
+    // raw_output mode returns { result: "..." }
+    if (raw_output) {
+      return {
+        result: data.result || '',
+      };
+    }
+
+    // Default mode returns { message, suggestions }
+    return {
+      message: data.message || '',
+      suggestions: data.suggestions || [],
+    };
+  }
+
+  /**
    * Generate code using Gemini on Modal (fast path)
    * @param {Object} params
    * @param {string} params.user_id - User ID (UUID)

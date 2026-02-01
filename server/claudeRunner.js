@@ -581,11 +581,10 @@ class ClaudeRunner {
     // Fallback: Use AI to analyze (only if spec doesn't have direction info)
     console.log(`No direction in SPEC.md, using AI analysis for: ${imageName}`);
 
-    return new Promise(async (resolve) => {
-      const specContext = gameSpec ? gameSpec.substring(0, 800) : '';
-      const movementContext = this.extractMovementPatterns(gameCode);
+    const specContext = gameSpec ? gameSpec.substring(0, 800) : '';
+    const movementContext = this.extractMovementPatterns(gameCode);
 
-      const prompt = `ゲームの画像アセットの向きを決定してください。
+    const prompt = `ゲームの画像アセットの向きを決定してください。
 
 ${specContext ? `## ゲーム仕様書\n${specContext}\n` : ''}
 ${movementContext ? `## コードパターン\n${movementContext}\n` : ''}
@@ -606,64 +605,90 @@ ${movementContext ? `## コードパターン\n${movementContext}\n` : ''}
 例:
 結果: cute cat character, game sprite, facing right, side view, 2D style`;
 
-      const claude = await spawnClaudeAsync([
-        '--print',
-        '--model', 'sonnet',  // Use Sonnet for better image direction analysis
-        '--dangerously-skip-permissions'
-      ], {
-        cwd: process.cwd(),
-        env: { ...process.env }
-      });
+    // Helper function to parse result
+    const parseDirectionResult = (result, imageName, originalPrompt) => {
+      console.log(`Direction analysis raw output for ${imageName}:`, result);
 
-      // Write prompt to stdin to avoid shell escaping issues
-      claude.stdin.write(prompt);
-      claude.stdin.end();
+      // Extract "結果:" line from structured output
+      const resultMatch = result.match(/結果:\s*(.+)/);
+      if (resultMatch) {
+        const enhancedPrompt = resultMatch[1].trim();
+        console.log(`Enhanced prompt for ${imageName}: ${enhancedPrompt}`);
+        return enhancedPrompt;
+      }
 
-      let output = '';
-      claude.stdout.on('data', (data) => {
-        output += data.toString();
-      });
+      // Fallback: try to find any line that looks like a prompt (has "facing" or "view")
+      const lines = result.split('\n').filter(line => line.trim());
+      const promptLine = lines.find(line => /facing|view|向き/i.test(line));
+      if (promptLine) {
+        const cleaned = promptLine.replace(/^(思考|結果|output):\s*/i, '').trim();
+        console.log(`Enhanced prompt (fallback) for ${imageName}: ${cleaned}`);
+        return cleaned;
+      }
 
-      claude.on('close', (code) => {
-        const result = output.trim();
-        console.log(`Direction analysis raw output for ${imageName}:`, result);
+      // Last resort: use last non-empty line
+      const lastLine = lines[lines.length - 1] || originalPrompt;
+      console.log(`Enhanced prompt (last line) for ${imageName}: ${lastLine}`);
+      return lastLine;
+    };
 
-        // Extract "結果:" line from structured output
-        const resultMatch = result.match(/結果:\s*(.+)/);
-        if (resultMatch) {
-          const enhancedPrompt = resultMatch[1].trim();
-          console.log(`Enhanced prompt for ${imageName}: ${enhancedPrompt}`);
-          resolve(enhancedPrompt);
-          return;
+    // Use Modal when enabled
+    if (config.USE_MODAL) {
+      const client = getModalClient();
+      if (client) {
+        try {
+          console.log(`[analyzeImageDirection] Using Modal Sonnet for: ${imageName}`);
+          const response = await client.chatSonnet({
+            message: prompt,
+            system_prompt: '画像アセットの向きを分析するアシスタントです。指示に従って向き指定を追加したプロンプトを生成してください。',
+            raw_output: true,
+          });
+          return parseDirectionResult(response.result || '', imageName, originalPrompt);
+        } catch (err) {
+          console.error(`[analyzeImageDirection] Modal error, using original prompt:`, err.message);
+          return originalPrompt;
         }
+      }
+    }
 
-        // Fallback: try to find any line that looks like a prompt (has "facing" or "view")
-        const lines = result.split('\n').filter(line => line.trim());
-        const promptLine = lines.find(line => /facing|view|向き/i.test(line));
-        if (promptLine) {
-          const cleaned = promptLine.replace(/^(思考|結果|output):\s*/i, '').trim();
-          console.log(`Enhanced prompt (fallback) for ${imageName}: ${cleaned}`);
-          resolve(cleaned);
-          return;
-        }
+    // Fallback: Local CLI (development only)
+    return new Promise(async (resolve) => {
+      try {
+        const claude = await spawnClaudeAsync([
+          '--print',
+          '--model', 'sonnet',
+          '--dangerously-skip-permissions'
+        ], {
+          cwd: process.cwd(),
+          env: { ...process.env }
+        });
 
-        // Last resort: use last non-empty line
-        const lastLine = lines[lines.length - 1] || originalPrompt;
-        console.log(`Enhanced prompt (last line) for ${imageName}: ${lastLine}`);
-        resolve(lastLine);
-      });
+        claude.stdin.write(prompt);
+        claude.stdin.end();
 
-      claude.on('error', () => {
-        console.log('Image direction analysis error, using original prompt');
+        let output = '';
+        claude.stdout.on('data', (data) => {
+          output += data.toString();
+        });
+
+        claude.on('close', () => {
+          resolve(parseDirectionResult(output.trim(), imageName, originalPrompt));
+        });
+
+        claude.on('error', () => {
+          console.log('Image direction analysis error, using original prompt');
+          resolve(originalPrompt);
+        });
+
+        setTimeout(() => {
+          claude.kill();
+          console.log('Image direction analysis timeout');
+          resolve(originalPrompt);
+        }, 10000);
+      } catch (err) {
+        console.error('[analyzeImageDirection] Local CLI error:', err.message);
         resolve(originalPrompt);
-      });
-
-      // Timeout after 10 seconds
-      setTimeout(() => {
-        claude.kill();
-        console.log('Image direction analysis timeout');
-        resolve(originalPrompt);
-      }, 10000);
+      }
     });
   }
 

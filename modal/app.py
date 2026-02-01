@@ -1356,6 +1356,92 @@ async def run_haiku_in_sandbox(prompt: str, timeout_seconds: int = 15) -> str:
         sb.terminate()
 
 
+async def run_sonnet_in_sandbox(prompt: str, timeout_seconds: int = 30) -> str:
+    """Run Claude CLI with Sonnet model in a sandbox for complex tasks.
+
+    Args:
+        prompt: The prompt to send to Claude Sonnet
+        timeout_seconds: Maximum time to wait (default 30s for more complex responses)
+
+    Returns:
+        The text response from Claude Sonnet
+    """
+    import os as _os  # Local import to avoid conflict
+
+    proxy_url = get_proxy_url()
+    sb = modal.Sandbox.create(
+        "bash", "-c", "sleep infinity",
+        image=sandbox_image,
+        secrets=[api_proxy_secret, proxy_secret, vertex_ai_secret, vertex_config_secret],
+        timeout=120,  # Longer timeout for Sonnet
+        memory=2048,  # More memory for Sonnet
+        cidr_allowlist=SANDBOX_CIDR_ALLOWLIST,
+        proxy=modal_proxy,
+        env={
+            "HTTP_PROXY": proxy_url,
+            "HTTPS_PROXY": proxy_url,
+            "NO_PROXY": "localhost,127.0.0.1,api-proxy.dreamcore.gg",
+            **get_vertex_env(),
+        },
+    )
+
+    try:
+        print(f"[run_sonnet] Starting sandbox for prompt ({len(prompt)} chars)")
+
+        # Write GCP credentials for Vertex AI
+        gcp_creds_path = write_gcp_credentials(sb)
+        print(f"[run_sonnet] GCP credentials written to {gcp_creds_path}")
+
+        # Get Vertex AI env vars
+        vertex_env = get_vertex_env()
+        print(f"[run_sonnet] Using Vertex AI: project={vertex_env.get('ANTHROPIC_VERTEX_PROJECT_ID')}, region={vertex_env.get('CLOUD_ML_REGION')}")
+
+        # Write prompt to temp file with world-readable permissions
+        prompt_b64 = base64.b64encode(prompt.encode()).decode()
+        prompt_file = "/tmp/sonnet_prompt.txt"
+        write_cmd = f"echo '{prompt_b64}' | base64 -d > {prompt_file} && chmod 644 {prompt_file}"
+        write_proc = sb.exec("bash", "-c", write_cmd)
+        write_proc.wait()
+        print("[run_sonnet] Prompt written to file")
+
+        # Run Claude CLI with Sonnet model
+        claude_cmd = (
+            f"export HTTP_PROXY={shlex.quote(proxy_url)} && "
+            f"export HTTPS_PROXY={shlex.quote(proxy_url)} && "
+            f"export NO_PROXY='localhost,127.0.0.1,api-proxy.dreamcore.gg' && "
+            f"export GOOGLE_APPLICATION_CREDENTIALS={shlex.quote(gcp_creds_path)} && "
+            f"export CLAUDE_CODE_USE_VERTEX='1' && "
+            f"export ANTHROPIC_VERTEX_PROJECT_ID={shlex.quote(vertex_env.get('ANTHROPIC_VERTEX_PROJECT_ID', ''))} && "
+            f"export CLOUD_ML_REGION={shlex.quote(vertex_env.get('CLOUD_ML_REGION', ''))} && "
+            f"export ANTHROPIC_DEFAULT_OPUS_MODEL={shlex.quote(vertex_env.get('ANTHROPIC_DEFAULT_OPUS_MODEL', ''))} && "
+            f"export ANTHROPIC_DEFAULT_SONNET_MODEL={shlex.quote(vertex_env.get('ANTHROPIC_DEFAULT_SONNET_MODEL', ''))} && "
+            f"export ANTHROPIC_DEFAULT_HAIKU_MODEL={shlex.quote(vertex_env.get('ANTHROPIC_DEFAULT_HAIKU_MODEL', ''))} && "
+            f"cat {prompt_file} | /usr/bin/claude --model sonnet --print --dangerously-skip-permissions 2>&1"
+        )
+        full_cmd = f"timeout {timeout_seconds} su claude -c \"{claude_cmd}\""
+        print(f"[run_sonnet] Running command (first 200 chars): {full_cmd[:200]}...")
+
+        proc = sb.exec("bash", "-c", full_cmd)
+
+        output_lines = []
+        for line in proc.stdout:
+            try:
+                stripped = line.strip() if isinstance(line, str) else line.decode('utf-8', errors='replace').strip()
+                if stripped:
+                    output_lines.append(stripped)
+                    print(f"[run_sonnet] Output: {stripped[:100]}")
+            except Exception as e:
+                print(f"[run_sonnet] Error reading line: {e}")
+
+        exit_code = proc.wait()
+        print(f"[run_sonnet] Exit code: {exit_code}, output lines: {len(output_lines)}")
+
+        return "\n".join(output_lines)
+
+    finally:
+        sb.terminate()
+
+
 @app.function(image=web_image, secrets=[api_proxy_secret, internal_secret, proxy_secret, vertex_ai_secret, vertex_config_secret])
 @modal.fastapi_endpoint(method="POST")
 async def detect_intent(request: Request):
@@ -1661,6 +1747,102 @@ JSON形式で出力。suggestionsは「〜して」形式で2-3個：
 
     except Exception as e:
         print(f"[chat_haiku] ERROR: {type(e).__name__}: {e}")
+        return JSONResponse({
+            "error": str(e),
+            "message": "申し訳ございません。回答の生成中にエラーが発生しました。",
+            "suggestions": [],
+        }, status_code=500)
+
+
+@app.function(image=web_image, secrets=[api_proxy_secret, internal_secret, proxy_secret, vertex_ai_secret, vertex_config_secret])
+@modal.fastapi_endpoint(method="POST")
+async def chat_sonnet(request: Request):
+    """Handle chat requests using Claude Sonnet in sandbox for complex tasks.
+
+    Request body:
+        {
+            "message": "user's question",
+            "game_spec": "SPEC.md content (optional)",
+            "conversation_history": [{"role": "user/assistant", "content": "..."}],
+            "system_prompt": "custom system prompt (optional, overrides default)",
+            "raw_output": false  // if true, return raw text without JSON parsing
+        }
+
+    Response (default mode):
+        {
+            "message": "AI response",
+            "suggestions": ["suggestion1", "suggestion2"]
+        }
+
+    Response (raw_output mode):
+        {
+            "result": "raw AI response text"
+        }
+    """
+    from starlette.responses import JSONResponse
+
+    if not verify_internal_auth(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    message = body.get("message", "")
+    game_spec = body.get("game_spec", "")
+    conversation_history = body.get("conversation_history", [])
+    custom_system_prompt = body.get("system_prompt", "")
+    raw_output = body.get("raw_output", False)
+
+    if not message:
+        return JSONResponse({"error": "message is required"}, status_code=400)
+
+    print(f"[chat_sonnet] Received message: {message[:50]}...")
+    print(f"[chat_sonnet] Mode: {'raw_output' if raw_output else 'default'}, custom_prompt: {bool(custom_system_prompt)}")
+
+    # Build prompt
+    if custom_system_prompt:
+        prompt = f"""{custom_system_prompt}
+
+{message}"""
+    else:
+        prompt = f"""あなたは高度なタスクを処理するアシスタントです。
+
+{message}"""
+
+    try:
+        print("[chat_sonnet] Calling run_sonnet_in_sandbox...")
+        result = await run_sonnet_in_sandbox(prompt, timeout_seconds=30)
+        print(f"[chat_sonnet] Result: {result[:200] if result else 'EMPTY'}")
+
+        # Raw output mode: return text as-is
+        if raw_output:
+            return JSONResponse({
+                "result": result.strip(),
+            })
+
+        # Default mode: try to parse JSON response
+        import re
+        json_match = re.search(r'\{[^{}]*"message"[^{}]*\}', result, re.DOTALL)
+        if json_match:
+            try:
+                parsed = json.loads(json_match.group())
+                return JSONResponse({
+                    "message": parsed.get("message", result),
+                    "suggestions": parsed.get("suggestions", []),
+                })
+            except json.JSONDecodeError:
+                pass
+
+        # Fallback: return raw result as message
+        return JSONResponse({
+            "message": result,
+            "suggestions": [],
+        })
+
+    except Exception as e:
+        print(f"[chat_sonnet] ERROR: {type(e).__name__}: {e}")
         return JSONResponse({
             "error": str(e),
             "message": "申し訳ございません。回答の生成中にエラーが発生しました。",
