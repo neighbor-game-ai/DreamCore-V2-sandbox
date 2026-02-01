@@ -8,6 +8,65 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-01: Modal chat_sonnet エンドポイント追加
+
+**詳細:** `.claude/logs/2026-02-01-modal-chat-sonnet.md`
+
+セキュリティ対応で本番ローカル CLI 禁止後、`analyzeImageDirection` がエラーになる問題を修正:
+
+| 項目 | 内容 |
+|------|------|
+| 問題 | 画像方向分析で `Local CLI execution is not allowed` エラー |
+| 原因 | Sonnet が必要だが `chat_haiku` は Haiku 固定 |
+| 対応 | Modal に `chat_sonnet` エンドポイント追加 |
+
+**変更ファイル:**
+- `modal/app.py` - `run_sonnet_in_sandbox()` + `chat_sonnet` エンドポイント
+- `server/modalClient.js` - `chatSonnet()` メソッド
+- `server/claudeRunner.js` - Modal Sonnet 対応
+
+**検証結果:**
+```
+[analyzeImageDirection] Using Modal Sonnet for: player.png
+[analyzeImageDirection] Using Modal Sonnet for: enemy.png
+```
+
+---
+
+### 2026-02-01: セキュリティレビュー対応（P0/P1）
+
+**詳細:** `.claude/logs/2026-02-01-security-review-response.md`
+
+外部セキュリティ専門家（kinopiee氏）によるレビュー指摘に対応:
+
+| Phase | 項目数 | 状態 |
+|-------|--------|------|
+| P0（リリースブロッカー） | 6件 | ✅ 完了 |
+| P1（リリース前） | 5件 | ✅ 完了 |
+
+**P0 対応内容:**
+- CLI サンドボックス必須化（本番で USE_MODAL=false → 起動拒否）
+- パストラバーサル対策（isPathSafe でファイルパス検証）
+- レート制限（AI系 5req/min、一般 60req/min）
+- WS 認証タイムアウト（未認証接続を 10秒で切断）
+- MIME 判定厳格化（ext && mime）
+- SUPABASE_URL 正規化（末尾スラッシュ削除）
+
+**P1 対応内容:**
+- SVG サニタイズ（DOMPurify で XSS 対策）
+- helmet 導入（セキュリティヘッダー）
+- Modal healthCheck 修正（500/503 を異常判定）
+- サムネイル修正（WebP 変換 + null 安全化）
+- プロンプトインジェクション対策（構造化マーカー + 監査ログ）
+
+**追加パッケージ:** `express-rate-limit`, `helmet`, `dompurify`, `jsdom`
+
+**ブランチ:** `feature/security-review-response`
+
+**残タスク:** CSP Report-Only 導入（Phase 2b）、CSP 強制モード移行（Phase 2c）
+
+---
+
 ### 2026-02-01: シェアボタンデザイン試行
 
 **詳細:** `.claude/logs/2026-02-01-share-button-design.md`
@@ -984,4 +1043,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-01 (セキュリティ改善 Phase 0 実装)
+最終更新: 2026-02-01 (Modal chat_sonnet 追加)
