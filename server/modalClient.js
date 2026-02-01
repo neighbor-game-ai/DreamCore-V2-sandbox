@@ -509,7 +509,17 @@ class ModalClient {
    * @param {string} params.project_name - Project name
    * @returns {Promise<Object>} { title, description, howToPlay, tags }
    */
-  async generatePublishInfo({ user_id, project_id, project_name }) {
+  /**
+   * Generate publish info using Modal Haiku
+   * @param {Object} params
+   * @param {string} params.user_id - User ID (UUID)
+   * @param {string} params.project_id - Project ID (UUID)
+   * @param {string} params.project_name - Project name
+   * @param {string} [params.game_code] - Game code (index.html content)
+   * @param {string} [params.spec_content] - Spec content (spec.md or specs/game.md)
+   * @returns {Promise<Object>} { title, description, howToPlay, tags }
+   */
+  async generatePublishInfo({ user_id, project_id, project_name, game_code = '', spec_content = '' }) {
     const endpoint = getEndpoint(
       null, // No explicit config, derive from base
       this.baseEndpoint,
@@ -522,7 +532,7 @@ class ModalClient {
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({ user_id, project_id, project_name }),
+      body: JSON.stringify({ user_id, project_id, project_name, game_code, spec_content }),
     });
 
     if (!response.ok) {

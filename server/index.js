@@ -2467,6 +2467,29 @@ app.post('/api/projects/:projectId/generate-publish-info', authenticate, checkPr
   const { projectId } = req.params;
 
   try {
+    // Read project files from GCE first
+    const projectDir = getProjectPath(req.user.id, projectId);
+    let gameCode = '';
+    let specContent = '';
+
+    // Read index.html
+    const indexPath = path.join(projectDir, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      gameCode = fs.readFileSync(indexPath, 'utf-8');
+    }
+
+    // Read spec content (try specs/game.md first, then spec.md)
+    const specPaths = [
+      path.join(projectDir, 'specs', 'game.md'),
+      path.join(projectDir, 'spec.md')
+    ];
+    for (const specPath of specPaths) {
+      if (fs.existsSync(specPath)) {
+        specContent = fs.readFileSync(specPath, 'utf-8');
+        break;
+      }
+    }
+
     // Use Modal when enabled
     if (config.USE_MODAL) {
       const modal = getModalClient();
@@ -2474,6 +2497,8 @@ app.post('/api/projects/:projectId/generate-publish-info', authenticate, checkPr
         user_id: req.user.id,
         project_id: projectId,
         project_name: req.project.name,
+        game_code: gameCode,
+        spec_content: specContent,
       });
 
       // Check for error in response
@@ -2492,26 +2517,8 @@ app.post('/api/projects/:projectId/generate-publish-info', authenticate, checkPr
     }
 
     // 開発環境のみローカルフォールバック
+    // gameCode, specContent は上で既に読み込み済み
     console.warn('[DEV] Using local CLI for generate-publish-info');
-    const projectDir = getProjectPath(req.user.id, projectId);
-    const indexPath = path.join(projectDir, 'index.html');
-    let gameCode = '';
-    if (fs.existsSync(indexPath)) {
-      gameCode = fs.readFileSync(indexPath, 'utf-8');
-    }
-
-    // Get spec content (try specs/game.md first, then spec.md)
-    let specContent = '';
-    const specPaths = [
-      path.join(projectDir, 'specs', 'game.md'),
-      path.join(projectDir, 'spec.md')
-    ];
-    for (const specPath of specPaths) {
-      if (fs.existsSync(specPath)) {
-        specContent = fs.readFileSync(specPath, 'utf-8');
-        break;
-      }
-    }
 
     const prompt = `以下のゲームプロジェクトの情報から、公開用のタイトル、概要、ルールと操作方法、タグを生成してください。
 

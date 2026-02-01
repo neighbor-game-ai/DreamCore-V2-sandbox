@@ -1671,19 +1671,20 @@ JSON形式で出力。suggestionsは「〜して」形式で2-3個：
 @app.function(
     image=web_image,
     secrets=[api_proxy_secret, internal_secret, proxy_secret, vertex_ai_secret, vertex_config_secret],
-    volumes={MOUNT_DATA: data_volume},
 )
 @modal.fastapi_endpoint(method="POST")
 async def generate_publish_info(request: Request):
     """Generate publish info (title, description, howToPlay, tags) using Claude Haiku.
 
-    Reads project files from Modal Volume and generates publish metadata.
+    File contents are passed from the Express server (GCE) to avoid Volume sync issues.
 
     Request body:
         {
             "user_id": "uuid",
             "project_id": "uuid",
-            "project_name": "My Game"
+            "project_name": "My Game",
+            "game_code": "index.html content (optional)",
+            "spec_content": "spec.md content (optional)"
         }
 
     Response:
@@ -1707,6 +1708,8 @@ async def generate_publish_info(request: Request):
     user_id = body.get("user_id")
     project_id = body.get("project_id")
     project_name = body.get("project_name", "")
+    game_code = body.get("game_code", "")
+    spec_content = body.get("spec_content", "")
 
     # Validate IDs
     try:
@@ -1714,35 +1717,7 @@ async def generate_publish_info(request: Request):
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
 
-    # Build project directory path
-    project_dir = f"{MOUNT_DATA}/users/{user_id}/projects/{project_id}"
-
-    # Read game code (index.html)
-    game_code = ""
-    index_path = f"{project_dir}/index.html"
-    try:
-        with open(index_path, "r", encoding="utf-8") as f:
-            game_code = f.read()
-    except FileNotFoundError:
-        pass
-    except Exception as e:
-        print(f"[generate_publish_info] Error reading index.html: {e}")
-
-    # Read spec content (try specs/game.md first, then spec.md)
-    spec_content = ""
-    spec_paths = [
-        f"{project_dir}/specs/game.md",
-        f"{project_dir}/spec.md"
-    ]
-    for spec_path in spec_paths:
-        try:
-            with open(spec_path, "r", encoding="utf-8") as f:
-                spec_content = f.read()
-                break
-        except FileNotFoundError:
-            continue
-        except Exception as e:
-            print(f"[generate_publish_info] Error reading spec: {e}")
+    print(f"[generate_publish_info] Project: {project_name}, game_code: {len(game_code)} chars, spec: {len(spec_content)} chars")
 
     # Build prompt blocks (avoid nested f-strings with \n)
     spec_block = f"仕様書:\n{spec_content}\n" if spec_content else ""
