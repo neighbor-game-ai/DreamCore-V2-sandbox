@@ -2,7 +2,9 @@
  * Supabase Auth Client for DreamCore V2
  *
  * Provides authentication utilities using Supabase Auth with Google OAuth.
- * Optimized with localStorage caching to minimize Supabase API calls.
+ * Optimized with sessionStorage caching to minimize Supabase API calls.
+ * Using sessionStorage (not localStorage) for improved security - session
+ * expires when browser closes, reducing XSS session hijacking risk.
  */
 
 // Global auth state
@@ -27,23 +29,23 @@ function isSessionExpired(session) {
 }
 
 /**
- * Get cached session from localStorage
+ * Get cached session from sessionStorage
  * @returns {Object|null} Cached session or null if expired/missing
  */
 function getCachedSession() {
   try {
-    const cached = localStorage.getItem(SESSION_CACHE_KEY);
+    const cached = sessionStorage.getItem(SESSION_CACHE_KEY);
     if (!cached) return null;
 
     const { session, timestamp } = JSON.parse(cached);
     // Check cache TTL
     if (Date.now() - timestamp > SESSION_CACHE_TTL) {
-      localStorage.removeItem(SESSION_CACHE_KEY);
+      sessionStorage.removeItem(SESSION_CACHE_KEY);
       return null;
     }
     // Check session token expiry
     if (isSessionExpired(session)) {
-      localStorage.removeItem(SESSION_CACHE_KEY);
+      sessionStorage.removeItem(SESSION_CACHE_KEY);
       return null;
     }
     return session;
@@ -71,18 +73,18 @@ function getSessionSync() {
 }
 
 /**
- * Save session to localStorage cache
+ * Save session to sessionStorage cache
  * @param {Object|null} session - Session to cache
  */
 function setCachedSession(session) {
   try {
     if (session) {
-      localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify({
+      sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify({
         session,
         timestamp: Date.now()
       }));
     } else {
-      localStorage.removeItem(SESSION_CACHE_KEY);
+      sessionStorage.removeItem(SESSION_CACHE_KEY);
     }
   } catch (e) {
     // Ignore storage errors
@@ -216,7 +218,7 @@ async function signOut() {
   localStorage.removeItem('visitorId');  // Legacy cleanup
   localStorage.removeItem('gameCreatorVisitorId');  // Legacy cleanup
   localStorage.removeItem('gameCreatorUserId');
-  localStorage.removeItem('sessionId');
+  sessionStorage.removeItem('sessionId');  // Migrated from localStorage
 
   // Redirect to login
   window.location.href = '/';
@@ -290,14 +292,14 @@ async function getFreshSession() {
 
 /**
  * Get current session
- * Optimized: Uses memory cache, then localStorage cache, then Supabase
+ * Optimized: Uses memory cache, then sessionStorage cache, then Supabase
  * @returns {Object|null} Current session or null if not authenticated
  */
 async function getSession() {
   // Return memory cache if available
   if (currentSession) return currentSession;
 
-  // Check localStorage cache before initializing
+  // Check sessionStorage cache before initializing
   const cachedSession = getCachedSession();
   if (cachedSession) {
     currentSession = cachedSession;
@@ -389,21 +391,39 @@ async function authFetch(url, options = {}) {
  * @returns {Object} { allowed: boolean, status: 'pending'|'approved'|null }
  */
 async function checkAccess() {
-  const token = await getAccessToken();
+  let token = await getAccessToken();
   if (!token) {
     // No token = auth error, should go to login
     return { allowed: false, status: null, authError: true };
   }
 
   try {
-    const response = await fetch('/api/check-access', {
+    let response = await fetch('/api/check-access', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
     });
 
+    // Token expired - try refresh before giving up
     if (response.status === 401) {
-      // Token expired/invalid = auth error, should go to login
+      console.log('[Auth] Token expired, attempting refresh...');
+      const freshSession = await getFreshSession();
+      if (!freshSession) {
+        console.log('[Auth] Refresh failed, auth error');
+        return { allowed: false, status: null, authError: true };
+      }
+
+      // Retry with fresh token
+      token = freshSession.access_token;
+      response = await fetch('/api/check-access', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+    }
+
+    if (response.status === 401) {
+      // Still 401 after refresh = auth error
       return { allowed: false, status: null, authError: true };
     }
 
