@@ -660,8 +660,9 @@ class ModalClient {
         headers: { 'X-Modal-Secret': this.secret },
       });
 
-      // 404 is expected (project doesn't exist), 401 means auth failed
-      return response.status !== 401;
+      // 200-299 or 404 = healthy (404 is expected for non-existent project)
+      // 401 (auth failed) or 500/503 (server error) = unhealthy
+      return response.ok || response.status === 404;
     } catch (e) {
       console.error('[modalClient] Health check failed:', e.message);
       return false;

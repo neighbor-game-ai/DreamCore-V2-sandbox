@@ -29,6 +29,29 @@ const config = require('./config');
 const waitlist = require('./waitlist');
 const quotaService = require('./quotaService');
 const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const { JSDOM } = require('jsdom');
+const createDOMPurify = require('dompurify');
+
+// SVG サニタイズ（XSS 攻撃防止）
+const SVG_WINDOW = new JSDOM('').window;
+const SVG_PURIFY = createDOMPurify(SVG_WINDOW);
+// SVG 専用の設定: スクリプト、イベントハンドラ、外部リソースを除去
+SVG_PURIFY.setConfig({
+  USE_PROFILES: { svg: true, svgFilters: true },
+  ADD_TAGS: ['use'],  // SVG の use タグは許可
+  FORBID_TAGS: ['script', 'foreignObject'],
+  FORBID_ATTR: ['onload', 'onerror', 'onclick', 'onmouseover', 'xlink:href'],
+});
+
+/**
+ * SVG コンテンツをサニタイズ
+ * @param {string} svgContent - 元の SVG コンテンツ
+ * @returns {string} サニタイズ済み SVG
+ */
+function sanitizeSVG(svgContent) {
+  return SVG_PURIFY.sanitize(svgContent);
+}
 
 // レート制限ミドルウェア（DoS/ブルートフォース対策）
 const createRateLimiter = (windowMs, max, message) => rateLimit({
@@ -113,6 +136,31 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 3000;
+
+// ==================== セキュリティヘッダー（helmet）====================
+// Phase 2a: デフォルト設定で導入（CSP は後で Report-Only で追加）
+app.use(helmet({
+  // CSP は段階導入のため一旦無効（Phase 2b で Report-Only 追加）
+  contentSecurityPolicy: false,
+  // X-Frame-Options: ゲームページはiframeに埋め込まれるため、全体には適用せず個別対応
+  frameguard: false,
+  // その他のセキュリティヘッダーはデフォルトで有効
+  // - X-Content-Type-Options: nosniff
+  // - X-DNS-Prefetch-Control: off
+  // - X-Download-Options: noopen
+  // - X-Permitted-Cross-Domain-Policies: none
+  // - Referrer-Policy: no-referrer
+  // - Strict-Transport-Security (HSTS)
+}));
+
+// ゲームページ以外には X-Frame-Options を適用
+app.use((req, res, next) => {
+  // /g/ (公開ゲーム) と /game/ (プレビュー) はiframe埋め込みを許可
+  if (!req.path.startsWith('/g/') && !req.path.startsWith('/game/')) {
+    res.setHeader('X-Frame-Options', 'DENY');
+  }
+  next();
+});
 
 // Temporary upload directory (files are moved to user-specific directories after processing)
 const UPLOAD_TEMP_DIR = path.join(__dirname, '..', 'uploads_temp');
@@ -562,7 +610,19 @@ app.post('/api/assets/upload', authenticate, upload.single('file'), async (req, 
     const displayName = originalName || req.file.originalname;
 
     // V2: Calculate hash
-    const fileBuffer = fs.readFileSync(req.file.path);
+    let fileBuffer = fs.readFileSync(req.file.path);
+
+    // SVG ファイルのサニタイズ（XSS 攻撃防止）
+    const uploadExt = path.extname(req.file.originalname).toLowerCase();
+    if (uploadExt === '.svg') {
+      console.log('[assets] Sanitizing SVG file:', req.file.originalname);
+      const svgContent = fileBuffer.toString('utf-8');
+      const sanitized = sanitizeSVG(svgContent);
+      fileBuffer = Buffer.from(sanitized, 'utf-8');
+      // サニタイズ後のファイルを一時ファイルに書き戻す
+      fs.writeFileSync(req.file.path, fileBuffer);
+    }
+
     const hash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
     const hashShort = hash.slice(0, 8);
 
@@ -2581,8 +2641,13 @@ ${limitedAssetPaths.length > 0 ? `- 参照画像が${limitedAssetPaths.length}�
     // Step 1: Generate image prompt with Modal Haiku
     console.log('[Thumbnail] Generating prompt with Modal Haiku...');
     let imagePrompt = '';
+    const modal = getModalClient();
+    if (!modal) {
+      console.error('[Thumbnail] Modal client not available');
+      return res.status(503).json({ error: 'AI service temporarily unavailable' });
+    }
     try {
-      const haikuResult = await modalClient.chatHaiku({
+      const haikuResult = await modal.chatHaiku({
         message: promptGeneratorPrompt,
         game_spec: '',
         conversation_history: [],
@@ -2694,8 +2759,10 @@ app.post('/api/projects/:projectId/upload-thumbnail', authenticate, checkProject
       fs.unlinkSync(oldPngPath);
     }
 
-    // Move uploaded file to project directory as thumbnail.webp
-    fs.copyFileSync(req.file.path, thumbnailPath);
+    // Convert to WebP and save (sharp handles PNG/JPEG/WebP input)
+    await sharp(req.file.path)
+      .webp({ quality: 85 })
+      .toFile(thumbnailPath);
     fs.unlinkSync(req.file.path); // Remove temp file
 
     // Commit to git (non-blocking, safe)
