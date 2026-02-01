@@ -403,9 +403,11 @@ UPDATE user_access SET status = 'approved' WHERE status = 'pending';
 
 ## トラブルシューティング
 
-### ログイン後にログインページに戻される
+### ログイン後にログインページに戻される（無限リダイレクト）
 
-**原因**: OAuth コード交換が失敗している可能性
+**原因**: 複数の原因が考えられる
+
+#### パターン1: OAuth コード交換の失敗
 
 **確認方法**:
 1. ブラウザのコンソールで `[Auth]` ログを確認
@@ -415,6 +417,43 @@ UPDATE user_access SET status = 'approved' WHERE status = 'pending';
 **解決策**:
 - `create.html` の早期チェックで `code=` パラメータを除外しているか確認
 - `auth.js` の `exchangeCodeForSession()` が呼ばれているか確認
+
+#### パターン2: トークン期限切れによる無限ループ
+
+**症状**:
+- コンソールに `[Auth] Current session is valid` と出るが、`/api/check-access` が 401 を返す
+- index.html ↔ create.html 間でリダイレクトがループする
+
+**原因**:
+- クライアントのセッションキャッシュでは「有効」と判断されるが、実際のトークンは期限切れ
+- サーバーが 401 を返すと即座にリダイレクトしていた（リフレッシュを試みない）
+
+**解決策**（実装済み 2026-02-01）:
+- `checkAccess()` で 401 を受けた時、キャッシュをクリアして `getFreshSession()` で強制リフレッシュ
+- リフレッシュ成功後に再試行、それでも 401 ならログインページへリダイレクト
+
+**関連コード** (`auth.js:407-423`):
+```javascript
+// Token expired - clear cache and force refresh before giving up
+if (response.status === 401) {
+  console.log('[Auth] Token expired (server 401), forcing refresh...');
+
+  // Clear cached session to force actual refresh
+  currentSession = null;
+  setCachedSession(null);
+
+  const freshSession = await getFreshSession();
+  if (!freshSession) {
+    return { allowed: false, status: null, authError: true };
+  }
+
+  // Retry with fresh token
+  token = freshSession.access_token;
+  response = await fetch('/api/check-access', {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+}
+```
 
 ### user_access にユーザーが登録されない
 
@@ -463,3 +502,4 @@ UPDATE user_access SET status = 'approved' WHERE status = 'pending';
 | 2026-01-30 | ページフラッシュ防止（visibility hidden + revealPage）追加 |
 | 2026-01-30 | OAuth code exchange 対応追加 |
 | 2026-01-30 | waitlist.html を DreamCoreAuth 使用に修正 |
+| 2026-02-01 | トークン期限切れ時の自動リフレッシュ機能追加（無限リダイレクト修正） |
