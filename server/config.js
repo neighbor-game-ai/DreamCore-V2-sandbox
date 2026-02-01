@@ -138,7 +138,8 @@ const isValidGitHash = (hash) => {
 
 // ==================== Supabase Settings ====================
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
+// 末尾スラッシュを削除（JWT issuer 不一致防止）
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // Optional: Base URL for assets (e.g., https://v2.dreamcore.gg)
@@ -349,3 +350,15 @@ module.exports = {
   // Features
   FEATURES
 };
+
+// ==================== Production Guard ====================
+// 本番環境では Modal Sandbox が必須（ローカルCLI実行禁止）
+if (IS_PRODUCTION && !USE_MODAL) {
+  console.error('='.repeat(60));
+  console.error('FATAL: USE_MODAL=true is required in production');
+  console.error('');
+  console.error('Local CLI execution is a security risk in production.');
+  console.error('Please set USE_MODAL=true and configure MODAL_ENDPOINT.');
+  console.error('='.repeat(60));
+  process.exit(1);
+}

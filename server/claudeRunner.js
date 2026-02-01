@@ -155,13 +155,19 @@ async function spawnClaudeAsync(args, options = {}) {
       }
     } catch (e) {
       console.error('[sandbox-runtime] Wrap failed:', e.message);
-      // Fall through to non-sandboxed execution
+      // Fall through to non-sandboxed execution (dev only)
     }
   } else if (USE_SANDBOX && sandboxInitFailed) {
     console.log('[sandbox-runtime] Sandbox disabled due to init failure');
   }
 
-  // Fallback: direct spawn
+  // 本番環境ではローカルCLI実行禁止
+  if (config.IS_PRODUCTION) {
+    throw new Error('Local CLI execution is not allowed in production. USE_MODAL must be true.');
+  }
+
+  // 開発環境のみフォールバック実行
+  console.warn('[DEV] Falling back to local CLI execution (not sandboxed)');
   return spawn('claude', args, options);
 }
 
@@ -174,7 +180,13 @@ function spawnClaude(args, options = {}) {
     console.log('[sandbox-runtime] Note: Use spawnClaudeAsync for sandbox support');
   }
 
-  // Direct spawn (sandboxing requires async)
+  // 本番環境ではローカルCLI実行禁止
+  if (config.IS_PRODUCTION) {
+    throw new Error('Local CLI execution is not allowed in production. USE_MODAL must be true.');
+  }
+
+  // 開発環境のみフォールバック実行
+  console.warn('[DEV] Falling back to local CLI execution (not sandboxed)');
   return spawn('claude', args, options);
 }
 
@@ -349,12 +361,23 @@ class ClaudeRunner {
         console.log('[detectIntent] Modal result:', intent);
         return intent;
       } catch (err) {
-        console.error('[detectIntent] Modal error, falling back to local:', err.message);
+        console.error('[detectIntent] Modal error:', err.message);
+        // 本番環境ではフォールバック禁止
+        if (config.IS_PRODUCTION) {
+          throw new Error('Modal intent detection failed and local fallback is not allowed in production');
+        }
+        console.warn('[DEV] Falling back to local intent detection');
         // Fall through to local execution
       }
     }
 
-    // Local execution (original code)
+    // 本番環境ではローカル実行禁止
+    if (config.IS_PRODUCTION) {
+      throw new Error('Local CLI execution is not allowed in production. USE_MODAL must be true.');
+    }
+
+    // 開発環境のみローカル実行
+    console.warn('[DEV] Using local intent detection');
     return this._detectIntentLocal(userMessage);
   }
 
@@ -683,12 +706,23 @@ ${movementContext ? `## コードパターン\n${movementContext}\n` : ''}
         console.log('[detectSkillsWithAI] Modal result:', skills.join(', ') || 'none');
         return skills;
       } catch (err) {
-        console.error('[detectSkillsWithAI] Modal error, falling back to local:', err.message);
+        console.error('[detectSkillsWithAI] Modal error:', err.message);
+        // 本番環境ではフォールバック禁止
+        if (config.IS_PRODUCTION) {
+          throw new Error('Modal skill detection failed and local fallback is not allowed in production');
+        }
+        console.warn('[DEV] Falling back to local skill detection');
         // Fall through to local execution
       }
     }
 
-    // Local execution (original code)
+    // 本番環境ではローカル実行禁止
+    if (config.IS_PRODUCTION) {
+      throw new Error('Local CLI execution is not allowed in production. USE_MODAL must be true.');
+    }
+
+    // 開発環境のみローカル実行
+    console.warn('[DEV] Using local skill detection');
     return this._detectSkillsWithAILocal(userMessage, currentCode, isNewProject, gameSpec, dimension, framework);
   }
 

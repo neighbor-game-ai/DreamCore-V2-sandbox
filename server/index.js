@@ -28,6 +28,38 @@ const { ErrorCodes, createWsError, sendHttpError } = require('./errorResponse');
 const config = require('./config');
 const waitlist = require('./waitlist');
 const quotaService = require('./quotaService');
+const rateLimit = require('express-rate-limit');
+
+// レート制限ミドルウェア（DoS/ブルートフォース対策）
+const createRateLimiter = (windowMs, max, message) => rateLimit({
+  windowMs,
+  max,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: message },
+  keyGenerator: (req) => req.user?.id || req.ip,  // 認証済みはuserIdで、未認証はIPでレート制限
+});
+
+// AI系API用（高コスト）: 5 req/min
+const aiRateLimiter = createRateLimiter(
+  60 * 1000,  // 1分
+  5,
+  'Too many AI requests. Please wait a minute before trying again.'
+);
+
+// 一般API用（認証済み）: 60 req/min
+const apiRateLimiter = createRateLimiter(
+  60 * 1000,  // 1分
+  config.RATE_LIMIT.api.authenticated,
+  'Too many requests. Please slow down.'
+);
+
+// 一般API用（未認証）: 10 req/min
+const publicRateLimiter = createRateLimiter(
+  60 * 1000,  // 1分
+  config.RATE_LIMIT.api.anonymous,
+  'Too many requests. Please slow down.'
+);
 
 /**
  * Get next quota reset time (00:00 UTC = 09:00 JST)
@@ -107,7 +139,8 @@ const upload = multer({
     const allowedTypes = /jpeg|jpg|png|gif|webp|svg|mp3|wav|ogg|json/;
     const ext = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mime = allowedTypes.test(file.mimetype.split('/')[1]);
-    if (ext || mime) {
+    // 拡張子とMIMEタイプの両方が一致する場合のみ許可（偽装防止）
+    if (ext && mime) {
       cb(null, true);
     } else {
       cb(new Error('Invalid file type'));
@@ -117,6 +150,17 @@ const upload = multer({
 
 // JSON body parser with increased limit for base64 images
 app.use(express.json({ limit: '50mb' }));
+
+// 一般APIレート制限（認証済み: 60 req/min, 未認証: 10 req/min）
+// AI系APIは個別にさらに厳しい制限（5 req/min）が適用される
+app.use('/api/', (req, res, next) => {
+  // 認証ヘッダーがある場合は認証済みレート制限を適用
+  if (req.headers.authorization) {
+    return apiRateLimiter(req, res, next);
+  }
+  // 認証ヘッダーがない場合は未認証レート制限を適用
+  return publicRateLimiter(req, res, next);
+});
 
 // CORS for Phase 2 subdomain architecture (play.dreamcore.gg)
 // Assets need to be accessible from the play subdomain where games run
@@ -309,7 +353,7 @@ app.get('/api/projects/:projectId/download', authenticate, checkProjectOwnership
 // ==================== Image Generation API ====================
 
 // Generate image using Gemini Imagen (Nano Banana Pro)
-app.post('/api/generate-image', authenticate, async (req, res) => {
+app.post('/api/generate-image', authenticate, aiRateLimiter, async (req, res) => {
   try {
     const { prompt, style, size } = req.body;
 
@@ -1581,6 +1625,14 @@ wss.on('connection', (ws) => {
   let sessionId = null;
   let userSupabase = null;  // Supabase client with user's JWT
 
+  // 認証タイムアウト: 10秒以内にinitメッセージを受信しない場合は切断（DoS対策）
+  const authTimeout = setTimeout(() => {
+    if (!userId) {
+      console.warn('[WS] Authentication timeout - closing unauthenticated connection');
+      ws.close(4008, 'Authentication timeout');
+    }
+  }, 10000);
+
   // Helper to safely send
   const safeSend = (data) => {
     if (ws.readyState === WebSocket.OPEN) {
@@ -1619,6 +1671,7 @@ wss.on('connection', (ws) => {
           userId = user.id;
           userSupabase = supabase;  // Store for db operations
           sessionId = data.sessionId || 'unknown';
+          clearTimeout(authTimeout);  // 認証成功したのでタイムアウトをキャンセル
 
           // Ensure profile exists in database (for foreign key constraints)
           const profile = await db.getOrCreateUserFromAuth(user);
@@ -2248,6 +2301,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     console.log(`[${sessionId}] Client disconnected: ${userId}`);
+    clearTimeout(authTimeout);  // 接続終了時にタイムアウトをキャンセル
 
     // Clean up
     if (jobUnsubscribe) jobUnsubscribe();
@@ -2348,7 +2402,7 @@ app.put('/api/projects/:projectId/publish-draft', authenticate, checkProjectOwne
 });
 
 // Generate title, description, tags using Claude CLI (Haiku)
-app.post('/api/projects/:projectId/generate-publish-info', authenticate, checkProjectOwnership, async (req, res) => {
+app.post('/api/projects/:projectId/generate-publish-info', authenticate, checkProjectOwnership, aiRateLimiter, async (req, res) => {
   const { projectId } = req.params;
 
   try {
@@ -2370,7 +2424,14 @@ app.post('/api/projects/:projectId/generate-publish-info', authenticate, checkPr
       return res.json(result);
     }
 
-    // Local fallback (when USE_MODAL=false)
+    // 本番環境ではローカル実行禁止
+    if (config.IS_PRODUCTION) {
+      console.error('[generate-publish-info] Local execution not allowed in production');
+      return res.status(503).json({ error: 'AI service temporarily unavailable' });
+    }
+
+    // 開発環境のみローカルフォールバック
+    console.warn('[DEV] Using local CLI for generate-publish-info');
     const projectDir = getProjectPath(req.user.id, projectId);
     const indexPath = path.join(projectDir, 'index.html');
     let gameCode = '';
@@ -2452,7 +2513,7 @@ ${gameCode ? `ゲームコード（抜粋）:\n${gameCode.slice(0, 3000)}\n` : '
 });
 
 // Generate thumbnail using Nano Banana
-app.post('/api/projects/:projectId/generate-thumbnail', authenticate, checkProjectOwnership, async (req, res) => {
+app.post('/api/projects/:projectId/generate-thumbnail', authenticate, checkProjectOwnership, aiRateLimiter, async (req, res) => {
   const { projectId } = req.params;
   const { title } = req.body;
 
@@ -2694,7 +2755,7 @@ app.get('/api/projects/:projectId/thumbnail', async (req, res) => {
 
 // Generate game demo movie using Remotion + AI
 // AI reads the game code and generates a Remotion component that recreates the gameplay
-app.post('/api/projects/:projectId/generate-movie', authenticate, checkProjectOwnership, async (req, res) => {
+app.post('/api/projects/:projectId/generate-movie', authenticate, checkProjectOwnership, aiRateLimiter, async (req, res) => {
   const { projectId } = req.params;
 
   try {
@@ -2757,6 +2818,16 @@ app.post('/api/projects/:projectId/generate-movie', authenticate, checkProjectOw
 
     console.log('[Movie] Generating demo for project:', projectId);
     console.log('[Movie] Assets copied:', assetInfo.length);
+
+    // 本番環境ではローカルCLI実行禁止
+    // TODO: Modal経由でのmovie生成実装後に USE_MODAL 分岐を追加
+    if (config.IS_PRODUCTION) {
+      console.error('[generate-movie] Local CLI execution not allowed in production');
+      return res.status(503).json({ error: 'Movie generation service is not yet available in production' });
+    }
+
+    // 開発環境のみローカル実行
+    console.warn('[DEV] Using local CLI for generate-movie');
 
     // Generate Remotion component using Claude
     const { spawn } = require('child_process');

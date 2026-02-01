@@ -434,7 +434,15 @@ const readProjectFile = (userId, projectId, filename) => {
 
 // Local file reading (original implementation)
 const readProjectFileLocal = (userId, projectId, filename) => {
-  const filePath = path.join(getProjectDir(userId, projectId), filename);
+  const projectDir = getProjectDir(userId, projectId);
+  const filePath = path.join(projectDir, filename);
+
+  // パストラバーサル対策: ファイルパスがプロジェクトディレクトリ内か検証
+  if (!config.isPathSafe(projectDir, filePath)) {
+    console.error('[readProjectFile] Path traversal attempt:', filename);
+    return null;
+  }
+
   if (fs.existsSync(filePath)) {
     // Check if it's a binary file
     const ext = path.extname(filename).toLowerCase();
@@ -554,6 +562,12 @@ const writeProjectFile = async (client, userId, projectId, filename, content) =>
 const writeProjectFileLocal = async (client, userId, projectId, filename, content) => {
   const projectDir = ensureProjectDir(userId, projectId);
   const filePath = path.join(projectDir, filename);
+
+  // パストラバーサル対策: ファイルパスがプロジェクトディレクトリ内か検証
+  if (!config.isPathSafe(projectDir, filePath)) {
+    console.error('[writeProjectFile] Path traversal attempt:', filename);
+    throw new Error('Invalid file path');
+  }
 
   // Create subdirectory if needed
   const fileDir = path.dirname(filePath);
