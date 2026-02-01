@@ -8,6 +8,30 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-01: CSP Report-Only 導入 (Phase 2b)
+
+**詳細:** `.claude/logs/2026-02-01-csp-report-only.md`
+
+Content-Security-Policy-Report-Only ヘッダーを導入:
+
+| 項目 | 内容 |
+|------|------|
+| 適用対象 | アプリページ (`/`, `/editor.html` 等) |
+| 除外対象 | ゲームページ (`/g/`, `/game/`) - AI 生成で CDN 予測不能 |
+| モード | Report-Only（ブロックせずログ記録のみ） |
+
+**CSP ディレクティブ:**
+- `script-src`: self, unsafe-inline, cdnjs.cloudflare.com
+- `style-src`: self, unsafe-inline, fonts.googleapis.com
+- `connect-src`: self, wss:, *.supabase.co
+- `img-src`: self, data:, blob:, supabase, googleusercontent, qrserver
+
+**違反レポート:** `/api/csp-report` → `[CSP Violation]` ログ
+
+**次のステップ:** 数日間違反ログ監視 → Phase 2c（強制モード移行）
+
+---
+
 ### 2026-02-01: Modal chat_sonnet エンドポイント追加
 
 **詳細:** `.claude/logs/2026-02-01-modal-chat-sonnet.md`
@@ -63,7 +87,7 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 **ブランチ:** `feature/security-review-response`
 
-**残タスク:** CSP Report-Only 導入（Phase 2b）、CSP 強制モード移行（Phase 2c）
+**残タスク:** ~~CSP Report-Only 導入（Phase 2b）~~ ✅ 完了、CSP 強制モード移行（Phase 2c）- 違反ログ監視後
 
 ---
 
@@ -1043,4 +1067,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-01 (Modal chat_sonnet 追加)
+最終更新: 2026-02-01 (CSP Report-Only Phase 2b)
