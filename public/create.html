@@ -98,57 +98,11 @@
   </script>
 </head>
 <body data-page="create">
-  <!-- Side Menu (mobile browser only) -->
-  <div class="side-menu-overlay" id="sideMenuOverlay"></div>
-  <nav class="side-menu" id="sideMenu">
-    <div class="side-menu-header">
-      <div class="brand-mark"></div>
-      <span class="brand-text">DreamCore</span>
-      <button class="side-menu-close" id="sideMenuClose" aria-label="閉じる">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-    </div>
-    <div class="side-menu-items">
-      <a href="/create.html" class="side-menu-item active">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        <span>つくる</span>
-      </a>
-      <a href="/discover.html" class="side-menu-item">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <span>さがす</span>
-      </a>
-      <a href="/mypage.html" class="side-menu-item">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-          <circle cx="12" cy="7" r="4"></circle>
-        </svg>
-        <span>マイページ</span>
-      </a>
-    </div>
-  </nav>
-
   <!-- Project List View -->
   <div class="project-list-view" id="projectListView">
     <!-- Minimal Header -->
     <header class="list-header">
       <div class="list-header-left">
-        <!-- Hamburger Menu Button (mobile browser only) -->
-        <button class="hamburger-menu-btn" id="hamburgerMenuBtn" aria-label="メニュー">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
-        </button>
         <div class="brand-mark"></div>
         <span class="brand-text">DreamCore</span>
       </div>
@@ -380,37 +334,6 @@
     </button>
   </nav>
 
-  <!-- Side Menu Toggle -->
-  <script>
-    (function() {
-      var hamburgerBtn = document.getElementById('hamburgerMenuBtn');
-      var sideMenu = document.getElementById('sideMenu');
-      var sideMenuOverlay = document.getElementById('sideMenuOverlay');
-      var sideMenuClose = document.getElementById('sideMenuClose');
-
-      function openMenu() {
-        sideMenu.classList.add('active');
-        sideMenuOverlay.classList.add('active');
-        document.body.style.overflow = 'hidden';
-      }
-
-      function closeMenu() {
-        sideMenu.classList.remove('active');
-        sideMenuOverlay.classList.remove('active');
-        document.body.style.overflow = '';
-      }
-
-      if (hamburgerBtn) {
-        hamburgerBtn.addEventListener('click', openMenu);
-      }
-      if (sideMenuClose) {
-        sideMenuClose.addEventListener('click', closeMenu);
-      }
-      if (sideMenuOverlay) {
-        sideMenuOverlay.addEventListener('click', closeMenu);
-      }
-    })();
-  </script>
   <script src="/auth.js" defer></script>
   <script src="/app.js" defer></script>
 </body>
