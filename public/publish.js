@@ -782,67 +782,86 @@ class PublishPage {
 
     // Bind share buttons
     const shareText = `${this.publishData.title} を作りました！`;
-    const shareTextWithUrl = `${shareText} ${gameUrl}`;
+
+    // UTMパラメーター付きURL生成
+    const getShareUrl = (source, medium = 'social') => {
+      const params = new URLSearchParams({
+        utm_source: source,
+        utm_medium: medium,
+        utm_campaign: 'game_share'
+      });
+      return `${gameUrl}?${params.toString()}`;
+    };
 
     // X (Twitter)
     document.getElementById('shareX').onclick = () => {
-      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(gameUrl)}`, '_blank', 'width=550,height=420');
+      const url = getShareUrl('twitter');
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}`, '_blank', 'width=550,height=420');
     };
 
     // Facebook
     document.getElementById('shareFacebook').onclick = () => {
-      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(gameUrl)}`, '_blank', 'width=550,height=420');
+      const url = getShareUrl('facebook');
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank', 'width=550,height=420');
     };
 
     // WhatsApp
     document.getElementById('shareWhatsApp').onclick = () => {
-      window.open(`https://wa.me/?text=${encodeURIComponent(shareTextWithUrl)}`, '_blank', 'width=550,height=420');
+      const url = getShareUrl('whatsapp');
+      window.open(`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + url)}`, '_blank', 'width=550,height=420');
     };
 
     // LINE
     document.getElementById('shareLine').onclick = () => {
-      window.open(`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(gameUrl)}`, '_blank', 'width=550,height=420');
+      const url = getShareUrl('line');
+      window.open(`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}`, '_blank', 'width=550,height=420');
     };
 
     // Telegram
     document.getElementById('shareTelegram').onclick = () => {
-      window.open(`https://t.me/share/url?url=${encodeURIComponent(gameUrl)}&text=${encodeURIComponent(shareText)}`, '_blank', 'width=550,height=420');
+      const url = getShareUrl('telegram');
+      window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(shareText)}`, '_blank', 'width=550,height=420');
     };
 
     // Email
     document.getElementById('shareEmail').onclick = () => {
+      const url = getShareUrl('email', 'email');
       const subject = encodeURIComponent(this.publishData.title);
-      const body = encodeURIComponent(`${shareText}\n\n${gameUrl}`);
+      const body = encodeURIComponent(`${shareText}\n\n${url}`);
       window.location.href = `mailto:?subject=${subject}&body=${body}`;
     };
 
     // SMS/iMessage
     document.getElementById('shareSMS').onclick = () => {
-      // iOS uses &body=, Android uses ?body=
+      const url = getShareUrl('sms', 'sms');
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const separator = isIOS ? '&' : '?';
-      window.location.href = `sms:${separator}body=${encodeURIComponent(shareTextWithUrl)}`;
+      window.location.href = `sms:${separator}body=${encodeURIComponent(shareText + ' ' + url)}`;
     };
 
     // Reddit
     document.getElementById('shareReddit').onclick = () => {
-      window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(gameUrl)}&title=${encodeURIComponent(this.publishData.title)}`, '_blank', 'width=550,height=420');
+      const url = getShareUrl('reddit');
+      window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(this.publishData.title)}`, '_blank', 'width=550,height=420');
     };
 
     // Threads
     document.getElementById('shareThreads').onclick = () => {
-      window.open(`https://www.threads.net/intent/post?text=${encodeURIComponent(shareTextWithUrl)}`, '_blank', 'width=550,height=420');
+      const url = getShareUrl('threads');
+      window.open(`https://www.threads.net/intent/post?text=${encodeURIComponent(shareText + ' ' + url)}`, '_blank', 'width=550,height=420');
     };
 
     // QRコード
     document.getElementById('shareQR').onclick = () => {
-      this.showQRCode(gameUrl);
+      const url = getShareUrl('qr', 'qr');
+      this.showQRCode(url);
     };
 
     // URLコピー
     document.getElementById('shareCopy').onclick = async () => {
+      const url = getShareUrl('copy', 'clipboard');
       try {
-        await navigator.clipboard.writeText(gameUrl);
+        await navigator.clipboard.writeText(url);
         const btn = document.getElementById('shareCopy');
         btn.classList.add('copied');
         setTimeout(() => btn.classList.remove('copied'), 2000);
@@ -855,11 +874,12 @@ class PublishPage {
     const nativeBtn = document.getElementById('shareNative');
     if (navigator.share) {
       nativeBtn.onclick = async () => {
+        const url = getShareUrl('native', 'share_api');
         try {
           await navigator.share({
             title: this.publishData.title,
             text: shareText,
-            url: gameUrl
+            url: url
           });
         } catch (err) {
           if (err.name !== 'AbortError') {
@@ -868,7 +888,6 @@ class PublishPage {
         }
       };
     } else {
-      // Web Share API非対応の場合は非表示
       nativeBtn.style.display = 'none';
     }
 
