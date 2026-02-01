@@ -2,6 +2,8 @@
 
 AI-powered browser game creation platform with Modal Sandbox integration.
 
+**Repository**: https://github.com/neighbor-game-ai/DreamCore-V2-sandbox
+
 ---
 
 ## ⚠️ プロジェクトの根幹（最重要・必読）
