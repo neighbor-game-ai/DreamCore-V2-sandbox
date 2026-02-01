@@ -611,248 +611,99 @@
             font-weight: 500;
         }
 
-        /* ============================================
-           Share Panel - DreamCore Style
-           Nintendo Joy × Kashiwa Sato Minimalism
-           ============================================ */
+        /* Share Panel - Simple Circular Buttons */
         .share-panel {
-            padding-bottom: var(--s-24);
-            background: linear-gradient(180deg, #fff 0%, #fafafa 100%);
+            padding-bottom: var(--s-16);
         }
 
-        .share-panel .panel-title {
-            display: none;
+        .share-buttons-grid {
+            padding: 24px 20px 8px;
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
-        /* Bold Header */
-        .share-header {
-            padding: 20px 24px 8px;
-            text-align: center;
-        }
-
-        .share-headline {
-            font-size: 1.25rem;
-            font-weight: 800;
-            color: #1a1a1a;
-            letter-spacing: -0.02em;
-            margin: 0 0 4px;
-        }
-
-        .share-headline-accent {
-            color: #E53935;
-        }
-
-        .share-subline {
-            font-size: 0.8125rem;
-            color: #737373;
-            font-weight: 500;
-        }
-
-        /* Section Groups */
-        .share-section {
-            padding: 0 16px;
-            margin-bottom: 16px;
-        }
-
-        .share-section:last-child {
-            margin-bottom: 0;
-        }
-
-        .share-section-label {
-            font-size: 0.6875rem;
-            font-weight: 700;
-            color: #a3a3a3;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            padding: 0 8px;
-            margin-bottom: 10px;
-        }
-
-        .share-section-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-        }
-
-        /* Share Button - Rounded Rectangle Style */
         .share-btn-game {
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 4px;
-            padding: 12px 4px 10px;
+            width: 48px;
+            height: 48px;
+            padding: 0;
             border: none;
-            border-radius: 14px;
+            border-radius: 50%;
             cursor: pointer;
-            background: #fff;
-            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .share-btn-game::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(180deg, rgba(255,255,255,0.6) 0%, transparent 40%);
-            pointer-events: none;
-            border-radius: inherit;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .share-btn-game svg {
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             flex-shrink: 0;
-            position: relative;
-            z-index: 1;
         }
 
-        .share-btn-label {
-            font-size: 0.5625rem;
-            font-weight: 600;
-            color: #525252;
-            letter-spacing: -0.01em;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* Individual button colors - bold backgrounds */
-        .share-btn-game.share-x {
-            background: linear-gradient(145deg, #1a1a1a 0%, #0a0a0a 100%);
-            color: #fff;
-        }
-        .share-btn-game.share-x .share-btn-label { color: rgba(255,255,255,0.8); }
-
-        .share-btn-game.share-facebook {
-            background: linear-gradient(145deg, #1877F2 0%, #0d5bb5 100%);
-            color: #fff;
-        }
-        .share-btn-game.share-facebook .share-btn-label { color: rgba(255,255,255,0.85); }
-
-        .share-btn-game.share-whatsapp {
-            background: linear-gradient(145deg, #25D366 0%, #1da851 100%);
-            color: #fff;
-        }
-        .share-btn-game.share-whatsapp .share-btn-label { color: rgba(255,255,255,0.9); }
-
-        .share-btn-game.share-line {
-            background: linear-gradient(145deg, #06C755 0%, #05a347 100%);
-            color: #fff;
-        }
-        .share-btn-game.share-line .share-btn-label { color: rgba(255,255,255,0.9); }
-
-        .share-btn-game.share-telegram {
-            background: linear-gradient(145deg, #0088cc 0%, #006699 100%);
-            color: #fff;
-        }
-        .share-btn-game.share-telegram .share-btn-label { color: rgba(255,255,255,0.85); }
-
+        /* Individual button colors */
+        .share-btn-game.share-x { background: #0f0f0f; color: #fff; }
+        .share-btn-game.share-facebook { background: #1877F2; color: #fff; }
+        .share-btn-game.share-whatsapp { background: #25D366; color: #fff; }
+        .share-btn-game.share-line { background: #06C755; color: #fff; }
+        .share-btn-game.share-telegram { background: #0088cc; color: #fff; }
         .share-btn-game.share-email {
-            background: linear-gradient(145deg, #EA4335 0%, #c5221f 100%);
+            background: linear-gradient(135deg, #EA4335 0%, #FBBC05 25%, #34A853 50%, #4285F4 75%, #EA4335 100%);
             color: #fff;
         }
-        .share-btn-game.share-email .share-btn-label { color: rgba(255,255,255,0.9); }
-
-        .share-btn-game.share-sms {
-            background: linear-gradient(145deg, #34C759 0%, #28a745 100%);
-            color: #fff;
-        }
-        .share-btn-game.share-sms .share-btn-label { color: rgba(255,255,255,0.9); }
-
-        .share-btn-game.share-reddit {
-            background: linear-gradient(145deg, #FF4500 0%, #d63a00 100%);
-            color: #fff;
-        }
-        .share-btn-game.share-reddit .share-btn-label { color: rgba(255,255,255,0.9); }
-
-        .share-btn-game.share-threads {
-            background: linear-gradient(145deg, #1a1a1a 0%, #000 100%);
-            color: #fff;
-        }
-        .share-btn-game.share-threads .share-btn-label { color: rgba(255,255,255,0.8); }
-
-        /* Utility buttons - outlined style */
-        .share-btn-game.share-qr,
-        .share-btn-game.share-copy,
-        .share-btn-game.share-native {
+        .share-btn-game.share-sms { background: #34C759; color: #fff; }
+        .share-btn-game.share-reddit { background: #FF4500; color: #fff; }
+        .share-btn-game.share-threads { background: #000; color: #fff; }
+        .share-btn-game.share-qr {
             background: #fff;
             color: #404040;
-            box-shadow: inset 0 0 0 1.5px #e5e5e5, 0 1px 3px rgba(0,0,0,0.04);
+            border: 2px solid #e5e5e5;
         }
-        .share-btn-game.share-qr .share-btn-label,
-        .share-btn-game.share-copy .share-btn-label,
-        .share-btn-game.share-native .share-btn-label {
-            color: #737373;
+        .share-btn-game.share-copy {
+            background: #fff;
+            color: #404040;
+            border: 2px solid #e5e5e5;
         }
-
         .share-btn-game.share-copy.copied {
-            background: linear-gradient(145deg, #22c55e 0%, #16a34a 100%);
+            background: #22c55e;
             color: #fff;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(34,197,94,0.2);
+            border-color: #22c55e;
         }
-        .share-btn-game.share-copy.copied .share-btn-label {
-            color: rgba(255,255,255,0.9);
-        }
+        .share-btn-game.share-native { background: #262626; color: #fff; }
 
         /* Tap feedback */
         .share-btn-game:active {
-            transform: scale(0.94);
+            transform: scale(0.92);
+            opacity: 0.85;
         }
 
         /* Hover effects for mouse devices */
         @media (hover: hover) {
             .share-btn-game:hover {
-                transform: translateY(-2px) scale(1.02);
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1), 0 8px 24px rgba(0,0,0,0.08);
+                transform: translateY(-3px) scale(1.05);
             }
             .share-btn-game:active {
-                transform: translateY(0) scale(0.98);
+                transform: translateY(-1px) scale(1);
+                opacity: 1;
             }
-
-            .share-btn-game.share-x:hover { box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
-            .share-btn-game.share-facebook:hover { box-shadow: 0 6px 20px rgba(24, 119, 242, 0.35); }
-            .share-btn-game.share-whatsapp:hover { box-shadow: 0 6px 20px rgba(37, 211, 102, 0.35); }
-            .share-btn-game.share-line:hover { box-shadow: 0 6px 20px rgba(6, 199, 85, 0.35); }
-            .share-btn-game.share-telegram:hover { box-shadow: 0 6px 20px rgba(0, 136, 204, 0.35); }
-            .share-btn-game.share-email:hover { box-shadow: 0 6px 20px rgba(234, 67, 53, 0.35); }
-            .share-btn-game.share-sms:hover { box-shadow: 0 6px 20px rgba(52, 199, 89, 0.35); }
-            .share-btn-game.share-reddit:hover { box-shadow: 0 6px 20px rgba(255, 69, 0, 0.35); }
-            .share-btn-game.share-threads:hover { box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
-
+            .share-btn-game.share-x:hover { box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.3); }
+            .share-btn-game.share-facebook:hover { box-shadow: 0 6px 20px -4px rgba(24, 119, 242, 0.4); }
+            .share-btn-game.share-whatsapp:hover { box-shadow: 0 6px 20px -4px rgba(37, 211, 102, 0.4); }
+            .share-btn-game.share-line:hover { box-shadow: 0 6px 20px -4px rgba(6, 199, 85, 0.4); }
+            .share-btn-game.share-telegram:hover { box-shadow: 0 6px 20px -4px rgba(0, 136, 204, 0.4); }
+            .share-btn-game.share-email:hover { box-shadow: 0 6px 20px -4px rgba(66, 133, 244, 0.4); }
+            .share-btn-game.share-sms:hover { box-shadow: 0 6px 20px -4px rgba(52, 199, 89, 0.4); }
+            .share-btn-game.share-reddit:hover { box-shadow: 0 6px 20px -4px rgba(255, 69, 0, 0.4); }
+            .share-btn-game.share-threads:hover { box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.3); }
             .share-btn-game.share-qr:hover,
-            .share-btn-game.share-copy:hover,
-            .share-btn-game.share-native:hover {
-                background: #fafafa;
-                box-shadow: inset 0 0 0 1.5px #d4d4d4, 0 4px 12px rgba(0,0,0,0.08);
+            .share-btn-game.share-copy:hover {
+                background: #f5f5f5;
+                box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.1);
             }
+            .share-btn-game.share-native:hover { box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.3); }
         }
-
-        /* Entrance Animation */
-        @keyframes shareButtonPop {
-            0% { opacity: 0; transform: scale(0.8) translateY(8px); }
-            100% { opacity: 1; transform: scale(1) translateY(0); }
-        }
-
-        .share-panel.animating .share-btn-game {
-            animation: shareButtonPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-            opacity: 0;
-        }
-
-        .share-panel.animating .share-section:nth-child(2) .share-btn-game:nth-child(1) { animation-delay: 0.02s; }
-        .share-panel.animating .share-section:nth-child(2) .share-btn-game:nth-child(2) { animation-delay: 0.04s; }
-        .share-panel.animating .share-section:nth-child(2) .share-btn-game:nth-child(3) { animation-delay: 0.06s; }
-        .share-panel.animating .share-section:nth-child(2) .share-btn-game:nth-child(4) { animation-delay: 0.08s; }
-        .share-panel.animating .share-section:nth-child(2) .share-btn-game:nth-child(5) { animation-delay: 0.10s; }
-        .share-panel.animating .share-section:nth-child(2) .share-btn-game:nth-child(6) { animation-delay: 0.12s; }
-        .share-panel.animating .share-section:nth-child(3) .share-btn-game:nth-child(1) { animation-delay: 0.14s; }
-        .share-panel.animating .share-section:nth-child(3) .share-btn-game:nth-child(2) { animation-delay: 0.16s; }
-        .share-panel.animating .share-section:nth-child(3) .share-btn-game:nth-child(3) { animation-delay: 0.18s; }
-        .share-panel.animating .share-section:nth-child(4) .share-btn-game:nth-child(1) { animation-delay: 0.20s; }
-        .share-panel.animating .share-section:nth-child(4) .share-btn-game:nth-child(2) { animation-delay: 0.22s; }
-        .share-panel.animating .share-section:nth-child(4) .share-btn-game:nth-child(3) { animation-delay: 0.24s; }
-        .share-panel.animating .share-section:nth-child(4) .share-btn-game:nth-child(4) { animation-delay: 0.26s; }
 
         /* QR Modal */
         .qr-modal-game {
@@ -1812,113 +1663,88 @@
         <div class="panel share-panel">
             <div class="panel-handle"></div>
             <div class="panel-title">シェア</div>
-
-            <!-- Header -->
-            <div class="share-header">
-                <h3 class="share-headline">友達に<span class="share-headline-accent">広めよう！</span></h3>
-                <p class="share-subline">このゲームをシェアする</p>
-            </div>
-
-            <!-- SNS Section -->
-            <div class="share-section">
-                <div class="share-section-label">SNS</div>
-                <div class="share-section-grid">
-                    <button class="share-btn-game share-x" id="shareBtnX" title="X">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                        </svg>
-                        <span class="share-btn-label">X</span>
-                    </button>
-                    <button class="share-btn-game share-facebook" id="shareBtnFacebook" title="Facebook">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                        </svg>
-                        <span class="share-btn-label">Facebook</span>
-                    </button>
-                    <button class="share-btn-game share-threads" id="shareBtnThreads" title="Threads">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.783 3.631 2.698 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.96-.065-1.182.408-2.256 1.332-3.023.868-.72 2.048-1.166 3.413-1.291.93-.085 1.785-.053 2.558.092-.075-.882-.39-1.554-.943-2.025-.626-.533-1.54-.81-2.64-.798l-.072.001c-1.14.012-2.082.338-2.724.943-.588.554-.935 1.32-1.035 2.278l-2.072-.235c.141-1.397.695-2.556 1.646-3.45 1.053-.99 2.5-1.517 4.185-1.534h.088c1.602.017 2.943.497 3.996 1.426.924.815 1.478 1.907 1.645 3.247.597.09 1.162.228 1.69.415 1.12.396 2.025 1.003 2.689 1.808.757.915 1.166 2.042 1.215 3.352.056 1.502-.405 2.9-1.37 4.16-1.058 1.379-2.646 2.396-4.723 3.022-1.673.505-3.63.77-5.817.787z"/>
-                        </svg>
-                        <span class="share-btn-label">Threads</span>
-                    </button>
-                    <button class="share-btn-game share-reddit" id="shareBtnReddit" title="Reddit">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/>
-                        </svg>
-                        <span class="share-btn-label">Reddit</span>
-                    </button>
-                    <button class="share-btn-game share-line" id="shareBtnLine" title="LINE">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
-                        </svg>
-                        <span class="share-btn-label">LINE</span>
-                    </button>
-                    <button class="share-btn-game share-whatsapp" id="shareBtnWhatsApp" title="WhatsApp">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                        </svg>
-                        <span class="share-btn-label">WhatsApp</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Message Section -->
-            <div class="share-section">
-                <div class="share-section-label">メッセージ</div>
-                <div class="share-section-grid">
-                    <button class="share-btn-game share-telegram" id="shareBtnTelegram" title="Telegram">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-                        </svg>
-                        <span class="share-btn-label">Telegram</span>
-                    </button>
-                    <button class="share-btn-game share-sms" id="shareBtnSMS" title="SMS">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.477 2 2 6.145 2 11.243c0 2.936 1.444 5.544 3.678 7.227V22l3.378-1.852c.904.252 1.863.389 2.944.389 5.523 0 10-4.145 10-9.294C22 6.145 17.523 2 12 2z"/>
-                        </svg>
-                        <span class="share-btn-label">SMS</span>
-                    </button>
-                    <button class="share-btn-game share-email" id="shareBtnEmail" title="Email">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
-                        </svg>
-                        <span class="share-btn-label">Email</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Tools Section -->
-            <div class="share-section">
-                <div class="share-section-label">ツール</div>
-                <div class="share-section-grid">
-                    <button class="share-btn-game share-copy" id="shareBtnCopy" title="URLをコピー">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-                        </svg>
-                        <span class="share-btn-label">コピー</span>
-                    </button>
-                    <button class="share-btn-game share-qr" id="shareBtnQR" title="QRコード">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="3" width="7" height="7"></rect>
-                            <rect x="14" y="3" width="7" height="7"></rect>
-                            <rect x="3" y="14" width="7" height="7"></rect>
-                            <rect x="14" y="14" width="3" height="3"></rect>
-                            <rect x="18" y="14" width="3" height="3"></rect>
-                            <rect x="14" y="18" width="3" height="3"></rect>
-                            <rect x="18" y="18" width="3" height="3"></rect>
-                        </svg>
-                        <span class="share-btn-label">QR</span>
-                    </button>
-                    <button class="share-btn-game share-native" id="shareBtnNative" title="その他">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-                            <polyline points="16 6 12 2 8 6"></polyline>
-                            <line x1="12" y1="2" x2="12" y2="15"></line>
-                        </svg>
-                        <span class="share-btn-label">その他</span>
-                    </button>
-                </div>
+            <div class="share-buttons-grid">
+                <!-- X -->
+                <button class="share-btn-game share-x" id="shareBtnX" title="X">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                </button>
+                <!-- Facebook -->
+                <button class="share-btn-game share-facebook" id="shareBtnFacebook" title="Facebook">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                </button>
+                <!-- WhatsApp -->
+                <button class="share-btn-game share-whatsapp" id="shareBtnWhatsApp" title="WhatsApp">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                    </svg>
+                </button>
+                <!-- LINE -->
+                <button class="share-btn-game share-line" id="shareBtnLine" title="LINE">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+                    </svg>
+                </button>
+                <!-- Telegram -->
+                <button class="share-btn-game share-telegram" id="shareBtnTelegram" title="Telegram">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                    </svg>
+                </button>
+                <!-- Email -->
+                <button class="share-btn-game share-email" id="shareBtnEmail" title="Email">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
+                    </svg>
+                </button>
+                <!-- SMS -->
+                <button class="share-btn-game share-sms" id="shareBtnSMS" title="SMS">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.477 2 2 6.145 2 11.243c0 2.936 1.444 5.544 3.678 7.227V22l3.378-1.852c.904.252 1.863.389 2.944.389 5.523 0 10-4.145 10-9.294C22 6.145 17.523 2 12 2z"/>
+                    </svg>
+                </button>
+                <!-- Reddit -->
+                <button class="share-btn-game share-reddit" id="shareBtnReddit" title="Reddit">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/>
+                    </svg>
+                </button>
+                <!-- Threads -->
+                <button class="share-btn-game share-threads" id="shareBtnThreads" title="Threads">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.783 3.631 2.698 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.96-.065-1.182.408-2.256 1.332-3.023.868-.72 2.048-1.166 3.413-1.291.93-.085 1.785-.053 2.558.092-.075-.882-.39-1.554-.943-2.025-.626-.533-1.54-.81-2.64-.798l-.072.001c-1.14.012-2.082.338-2.724.943-.588.554-.935 1.32-1.035 2.278l-2.072-.235c.141-1.397.695-2.556 1.646-3.45 1.053-.99 2.5-1.517 4.185-1.534h.088c1.602.017 2.943.497 3.996 1.426.924.815 1.478 1.907 1.645 3.247.597.09 1.162.228 1.69.415 1.12.396 2.025 1.003 2.689 1.808.757.915 1.166 2.042 1.215 3.352.056 1.502-.405 2.9-1.37 4.16-1.058 1.379-2.646 2.396-4.723 3.022-1.673.505-3.63.77-5.817.787z"/>
+                    </svg>
+                </button>
+                <!-- QR -->
+                <button class="share-btn-game share-qr" id="shareBtnQR" title="QRコード">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="3" height="3"></rect>
+                        <rect x="18" y="14" width="3" height="3"></rect>
+                        <rect x="14" y="18" width="3" height="3"></rect>
+                        <rect x="18" y="18" width="3" height="3"></rect>
+                    </svg>
+                </button>
+                <!-- Copy -->
+                <button class="share-btn-game share-copy" id="shareBtnCopy" title="URLをコピー">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                    </svg>
+                </button>
+                <!-- Native Share -->
+                <button class="share-btn-game share-native" id="shareBtnNative" title="その他">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                        <polyline points="16 6 12 2 8 6"></polyline>
+                        <line x1="12" y1="2" x2="12" y2="15"></line>
+                    </svg>
+                </button>
             </div>
             <!-- QRコードモーダル -->
             <div class="qr-modal-game hidden" id="qrModalGame">
@@ -2427,11 +2253,6 @@
 
         document.getElementById('shareBtn').addEventListener('click', () => {
             openPanel('sharePanelOverlay');
-            // Trigger entrance animation
-            const sharePanel = document.querySelector('.share-panel');
-            sharePanel.classList.remove('animating');
-            void sharePanel.offsetWidth; // Force reflow
-            sharePanel.classList.add('animating');
         });
 
         document.getElementById('infoBtn').addEventListener('click', () => {
