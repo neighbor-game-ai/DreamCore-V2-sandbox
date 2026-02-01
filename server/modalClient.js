@@ -418,9 +418,11 @@ class ModalClient {
    * @param {string} params.message - User's question
    * @param {string} [params.game_spec] - SPEC.md content
    * @param {Array} [params.conversation_history] - Previous messages
-   * @returns {Promise<Object>} { message, suggestions }
+   * @param {string} [params.system_prompt] - Custom system prompt (overrides default Q&A mode)
+   * @param {boolean} [params.raw_output] - If true, return raw text without JSON parsing
+   * @returns {Promise<Object>} { message, suggestions } or { result } if raw_output
    */
-  async chatHaiku({ message, game_spec = '', conversation_history = [] }) {
+  async chatHaiku({ message, game_spec = '', conversation_history = [], system_prompt = '', raw_output = false }) {
     const endpoint = getEndpoint(
       null, // No explicit config, derive from base
       this.baseEndpoint,
@@ -430,10 +432,18 @@ class ModalClient {
       throw new Error('Modal chat_haiku endpoint is not configured');
     }
 
+    const body = { message, game_spec, conversation_history };
+    if (system_prompt) {
+      body.system_prompt = system_prompt;
+    }
+    if (raw_output) {
+      body.raw_output = true;
+    }
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({ message, game_spec, conversation_history }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -442,6 +452,15 @@ class ModalClient {
     }
 
     const data = await response.json();
+
+    // raw_output mode returns { result: "..." }
+    if (raw_output) {
+      return {
+        result: data.result || '',
+      };
+    }
+
+    // Default mode returns { message, suggestions }
     return {
       message: data.message || '',
       suggestions: data.suggestions || [],
@@ -490,7 +509,17 @@ class ModalClient {
    * @param {string} params.project_name - Project name
    * @returns {Promise<Object>} { title, description, howToPlay, tags }
    */
-  async generatePublishInfo({ user_id, project_id, project_name }) {
+  /**
+   * Generate publish info using Modal Haiku
+   * @param {Object} params
+   * @param {string} params.user_id - User ID (UUID)
+   * @param {string} params.project_id - Project ID (UUID)
+   * @param {string} params.project_name - Project name
+   * @param {string} [params.game_code] - Game code (index.html content)
+   * @param {string} [params.spec_content] - Spec content (spec.md or specs/game.md)
+   * @returns {Promise<Object>} { title, description, howToPlay, tags }
+   */
+  async generatePublishInfo({ user_id, project_id, project_name, game_code = '', spec_content = '' }) {
     const endpoint = getEndpoint(
       null, // No explicit config, derive from base
       this.baseEndpoint,
@@ -503,7 +532,7 @@ class ModalClient {
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({ user_id, project_id, project_name }),
+      body: JSON.stringify({ user_id, project_id, project_name, game_code, spec_content }),
     });
 
     if (!response.ok) {
@@ -660,8 +689,9 @@ class ModalClient {
         headers: { 'X-Modal-Secret': this.secret },
       });
 
-      // 404 is expected (project doesn't exist), 401 means auth failed
-      return response.status !== 401;
+      // 200-299 or 404 = healthy (404 is expected for non-existent project)
+      // 401 (auth failed) or 500/503 (server error) = unhealthy
+      return response.ok || response.status === 404;
     } catch (e) {
       console.error('[modalClient] Health check failed:', e.message);
       return false;

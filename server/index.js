@@ -28,6 +28,62 @@ const { ErrorCodes, createWsError, sendHttpError } = require('./errorResponse');
 const config = require('./config');
 const waitlist = require('./waitlist');
 const quotaService = require('./quotaService');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const { JSDOM } = require('jsdom');
+const createDOMPurify = require('dompurify');
+
+// SVG サニタイズ（XSS 攻撃防止）
+const SVG_WINDOW = new JSDOM('').window;
+const SVG_PURIFY = createDOMPurify(SVG_WINDOW);
+// SVG 専用の設定: スクリプト、イベントハンドラ、外部リソースを除去
+SVG_PURIFY.setConfig({
+  USE_PROFILES: { svg: true, svgFilters: true },
+  ADD_TAGS: ['use'],  // SVG の use タグは許可
+  FORBID_TAGS: ['script', 'foreignObject'],
+  FORBID_ATTR: ['onload', 'onerror', 'onclick', 'onmouseover', 'xlink:href'],
+});
+
+/**
+ * SVG コンテンツをサニタイズ
+ * @param {string} svgContent - 元の SVG コンテンツ
+ * @returns {string} サニタイズ済み SVG
+ */
+function sanitizeSVG(svgContent) {
+  return SVG_PURIFY.sanitize(svgContent);
+}
+
+// レート制限ミドルウェア（DoS/ブルートフォース対策）
+const createRateLimiter = (windowMs, max, message) => rateLimit({
+  windowMs,
+  max,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: message },
+  keyGenerator: (req) => req.user?.id || req.ip,  // 認証済みはuserIdで、未認証はIPでレート制限
+  validate: false,  // カスタムkeyGeneratorのバリデーション警告を抑制
+});
+
+// AI系API用（高コスト）: 5 req/min
+const aiRateLimiter = createRateLimiter(
+  60 * 1000,  // 1分
+  5,
+  'Too many AI requests. Please wait a minute before trying again.'
+);
+
+// 一般API用（認証済み）: 60 req/min
+const apiRateLimiter = createRateLimiter(
+  60 * 1000,  // 1分
+  config.RATE_LIMIT.api.authenticated,
+  'Too many requests. Please slow down.'
+);
+
+// 一般API用（未認証）: 10 req/min
+const publicRateLimiter = createRateLimiter(
+  60 * 1000,  // 1分
+  config.RATE_LIMIT.api.anonymous,
+  'Too many requests. Please slow down.'
+);
 
 /**
  * Get next quota reset time (00:00 UTC = 09:00 JST)
@@ -82,6 +138,31 @@ const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 3000;
 
+// ==================== セキュリティヘッダー（helmet）====================
+// Phase 2a: デフォルト設定で導入（CSP は後で Report-Only で追加）
+app.use(helmet({
+  // CSP は段階導入のため一旦無効（Phase 2b で Report-Only 追加）
+  contentSecurityPolicy: false,
+  // X-Frame-Options: ゲームページはiframeに埋め込まれるため、全体には適用せず個別対応
+  frameguard: false,
+  // その他のセキュリティヘッダーはデフォルトで有効
+  // - X-Content-Type-Options: nosniff
+  // - X-DNS-Prefetch-Control: off
+  // - X-Download-Options: noopen
+  // - X-Permitted-Cross-Domain-Policies: none
+  // - Referrer-Policy: no-referrer
+  // - Strict-Transport-Security (HSTS)
+}));
+
+// ゲームページ以外には X-Frame-Options を適用
+app.use((req, res, next) => {
+  // /g/ (公開ゲーム) と /game/ (プレビュー) はiframe埋め込みを許可
+  if (!req.path.startsWith('/g/') && !req.path.startsWith('/game/')) {
+    res.setHeader('X-Frame-Options', 'DENY');
+  }
+  next();
+});
+
 // Temporary upload directory (files are moved to user-specific directories after processing)
 const UPLOAD_TEMP_DIR = path.join(__dirname, '..', 'uploads_temp');
 if (!fs.existsSync(UPLOAD_TEMP_DIR)) {
@@ -107,7 +188,8 @@ const upload = multer({
     const allowedTypes = /jpeg|jpg|png|gif|webp|svg|mp3|wav|ogg|json/;
     const ext = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mime = allowedTypes.test(file.mimetype.split('/')[1]);
-    if (ext || mime) {
+    // 拡張子とMIMEタイプの両方が一致する場合のみ許可（偽装防止）
+    if (ext && mime) {
       cb(null, true);
     } else {
       cb(new Error('Invalid file type'));
@@ -117,6 +199,17 @@ const upload = multer({
 
 // JSON body parser with increased limit for base64 images
 app.use(express.json({ limit: '50mb' }));
+
+// 一般APIレート制限（認証済み: 60 req/min, 未認証: 10 req/min）
+// AI系APIは個別にさらに厳しい制限（5 req/min）が適用される
+app.use('/api/', (req, res, next) => {
+  // 認証ヘッダーがある場合は認証済みレート制限を適用
+  if (req.headers.authorization) {
+    return apiRateLimiter(req, res, next);
+  }
+  // 認証ヘッダーがない場合は未認証レート制限を適用
+  return publicRateLimiter(req, res, next);
+});
 
 // CORS for Phase 2 subdomain architecture (play.dreamcore.gg)
 // Assets need to be accessible from the play subdomain where games run
@@ -309,7 +402,7 @@ app.get('/api/projects/:projectId/download', authenticate, checkProjectOwnership
 // ==================== Image Generation API ====================
 
 // Generate image using Gemini Imagen (Nano Banana Pro)
-app.post('/api/generate-image', authenticate, async (req, res) => {
+app.post('/api/generate-image', authenticate, aiRateLimiter, async (req, res) => {
   try {
     const { prompt, style, size } = req.body;
 
@@ -518,7 +611,19 @@ app.post('/api/assets/upload', authenticate, upload.single('file'), async (req, 
     const displayName = originalName || req.file.originalname;
 
     // V2: Calculate hash
-    const fileBuffer = fs.readFileSync(req.file.path);
+    let fileBuffer = fs.readFileSync(req.file.path);
+
+    // SVG ファイルのサニタイズ（XSS 攻撃防止）
+    const uploadExt = path.extname(req.file.originalname).toLowerCase();
+    if (uploadExt === '.svg') {
+      console.log('[assets] Sanitizing SVG file:', req.file.originalname);
+      const svgContent = fileBuffer.toString('utf-8');
+      const sanitized = sanitizeSVG(svgContent);
+      fileBuffer = Buffer.from(sanitized, 'utf-8');
+      // サニタイズ後のファイルを一時ファイルに書き戻す
+      fs.writeFileSync(req.file.path, fileBuffer);
+    }
+
     const hash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
     const hashShort = hash.slice(0, 8);
 
@@ -1581,6 +1686,14 @@ wss.on('connection', (ws) => {
   let sessionId = null;
   let userSupabase = null;  // Supabase client with user's JWT
 
+  // 認証タイムアウト: 10秒以内にinitメッセージを受信しない場合は切断（DoS対策）
+  const authTimeout = setTimeout(() => {
+    if (!userId) {
+      console.warn('[WS] Authentication timeout - closing unauthenticated connection');
+      ws.close(4008, 'Authentication timeout');
+    }
+  }, 10000);
+
   // Helper to safely send
   const safeSend = (data) => {
     if (ws.readyState === WebSocket.OPEN) {
@@ -1619,6 +1732,7 @@ wss.on('connection', (ws) => {
           userId = user.id;
           userSupabase = supabase;  // Store for db operations
           sessionId = data.sessionId || 'unknown';
+          clearTimeout(authTimeout);  // 認証成功したのでタイムアウトをキャンセル
 
           // Ensure profile exists in database (for foreign key constraints)
           const profile = await db.getOrCreateUserFromAuth(user);
@@ -2248,6 +2362,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     console.log(`[${sessionId}] Client disconnected: ${userId}`);
+    clearTimeout(authTimeout);  // 接続終了時にタイムアウトをキャンセル
 
     // Clean up
     if (jobUnsubscribe) jobUnsubscribe();
@@ -2348,10 +2463,33 @@ app.put('/api/projects/:projectId/publish-draft', authenticate, checkProjectOwne
 });
 
 // Generate title, description, tags using Claude CLI (Haiku)
-app.post('/api/projects/:projectId/generate-publish-info', authenticate, checkProjectOwnership, async (req, res) => {
+app.post('/api/projects/:projectId/generate-publish-info', authenticate, checkProjectOwnership, aiRateLimiter, async (req, res) => {
   const { projectId } = req.params;
 
   try {
+    // Read project files from GCE first
+    const projectDir = getProjectPath(req.user.id, projectId);
+    let gameCode = '';
+    let specContent = '';
+
+    // Read index.html
+    const indexPath = path.join(projectDir, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      gameCode = fs.readFileSync(indexPath, 'utf-8');
+    }
+
+    // Read spec content (try specs/game.md first, then spec.md)
+    const specPaths = [
+      path.join(projectDir, 'specs', 'game.md'),
+      path.join(projectDir, 'spec.md')
+    ];
+    for (const specPath of specPaths) {
+      if (fs.existsSync(specPath)) {
+        specContent = fs.readFileSync(specPath, 'utf-8');
+        break;
+      }
+    }
+
     // Use Modal when enabled
     if (config.USE_MODAL) {
       const modal = getModalClient();
@@ -2359,6 +2497,8 @@ app.post('/api/projects/:projectId/generate-publish-info', authenticate, checkPr
         user_id: req.user.id,
         project_id: projectId,
         project_name: req.project.name,
+        game_code: gameCode,
+        spec_content: specContent,
       });
 
       // Check for error in response
@@ -2370,26 +2510,15 @@ app.post('/api/projects/:projectId/generate-publish-info', authenticate, checkPr
       return res.json(result);
     }
 
-    // Local fallback (when USE_MODAL=false)
-    const projectDir = getProjectPath(req.user.id, projectId);
-    const indexPath = path.join(projectDir, 'index.html');
-    let gameCode = '';
-    if (fs.existsSync(indexPath)) {
-      gameCode = fs.readFileSync(indexPath, 'utf-8');
+    // 本番環境ではローカル実行禁止
+    if (config.IS_PRODUCTION) {
+      console.error('[generate-publish-info] Local execution not allowed in production');
+      return res.status(503).json({ error: 'AI service temporarily unavailable' });
     }
 
-    // Get spec content (try specs/game.md first, then spec.md)
-    let specContent = '';
-    const specPaths = [
-      path.join(projectDir, 'specs', 'game.md'),
-      path.join(projectDir, 'spec.md')
-    ];
-    for (const specPath of specPaths) {
-      if (fs.existsSync(specPath)) {
-        specContent = fs.readFileSync(specPath, 'utf-8');
-        break;
-      }
-    }
+    // 開発環境のみローカルフォールバック
+    // gameCode, specContent は上で既に読み込み済み
+    console.warn('[DEV] Using local CLI for generate-publish-info');
 
     const prompt = `以下のゲームプロジェクトの情報から、公開用のタイトル、概要、ルールと操作方法、タグを生成してください。
 
@@ -2452,7 +2581,7 @@ ${gameCode ? `ゲームコード（抜粋）:\n${gameCode.slice(0, 3000)}\n` : '
 });
 
 // Generate thumbnail using Nano Banana
-app.post('/api/projects/:projectId/generate-thumbnail', authenticate, checkProjectOwnership, async (req, res) => {
+app.post('/api/projects/:projectId/generate-thumbnail', authenticate, checkProjectOwnership, aiRateLimiter, async (req, res) => {
   const { projectId } = req.params;
   const { title } = req.body;
 
@@ -2520,13 +2649,18 @@ ${limitedAssetPaths.length > 0 ? `- 参照画像が${limitedAssetPaths.length}�
     // Step 1: Generate image prompt with Modal Haiku
     console.log('[Thumbnail] Generating prompt with Modal Haiku...');
     let imagePrompt = '';
+    const modal = getModalClient();
+    if (!modal) {
+      console.error('[Thumbnail] Modal client not available');
+      return res.status(503).json({ error: 'AI service temporarily unavailable' });
+    }
     try {
-      const haikuResult = await modalClient.chatHaiku({
+      const haikuResult = await modal.chatHaiku({
         message: promptGeneratorPrompt,
-        game_spec: '',
-        conversation_history: [],
+        system_prompt: 'あなたは画像生成AIへのプロンプトを作成する専門家です。ゲームのサムネイル画像用の高品質なプロンプトを生成してください。プロンプトのみを出力し、説明は不要です。',
+        raw_output: true,
       });
-      imagePrompt = (haikuResult.message || '')
+      imagePrompt = (haikuResult.result || '')
         .replace(/^["'`]+|["'`]+$/g, '')
         .replace(/^\*+|\*+$/g, '')
         .trim();
@@ -2633,8 +2767,10 @@ app.post('/api/projects/:projectId/upload-thumbnail', authenticate, checkProject
       fs.unlinkSync(oldPngPath);
     }
 
-    // Move uploaded file to project directory as thumbnail.webp
-    fs.copyFileSync(req.file.path, thumbnailPath);
+    // Convert to WebP and save (sharp handles PNG/JPEG/WebP input)
+    await sharp(req.file.path)
+      .webp({ quality: 85 })
+      .toFile(thumbnailPath);
     fs.unlinkSync(req.file.path); // Remove temp file
 
     // Commit to git (non-blocking, safe)
@@ -2694,7 +2830,7 @@ app.get('/api/projects/:projectId/thumbnail', async (req, res) => {
 
 // Generate game demo movie using Remotion + AI
 // AI reads the game code and generates a Remotion component that recreates the gameplay
-app.post('/api/projects/:projectId/generate-movie', authenticate, checkProjectOwnership, async (req, res) => {
+app.post('/api/projects/:projectId/generate-movie', authenticate, checkProjectOwnership, aiRateLimiter, async (req, res) => {
   const { projectId } = req.params;
 
   try {
@@ -2757,6 +2893,16 @@ app.post('/api/projects/:projectId/generate-movie', authenticate, checkProjectOw
 
     console.log('[Movie] Generating demo for project:', projectId);
     console.log('[Movie] Assets copied:', assetInfo.length);
+
+    // 本番環境ではローカルCLI実行禁止
+    // TODO: Modal経由でのmovie生成実装後に USE_MODAL 分岐を追加
+    if (config.IS_PRODUCTION) {
+      console.error('[generate-movie] Local CLI execution not allowed in production');
+      return res.status(503).json({ error: 'Movie generation service is not yet available in production' });
+    }
+
+    // 開発環境のみローカル実行
+    console.warn('[DEV] Using local CLI for generate-movie');
 
     // Generate Remotion component using Claude
     const { spawn } = require('child_process');
