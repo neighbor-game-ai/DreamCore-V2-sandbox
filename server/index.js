@@ -139,10 +139,56 @@ const wss = new WebSocket.Server({ server });
 const PORT = process.env.PORT || 3000;
 
 // ==================== セキュリティヘッダー（helmet）====================
-// Phase 2a: デフォルト設定で導入（CSP は後で Report-Only で追加）
+// Phase 2b: CSP Report-Only で違反ログ収集（ブロックしない）
+// Phase 2c: 違反がないことを確認後、強制モードに移行予定
 app.use(helmet({
-  // CSP は段階導入のため一旦無効（Phase 2b で Report-Only 追加）
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    reportOnly: true,  // 違反をログするがブロックしない
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'",  // インラインスクリプト（将来的に nonce/hash に移行）
+        "https://cdnjs.cloudflare.com",  // cropper.js
+      ],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",  // インラインスタイル
+        "https://fonts.googleapis.com",
+      ],
+      fontSrc: [
+        "'self'",
+        "https://fonts.gstatic.com",
+      ],
+      imgSrc: [
+        "'self'",
+        "data:",   // Base64 画像
+        "blob:",   // Blob URL
+        "https://*.supabase.co",  // Supabase Storage
+        "https://lh3.googleusercontent.com",  // Google アバター
+        "https://api.qrserver.com",  // QR コード生成
+      ],
+      mediaSrc: [
+        "'self'",
+        "blob:",  // 動画/音声 Blob
+      ],
+      connectSrc: [
+        "'self'",
+        "wss:",  // WebSocket（同一ホスト）
+        "https://*.supabase.co",  // Supabase API
+      ],
+      frameSrc: [
+        "'self'",
+        "https://play.dreamcore.gg",  // ゲーム iframe
+      ],
+      frameAncestors: ["'self'"],  // 自身のみ埋め込み許可
+      objectSrc: ["'none'"],  // プラグイン禁止
+      baseUri: ["'self'"],  // base タグ制限
+      formAction: ["'self'"],  // フォーム送信先制限
+      upgradeInsecureRequests: [],  // HTTP → HTTPS 自動アップグレード
+      reportUri: ["/api/csp-report"],  // 違反レポート送信先
+    },
+  },
   // X-Frame-Options: ゲームページはiframeに埋め込まれるため、全体には適用せず個別対応
   frameguard: false,
   // その他のセキュリティヘッダーはデフォルトで有効
@@ -153,6 +199,13 @@ app.use(helmet({
   // - Referrer-Policy: no-referrer
   // - Strict-Transport-Security (HSTS)
 }));
+
+// CSP 違反レポートエンドポイント（ブラウザが自動送信）
+app.post('/api/csp-report', express.json({ type: 'application/csp-report' }), (req, res) => {
+  const report = req.body?.['csp-report'] || req.body;
+  console.warn('[CSP Violation]', JSON.stringify(report, null, 2));
+  res.status(204).end();
+});
 
 // ゲームページ以外には X-Frame-Options を適用
 app.use((req, res, next) => {
