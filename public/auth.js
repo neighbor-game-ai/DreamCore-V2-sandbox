@@ -404,9 +404,14 @@ async function checkAccess() {
       }
     });
 
-    // Token expired - try refresh before giving up
+    // Token expired - clear cache and force refresh before giving up
     if (response.status === 401) {
-      console.log('[Auth] Token expired, attempting refresh...');
+      console.log('[Auth] Token expired (server 401), forcing refresh...');
+
+      // Clear cached session to force actual refresh
+      currentSession = null;
+      setCachedSession(null);
+
       const freshSession = await getFreshSession();
       if (!freshSession) {
         console.log('[Auth] Refresh failed, auth error');
