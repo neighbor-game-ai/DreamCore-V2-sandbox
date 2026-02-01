@@ -1242,8 +1242,8 @@ app.post('/api/projects/:projectId/publish', authenticate, checkProjectOwnership
     return res.status(500).json({ error: 'Failed to publish game' });
   }
 
-  console.log(`[publish] Game published: ${game.id} (project: ${projectId})`);
-  res.json({ success: true, gameId: game.id, game });
+  console.log(`[publish] Game published: ${game.id} / ${game.public_id} (project: ${projectId})`);
+  res.json({ success: true, gameId: game.public_id, game });
 });
 
 // GET /api/projects/:projectId/published - Get published status for a project
