@@ -108,6 +108,29 @@ api.anthropic.com / generativelanguage.googleapis.com
 
 詳細な実装計画: `.claude/plans/api-key-proxy.md`
 
+### Modal デプロイ（重要）
+
+**⚠️ Modal のデプロイは必ず `DreamCore-V2-sandbox/modal` から実行すること。**
+
+```bash
+# 正しいデプロイ方法
+cd /Users/admin/DreamCore-V2-sandbox/modal
+modal deploy app.py
+
+# ローカルテスト
+cd /Users/admin/DreamCore-V2-sandbox/modal
+modal serve app.py
+```
+
+| ❌ 禁止 | ✅ 正しい |
+|--------|----------|
+| `DreamCore-V2-modal/` からデプロイ | `DreamCore-V2-sandbox/modal/` からデプロイ |
+
+**理由:**
+- Modal コードは `DreamCore-V2-sandbox` に統合済み（2026-02-01）
+- `DreamCore-V2-modal` は旧リポジトリで、更新されていない
+- 間違ったリポジトリからデプロイすると修正が反映されない
+
 ## 将来の機能拡張
 
 計画書: `.claude/docs/session-persistence-plan.md`（セッション永続化、CIDR Allowlist 等）

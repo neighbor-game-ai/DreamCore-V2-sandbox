@@ -2,6 +2,8 @@
 
 Sandbox execution for AI game generation with Claude CLI.
 
+> **Note**: This is the canonical Modal code location. Always deploy from here, not from `DreamCore-V2-modal/` (deprecated).
+
 ## Prerequisites
 
 1. **Modal Account**: Sign up at https://modal.com
