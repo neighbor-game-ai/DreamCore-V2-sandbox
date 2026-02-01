@@ -39,6 +39,22 @@ const results = {
   getProjectInfo_other: { status: 'pending', details: '' }
 };
 
+// Reset quota for test user (to avoid quota limit issues)
+async function resetQuotaForTestUser(userId) {
+  console.log(`Resetting quota for user: ${userId}`);
+  // Delete quota entry - it will be recreated with 0 counts on next use
+  const { error } = await supabaseAdmin
+    .from('usage_quotas')
+    .delete()
+    .eq('user_id', userId);
+
+  if (error && error.code !== 'PGRST116') { // PGRST116 = no rows deleted (OK)
+    console.warn('Warning: Could not reset quota:', error.message);
+  } else {
+    console.log('Quota reset successfully');
+  }
+}
+
 // Helper to create WebSocket connection
 function createWS() {
   return new WebSocket(WS_URL);
@@ -126,6 +142,9 @@ async function runProjectOperationsTests() {
     const user1Data = await getOrCreateTestUser();
     const accessToken1 = user1Data.accessToken;
     const userId1 = user1Data.user.id;
+
+    // Reset quota for test user to avoid quota limit issues
+    await resetQuotaForTestUser(userId1);
 
     const user2Data = await getOrCreateSecondTestUser();
     const accessToken2 = user2Data.accessToken;

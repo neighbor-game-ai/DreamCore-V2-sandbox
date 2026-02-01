@@ -185,16 +185,20 @@ class PublishPage {
 
   async loadPublishData() {
     try {
+      console.log('[Publish] Loading publish draft for project:', this.projectId);
       const response = await DreamCoreAuth.authFetch(`/api/projects/${this.projectId}/publish-draft`);
+      console.log('[Publish] Draft response status:', response.status);
       if (response.ok) {
         const draft = await response.json();
+        console.log('[Publish] Draft data:', draft);
         if (draft) {
           this.publishData = { ...this.publishData, ...draft };
+          console.log('[Publish] publishData after merge:', this.publishData);
           return;
         }
       }
     } catch (error) {
-      console.log('No existing draft, will generate new data');
+      console.log('No existing draft, will generate new data:', error);
     }
 
     // If no draft exists, generate initial data
@@ -309,10 +313,17 @@ class PublishPage {
     if (remixRadio) remixRadio.checked = true;
 
     // Thumbnail
+    console.log('[Publish] updateUI - thumbnailUrl:', this.publishData.thumbnailUrl);
     if (this.publishData.thumbnailUrl) {
-      this.thumbnailImage.src = this.getAuthenticatedUrl(this.publishData.thumbnailUrl);
+      const thumbnailSrc = this.getAuthenticatedUrl(this.publishData.thumbnailUrl);
+      console.log('[Publish] Setting thumbnail src:', thumbnailSrc);
+      this.thumbnailImage.src = thumbnailSrc;
       this.thumbnailImage.classList.remove('hidden');
       this.thumbnailPreview.querySelector('.thumbnail-placeholder').classList.add('hidden');
+
+      // Debug: log when image loads or errors
+      this.thumbnailImage.onload = () => console.log('[Publish] Thumbnail loaded successfully');
+      this.thumbnailImage.onerror = (e) => console.error('[Publish] Thumbnail failed to load:', e);
     }
   }
 

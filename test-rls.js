@@ -2,9 +2,10 @@
  * Supabase RLS (Row Level Security) Test Script
  *
  * Tests:
- * 1. profiles table access
- * 2. projects CRUD with RLS (owner only)
- * 3. assets CRUD with RLS (owner only, is_deleted=false)
+ * 1. projects CRUD with RLS (owner only)
+ * 2. assets CRUD with RLS (owner only, is_deleted=false)
+ *
+ * NOTE: profiles table was removed (2026-01-23)
  *
  * DESIGN NOTE:
  * - assets SELECT policy includes `is_deleted = FALSE`
@@ -29,7 +30,6 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 
 // Test results
 const results = {
-  profiles: { status: 'pending', details: '' },
   projects: { status: 'pending', details: '' },
   assets: { status: 'pending', details: '' }
 };
@@ -77,40 +77,6 @@ async function setupTestUsers() {
   }
   testUser2 = user2Data.user;
   console.log('Created test user 2:', testUser2.id);
-
-  // Wait for profile trigger to create profiles
-  await new Promise(resolve => setTimeout(resolve, 1500));
-
-  // Ensure profiles exist using admin
-  const { data: profile1 } = await supabaseAdmin
-    .from('profiles')
-    .select('*')
-    .eq('id', testUser1.id)
-    .single();
-
-  if (!profile1) {
-    console.log('Profile not created by trigger, creating manually...');
-    await supabaseAdmin.from('profiles').insert({
-      id: testUser1.id,
-      email: testUser1.email,
-      display_name: 'Test User 1'
-    });
-  }
-
-  const { data: profile2 } = await supabaseAdmin
-    .from('profiles')
-    .select('*')
-    .eq('id', testUser2.id)
-    .single();
-
-  if (!profile2) {
-    console.log('Profile 2 not created by trigger, creating manually...');
-    await supabaseAdmin.from('profiles').insert({
-      id: testUser2.id,
-      email: testUser2.email,
-      display_name: 'Test User 2'
-    });
-  }
 
   // Ensure users table entries exist (FK constraint for projects/assets)
   await supabaseAdmin.from('users').upsert({ id: testUser1.id, email: testUser1.email });
@@ -162,75 +128,10 @@ async function setupTestUsers() {
 }
 
 /**
- * Test 1: Profiles table access
- */
-async function testProfiles() {
-  console.log('\n=== Test 1: Profiles ===');
-  const details = [];
-
-  try {
-    // Test: User can read their own profile
-    const { data: ownProfile, error: ownError } = await testUser1Client
-      .from('profiles')
-      .select('*')
-      .eq('id', testUser1.id)
-      .single();
-
-    if (ownError) {
-      details.push(`FAIL: Cannot read own profile: ${ownError.message}`);
-    } else {
-      details.push(`PASS: Can read own profile (id: ${ownProfile.id})`);
-    }
-
-    // Test: User can update their own profile
-    const { error: updateError } = await testUser1Client
-      .from('profiles')
-      .update({ display_name: 'Test User 1 Updated' })
-      .eq('id', testUser1.id);
-
-    if (updateError) {
-      details.push(`FAIL: Cannot update own profile: ${updateError.message}`);
-    } else {
-      details.push('PASS: Can update own profile');
-    }
-
-    // Test: User cannot update other's profile
-    await testUser1Client
-      .from('profiles')
-      .update({ display_name: 'Hacked!' })
-      .eq('id', testUser2.id);
-
-    // Check if update actually happened using admin
-    const { data: checkProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('display_name')
-      .eq('id', testUser2.id)
-      .single();
-
-    if (checkProfile && checkProfile.display_name === 'Hacked!') {
-      details.push('FAIL: User CAN update other user profile (RLS broken!)');
-    } else {
-      details.push('PASS: Cannot update other user profile (RLS working)');
-    }
-
-    const passCount = details.filter(d => d.startsWith('PASS')).length;
-    const failCount = details.filter(d => d.startsWith('FAIL')).length;
-
-    results.profiles = {
-      status: failCount === 0 ? 'pass' : 'fail',
-      details: details.join('; ')
-    };
-
-  } catch (err) {
-    results.profiles = { status: 'fail', details: `Exception: ${err.message}` };
-  }
-}
-
-/**
- * Test 2: Projects table with RLS
+ * Test 1: Projects table with RLS
  */
 async function testProjects() {
-  console.log('\n=== Test 2: Projects ===');
+  console.log('\n=== Test 1: Projects ===');
   const details = [];
 
   try {
@@ -367,7 +268,7 @@ async function testProjects() {
 }
 
 /**
- * Test 3: Assets table with RLS (including is_deleted check)
+ * Test 2: Assets table with RLS (including is_deleted check)
  *
  * DESIGN NOTE:
  * - Soft delete (is_deleted = true) makes the asset invisible via RLS SELECT policy
@@ -376,8 +277,9 @@ async function testProjects() {
  * - We verify soft delete success using service_role (admin) client
  */
 async function testAssets() {
-  console.log('\n=== Test 3: Assets ===');
+  console.log('\n=== Test 2: Assets ===');
   const details = [];
+  const timestamp = Date.now();
 
   try {
     // Test: User1 creates an asset
@@ -388,6 +290,8 @@ async function testAssets() {
         filename: 'test-asset.png',
         original_name: 'Test Asset',
         storage_path: '/test/test-asset.png',
+        alias: `test-asset-${timestamp}.png`,
+        hash: `testhash${timestamp}`,  // Required field
         is_deleted: false
       })
       .select()
@@ -403,6 +307,8 @@ async function testAssets() {
           filename: 'test-asset-admin.png',
           original_name: 'Test Asset (Admin)',
           storage_path: '/test/test-asset-admin.png',
+          alias: `test-asset-admin-${timestamp}.png`,
+          hash: `testhash-admin-${timestamp}`,  // Required field
           is_deleted: false
         })
         .select()
@@ -601,7 +507,6 @@ async function main() {
     }
 
     // Run tests
-    await testProfiles();
     await testProjects();
     await testAssets();
 
