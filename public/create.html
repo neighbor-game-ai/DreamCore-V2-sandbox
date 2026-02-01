@@ -41,30 +41,36 @@
           (search && (search.includes('code=') || search.includes('error=')))) {
         return; // Let auth.js handle OAuth callback
       }
-      // Check our session cache
-      var cached = localStorage.getItem('dreamcore_session_cache');
-      if (!cached) {
+      // Check our session cache (sessionStorage) OR Supabase's session (localStorage)
+      // This allows cross-tab navigation while keeping sessionStorage for security
+      var cached = sessionStorage.getItem('dreamcore_session_cache');
+      var supabaseSession = localStorage.getItem('sb-tcynrijrovktirsvwiqb-auth-token');
+      if (!cached && !supabaseSession) {
         window.location.href = '/';
         return;
+      }
+      // If we have Supabase session but no cache, let auth.js handle session restoration
+      if (!cached && supabaseSession) {
+        return; // Don't redirect, let the page load and auth.js will restore session
       }
       try {
         var data = JSON.parse(cached);
         var age = Date.now() - data.timestamp;
         // Check cache TTL (5 min)
         if (age > 300000) {
-          localStorage.removeItem('dreamcore_session_cache');
+          sessionStorage.removeItem('dreamcore_session_cache');
           window.location.href = '/';
           return;
         }
         // Check session token expiry
         var session = data.session;
         if (session && session.expires_at && Date.now() / 1000 > session.expires_at - 60) {
-          localStorage.removeItem('dreamcore_session_cache');
+          sessionStorage.removeItem('dreamcore_session_cache');
           window.location.href = '/';
           return;
         }
       } catch(e) {
-        localStorage.removeItem('dreamcore_session_cache');
+        sessionStorage.removeItem('dreamcore_session_cache');
         window.location.href = '/';
       }
     })();

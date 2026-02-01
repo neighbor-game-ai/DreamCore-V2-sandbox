@@ -966,9 +966,42 @@ const injectGameHtml = (html, req) => {
   return content;
 };
 
+// ==================== Signed Game URL API ====================
+
+/**
+ * Generate a signed URL for game preview/play iframe access.
+ * This replaces passing access_token in URL query params, which is insecure.
+ *
+ * Signature algorithm:
+ *   payload = "{userId}:{projectId}:{expiresAt}"
+ *   signature = HMAC-SHA256(GAME_SIGNING_SECRET, payload)
+ *
+ * URL format: /game/{userId}/{projectId}/index.html?sig={signature}&exp={expiresAt}
+ */
+app.get('/api/game-url/:projectId', authenticate, checkProjectOwnership, (req, res) => {
+  const { projectId } = req.params;
+  const userId = req.user.id;
+  const expiresAt = Math.floor(Date.now() / 1000) + 300; // 5 minutes
+
+  const payload = `${userId}:${projectId}:${expiresAt}`;
+  const signature = crypto
+    .createHmac('sha256', config.GAME_SIGNING_SECRET)
+    .update(payload)
+    .digest('hex');
+
+  res.json({
+    url: `/game/${userId}/${projectId}/index.html?sig=${signature}&exp=${expiresAt}`,
+    expiresAt
+  });
+});
+
+// ==================== Game File Server ====================
+
 // Serve project game files (supports nested paths: js/, css/, assets/)
-// Authentication required for index.html - owner-only access (Phase 1 policy)
-// Sub-resources (js, css, etc.) are allowed if Referer matches the same project
+// Authentication methods (in priority order):
+// 1. Signed URL (sig + exp params) - recommended
+// 2. Bearer token - for migration period
+// 3. Referer-based - for sub-resources only
 app.get('/game/:userId/:projectId/*', optionalAuth, async (req, res) => {
   const { userId, projectId } = req.params;
   const filename = req.params[0] || 'index.html';
@@ -978,23 +1011,48 @@ app.get('/game/:userId/:projectId/*', optionalAuth, async (req, res) => {
     return res.status(400).json({ error: 'Invalid ID format' });
   }
 
-  // Check authentication or valid Referer
+  // Authentication methods (in priority order):
+  // 1. Signed URL (sig + exp params) - recommended, most secure
+  // 2. Bearer token - for migration period
+  // 3. Referer-based - for sub-resources loaded from authenticated iframe
+  const { sig, exp } = req.query;
   const referer = req.headers.referer || '';
   const expectedRefererPattern = new RegExp(`/game/${userId}/${projectId}/`);
   const isValidReferer = referer && expectedRefererPattern.test(referer);
 
-  if (req.user) {
-    // Token authentication: ownership check
+  if (sig && exp) {
+    // Method 1: Signed URL (recommended)
+    const now = Math.floor(Date.now() / 1000);
+    const expiresAt = parseInt(exp, 10);
+
+    if (isNaN(expiresAt) || now > expiresAt) {
+      return res.status(401).json({ error: 'URL expired' });
+    }
+
+    const payload = `${userId}:${projectId}:${expiresAt}`;
+    const expectedSig = crypto
+      .createHmac('sha256', config.GAME_SIGNING_SECRET)
+      .update(payload)
+      .digest('hex');
+
+    // Constant-time comparison to prevent timing attacks
+    if (sig.length !== expectedSig.length ||
+        !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) {
+      return res.status(401).json({ error: 'Invalid signature' });
+    }
+  } else if (req.user) {
+    // Method 2: Bearer token (migration period)
     if (req.user.id !== userId) {
       return res.status(403).json({ error: 'Access denied' });
     }
   } else if (isValidReferer) {
-    // Referer-based access for sub-resources loaded from iframe
-    // This allows audio.js, style.css, etc. to load without explicit token
-    // Security: Referer can be spoofed, but:
-    // - Only same-project resources are accessible
-    // - Primary access (index.html) requires valid token
-    // - Project files are not sensitive (user's own game code)
+    // Method 3: Referer-based access for sub-resources ONLY
+    // This allows audio.js, style.css, etc. to load from authenticated iframe
+    // Security: Referer can be spoofed, so restrict to non-HTML files only
+    // index.html always requires signature or token
+    if (filename === 'index.html' || filename.endsWith('.html')) {
+      return res.status(401).json({ error: 'Authentication required for HTML files' });
+    }
   } else {
     // No valid authentication
     return res.status(401).json({ error: 'Authentication required' });

@@ -170,6 +170,11 @@ const validateEnvironment = () => {
     warnings.push('V2_DOMAIN not set - public game assets may not load correctly from play domain');
   }
 
+  // In production, require GAME_SIGNING_SECRET or MODAL_INTERNAL_SECRET
+  if (IS_PRODUCTION && !process.env.GAME_SIGNING_SECRET && !process.env.MODAL_INTERNAL_SECRET) {
+    missing.push('GAME_SIGNING_SECRET or MODAL_INTERNAL_SECRET');
+  }
+
   if (missing.length > 0) {
     console.error('='.repeat(60));
     console.error('FATAL: Missing required environment variables:');
@@ -205,6 +210,11 @@ const MODAL_ENDPOINT = process.env.MODAL_ENDPOINT;
 
 // Internal authentication secret (shared between Express and Modal)
 const MODAL_INTERNAL_SECRET = process.env.MODAL_INTERNAL_SECRET;
+
+// Game URL signing secret (defaults to MODAL_INTERNAL_SECRET for convenience)
+// In development without secrets, generates a random one per server start
+const GAME_SIGNING_SECRET = process.env.GAME_SIGNING_SECRET || MODAL_INTERNAL_SECRET ||
+  (IS_PRODUCTION ? null : require('crypto').randomBytes(32).toString('hex'));
 
 // Optional: Individual endpoint overrides (auto-derived from MODAL_ENDPOINT if not set)
 const MODAL_GET_FILE_ENDPOINT = process.env.MODAL_GET_FILE_ENDPOINT;
@@ -321,6 +331,7 @@ module.exports = {
   USE_MODAL,
   MODAL_ENDPOINT,
   MODAL_INTERNAL_SECRET,
+  GAME_SIGNING_SECRET,
   MODAL_GET_FILE_ENDPOINT,
   MODAL_LIST_FILES_ENDPOINT,
   MODAL_APPLY_FILES_ENDPOINT,

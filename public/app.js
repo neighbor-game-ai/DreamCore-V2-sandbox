@@ -10,7 +10,7 @@ class GameCreatorApp {
     this.jobPollInterval = null;
 
     // Authentication state (Supabase Auth)
-    this.sessionId = localStorage.getItem('sessionId');
+    this.sessionId = sessionStorage.getItem('sessionId');
     this.currentUser = null;
     this.accessToken = null;
     this.isAuthenticated = false;
@@ -229,8 +229,8 @@ class GameCreatorApp {
     // IME composition state
     this.isComposing = false;
 
-    // Try to restore session from localStorage
-    this.sessionId = localStorage.getItem('sessionId');
+    // Try to restore session from sessionStorage
+    this.sessionId = sessionStorage.getItem('sessionId');
 
     this.init();
   }
@@ -278,7 +278,7 @@ class GameCreatorApp {
    */
   async checkAuthAndConnect() {
     try {
-      // FAST PATH: Use sync localStorage check first (no SDK, no async)
+      // FAST PATH: Use sync sessionStorage check first (no SDK, no async)
       const cachedSession = DreamCoreAuth.getSessionSync();
 
       if (!cachedSession) {
@@ -845,7 +845,7 @@ class GameCreatorApp {
             </div>
           ` : ''}
           <img
-            src="/api/projects/${project.id}/thumbnail?access_token=${encodeURIComponent(this.accessToken)}"
+            src="/api/projects/${project.id}/thumbnail"
             alt="${this.escapeHtml(project.name)}"
             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
             onload="this.style.display='block'; this.nextElementSibling.style.display='none';"
@@ -3312,7 +3312,7 @@ class GameCreatorApp {
       .replace(/'/g, '&#039;');
   }
 
-  refreshPreview() {
+  async refreshPreview() {
     if (!this.gamePreview) return;
     if (this.userId && this.currentProjectId && this.accessToken) {
       // Show loading status
@@ -3320,8 +3320,19 @@ class GameCreatorApp {
       this.currentErrors = [];
       this.hideErrorPanel();
 
-      const timestamp = Date.now();
-      this.gamePreview.src = `/game/${this.userId}/${this.currentProjectId}/index.html?t=${timestamp}&access_token=${encodeURIComponent(this.accessToken)}`;
+      try {
+        // Get signed URL from API (no access_token in URL)
+        const response = await DreamCoreAuth.authFetch(`/api/game-url/${this.currentProjectId}`);
+        if (!response.ok) {
+          throw new Error('Failed to get game URL');
+        }
+        const { url } = await response.json();
+        // Add cache-busting timestamp
+        this.gamePreview.src = `${url}&t=${Date.now()}`;
+      } catch (err) {
+        console.error('Failed to refresh preview:', err);
+        this.updateGameStatus('error', '読み込み失敗');
+      }
     }
   }
 

@@ -111,15 +111,27 @@ class PlayApp {
     }
   }
 
-  loadGame() {
+  async loadGame() {
     if (!this.gameData || !this.gameData.creatorId || !this.accessToken) {
       console.error('Cannot load game: missing creatorId or accessToken');
       return;
     }
 
-    // Load game with access_token for authentication
-    const gameUrl = `/game/${this.gameData.creatorId}/${this.projectId}/index.html?access_token=${encodeURIComponent(this.accessToken)}`;
-    this.gameFrame.src = gameUrl;
+    try {
+      // Get signed URL from API (no access_token in URL)
+      const response = await DreamCoreAuth.authFetch(`/api/game-url/${this.projectId}`);
+      if (!response.ok) {
+        throw new Error('Failed to get game URL');
+      }
+      const { url } = await response.json();
+      this.gameFrame.src = url;
+    } catch (err) {
+      console.error('Failed to load game:', err);
+      // Show error in iframe area
+      if (this.gameFrame) {
+        this.gameFrame.style.display = 'none';
+      }
+    }
   }
 
   setupListeners() {

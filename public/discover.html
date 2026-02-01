@@ -12,25 +12,28 @@
   <!-- Early auth check + Supabase lazy loader -->
   <script>
     (function() {
-      var cached = localStorage.getItem('dreamcore_session_cache');
-      if (!cached) { window.location.href = '/'; return; }
+      // Check our session cache (sessionStorage) OR Supabase's session (localStorage)
+      var cached = sessionStorage.getItem('dreamcore_session_cache');
+      var supabaseSession = localStorage.getItem('sb-tcynrijrovktirsvwiqb-auth-token');
+      if (!cached && !supabaseSession) { window.location.href = '/'; return; }
+      if (!cached && supabaseSession) { return; } // Let auth.js restore session
       try {
         var data = JSON.parse(cached);
         // Check cache TTL (5 min)
         if (Date.now() - data.timestamp > 300000) {
-          localStorage.removeItem('dreamcore_session_cache');
+          sessionStorage.removeItem('dreamcore_session_cache');
           window.location.href = '/';
           return;
         }
         // Check session token expiry
         var session = data.session;
         if (session && session.expires_at && Date.now() / 1000 > session.expires_at - 60) {
-          localStorage.removeItem('dreamcore_session_cache');
+          sessionStorage.removeItem('dreamcore_session_cache');
           window.location.href = '/';
           return;
         }
       } catch(e) {
-        localStorage.removeItem('dreamcore_session_cache');
+        sessionStorage.removeItem('dreamcore_session_cache');
         window.location.href = '/';
       }
     })();

@@ -20,15 +20,11 @@ const { verifyToken, createUserClient } = require('./supabaseClient');
  * @returns {string|null} Access token or null
  */
 const extractToken = (req) => {
-  // 1. Authorization header (standard)
+  // Authorization header only (query parameter removed for security)
+  // WebSocket auth uses message-based token, not query params
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7);
-  }
-
-  // 2. Query parameter (for WebSocket upgrade)
-  if (req.query && req.query.access_token) {
-    return req.query.access_token;
   }
 
   return null;
