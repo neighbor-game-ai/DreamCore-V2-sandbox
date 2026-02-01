@@ -754,15 +754,65 @@ class PublishPage {
 
       const result = await response.json();
 
-      // Show success and redirect to game detail page
-      alert('ゲームを登録しました！');
-      window.location.href = `/game/${result.gameId}`;
+      // Show share modal instead of alert
+      this.showShareModal(result.gameId);
     } catch (error) {
       console.error('Error publishing:', error);
       alert('登録に失敗しました');
     } finally {
       this.hideLoading();
     }
+  }
+
+  showShareModal(gameId) {
+    const modal = document.getElementById('shareModal');
+    const previewImage = document.getElementById('sharePreviewImage');
+    const gameTitle = document.getElementById('shareGameTitle');
+
+    // Set preview data
+    if (this.publishData.thumbnailUrl) {
+      previewImage.src = this.getAuthenticatedUrl(this.publishData.thumbnailUrl);
+    } else {
+      previewImage.src = `/api/projects/${this.projectId}/thumbnail`;
+    }
+    gameTitle.textContent = this.publishData.title;
+
+    // Game URL
+    const gameUrl = `${window.location.origin}/game/${gameId}`;
+
+    // Bind share buttons
+    document.getElementById('shareX').onclick = () => {
+      const text = `${this.publishData.title} を作りました！`;
+      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(gameUrl)}`;
+      window.open(url, '_blank', 'width=550,height=420');
+    };
+
+    document.getElementById('shareLine').onclick = () => {
+      const url = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(gameUrl)}`;
+      window.open(url, '_blank', 'width=550,height=420');
+    };
+
+    document.getElementById('shareCopy').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(gameUrl);
+        const btn = document.getElementById('shareCopy');
+        btn.classList.add('copied');
+        btn.querySelector('span').textContent = 'コピーしました';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.querySelector('span').textContent = 'URLをコピー';
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    };
+
+    document.getElementById('shareViewGame').onclick = () => {
+      window.location.href = `/game/${gameId}`;
+    };
+
+    // Show modal
+    modal.classList.remove('hidden');
   }
 
   goBack() {
