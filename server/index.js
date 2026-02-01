@@ -200,9 +200,19 @@ const upload = multer({
 // JSON body parser with increased limit for base64 images
 app.use(express.json({ limit: '50mb' }));
 
-// 一般APIレート制限（認証済み: 60 req/min, 未認証: 10 req/min）
+// 一般APIレート制限（認証済み: 60 req/min, 未認証: 60 req/min）
 // AI系APIは個別にさらに厳しい制限（5 req/min）が適用される
+// 公開API（ゲーム情報取得等）はレート制限から除外
 app.use('/api/', (req, res, next) => {
+  // 公開APIはレート制限から除外（UX優先）
+  const publicPaths = [
+    '/api/published-games/',  // ゲーム情報取得
+    '/api/config',            // フロントエンド設定
+  ];
+  if (publicPaths.some(p => req.path.startsWith(p))) {
+    return next();
+  }
+
   // 認証ヘッダーがある場合は認証済みレート制限を適用
   if (req.headers.authorization) {
     return apiRateLimiter(req, res, next);

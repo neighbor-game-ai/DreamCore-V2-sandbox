@@ -271,7 +271,7 @@ const RATE_LIMIT = {
   // API rate limits (requests per minute)
   api: {
     authenticated: 60,
-    anonymous: 10
+    anonymous: 60  // 公開APIは除外済みなので、残りの匿名APIも緩め
   }
 };
 
