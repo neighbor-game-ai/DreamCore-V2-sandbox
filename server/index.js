@@ -2286,7 +2286,7 @@ app.get('/api/projects', authenticate, async (req, res) => {
       description: g.description || '',
       isPublic: true,
       isPublished: true,
-      publishedGameId: g.id,
+      publishedGameId: g.public_id,  // Use short public_id for URLs
       createdAt: g.published_at,
       updatedAt: g.updated_at
     }));
