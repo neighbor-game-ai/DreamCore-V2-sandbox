@@ -915,15 +915,39 @@ body[data-page="publish"] {
   color: #fff;
 }
 
+/* WhatsApp */
+.share-btn.share-whatsapp {
+  background: #25D366;
+  color: #fff;
+}
+
 /* LINE */
 .share-btn.share-line {
   background: #06C755;
   color: #fff;
 }
 
-/* WhatsApp */
-.share-btn.share-whatsapp {
-  background: #25D366;
+/* Telegram */
+.share-btn.share-telegram {
+  background: #0088cc;
+  color: #fff;
+}
+
+/* Email */
+.share-btn.share-email {
+  background: linear-gradient(135deg, #EA4335 0%, #FBBC05 25%, #34A853 50%, #4285F4 75%, #EA4335 100%);
+  color: #fff;
+}
+
+/* SMS/iMessage */
+.share-btn.share-sms {
+  background: #34C759;
+  color: #fff;
+}
+
+/* Reddit */
+.share-btn.share-reddit {
+  background: #FF4500;
   color: #fff;
 }
 
@@ -931,6 +955,13 @@ body[data-page="publish"] {
 .share-btn.share-threads {
   background: #000;
   color: #fff;
+}
+
+/* QRコード */
+.share-btn.share-qr {
+  background: #fff;
+  color: var(--gray-700);
+  border: 2px solid var(--gray-200);
 }
 
 /* URLコピー */
@@ -944,6 +975,12 @@ body[data-page="publish"] {
   background: #22c55e;
   color: #fff;
   border-color: #22c55e;
+}
+
+/* ネイティブシェア */
+.share-btn.share-native {
+  background: var(--gray-800);
+  color: #fff;
 }
 
 /* タップフィードバック（タッチデバイス用） */
@@ -977,14 +1014,33 @@ body[data-page="publish"] {
     box-shadow: 0 6px 20px -4px rgba(24, 119, 242, 0.4);
   }
 
+  .share-btn.share-whatsapp:hover {
+    background: #20bd5a;
+    box-shadow: 0 6px 20px -4px rgba(37, 211, 102, 0.4);
+  }
+
   .share-btn.share-line:hover {
     background: #05b34c;
     box-shadow: 0 6px 20px -4px rgba(6, 199, 85, 0.4);
   }
 
-  .share-btn.share-whatsapp:hover {
-    background: #20bd5a;
-    box-shadow: 0 6px 20px -4px rgba(37, 211, 102, 0.4);
+  .share-btn.share-telegram:hover {
+    background: #0077b5;
+    box-shadow: 0 6px 20px -4px rgba(0, 136, 204, 0.4);
+  }
+
+  .share-btn.share-email:hover {
+    box-shadow: 0 6px 20px -4px rgba(66, 133, 244, 0.4);
+  }
+
+  .share-btn.share-sms:hover {
+    background: #2eb350;
+    box-shadow: 0 6px 20px -4px rgba(52, 199, 89, 0.4);
+  }
+
+  .share-btn.share-reddit:hover {
+    background: #e03d00;
+    box-shadow: 0 6px 20px -4px rgba(255, 69, 0, 0.4);
   }
 
   .share-btn.share-threads:hover {
@@ -992,15 +1048,77 @@ body[data-page="publish"] {
     box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.3);
   }
 
+  .share-btn.share-qr:hover,
   .share-btn.share-copy:hover {
     background: var(--gray-50);
     border-color: var(--gray-300);
     box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.1);
   }
 
+  .share-btn.share-qr:active,
   .share-btn.share-copy:active {
     background: var(--gray-100);
   }
+
+  .share-btn.share-native:hover {
+    background: var(--gray-700);
+    box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* QRコードモーダル */
+.qr-modal {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: inherit;
+}
+
+.qr-modal.hidden {
+  display: none;
+}
+
+.qr-modal-content {
+  background: #fff;
+  padding: 24px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.qr-modal-content canvas {
+  display: block;
+  margin: 0 auto 16px;
+  border-radius: 8px;
+}
+
+.qr-modal-content p {
+  color: var(--gray-600);
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+}
+
+.qr-close-btn {
+  padding: 10px 24px;
+  background: var(--gray-100);
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-700);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.qr-close-btn:hover {
+  background: var(--gray-200);
 }
 
 .share-modal-footer {

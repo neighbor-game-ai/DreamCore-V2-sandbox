@@ -782,35 +782,61 @@ class PublishPage {
 
     // Bind share buttons
     const shareText = `${this.publishData.title} を作りました！`;
+    const shareTextWithUrl = `${shareText} ${gameUrl}`;
 
     // X (Twitter)
     document.getElementById('shareX').onclick = () => {
-      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(gameUrl)}`;
-      window.open(url, '_blank', 'width=550,height=420');
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(gameUrl)}`, '_blank', 'width=550,height=420');
     };
 
     // Facebook
     document.getElementById('shareFacebook').onclick = () => {
-      const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(gameUrl)}`;
-      window.open(url, '_blank', 'width=550,height=420');
-    };
-
-    // LINE
-    document.getElementById('shareLine').onclick = () => {
-      const url = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(gameUrl)}`;
-      window.open(url, '_blank', 'width=550,height=420');
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(gameUrl)}`, '_blank', 'width=550,height=420');
     };
 
     // WhatsApp
     document.getElementById('shareWhatsApp').onclick = () => {
-      const url = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + gameUrl)}`;
-      window.open(url, '_blank', 'width=550,height=420');
+      window.open(`https://wa.me/?text=${encodeURIComponent(shareTextWithUrl)}`, '_blank', 'width=550,height=420');
+    };
+
+    // LINE
+    document.getElementById('shareLine').onclick = () => {
+      window.open(`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(gameUrl)}`, '_blank', 'width=550,height=420');
+    };
+
+    // Telegram
+    document.getElementById('shareTelegram').onclick = () => {
+      window.open(`https://t.me/share/url?url=${encodeURIComponent(gameUrl)}&text=${encodeURIComponent(shareText)}`, '_blank', 'width=550,height=420');
+    };
+
+    // Email
+    document.getElementById('shareEmail').onclick = () => {
+      const subject = encodeURIComponent(this.publishData.title);
+      const body = encodeURIComponent(`${shareText}\n\n${gameUrl}`);
+      window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    };
+
+    // SMS/iMessage
+    document.getElementById('shareSMS').onclick = () => {
+      // iOS uses &body=, Android uses ?body=
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const separator = isIOS ? '&' : '?';
+      window.location.href = `sms:${separator}body=${encodeURIComponent(shareTextWithUrl)}`;
+    };
+
+    // Reddit
+    document.getElementById('shareReddit').onclick = () => {
+      window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(gameUrl)}&title=${encodeURIComponent(this.publishData.title)}`, '_blank', 'width=550,height=420');
     };
 
     // Threads
     document.getElementById('shareThreads').onclick = () => {
-      const url = `https://www.threads.net/intent/post?text=${encodeURIComponent(shareText + ' ' + gameUrl)}`;
-      window.open(url, '_blank', 'width=550,height=420');
+      window.open(`https://www.threads.net/intent/post?text=${encodeURIComponent(shareTextWithUrl)}`, '_blank', 'width=550,height=420');
+    };
+
+    // QRコード
+    document.getElementById('shareQR').onclick = () => {
+      this.showQRCode(gameUrl);
     };
 
     // URLコピー
@@ -819,12 +845,36 @@ class PublishPage {
         await navigator.clipboard.writeText(gameUrl);
         const btn = document.getElementById('shareCopy');
         btn.classList.add('copied');
-        setTimeout(() => {
-          btn.classList.remove('copied');
-        }, 2000);
+        setTimeout(() => btn.classList.remove('copied'), 2000);
       } catch (err) {
         console.error('Failed to copy:', err);
       }
+    };
+
+    // ネイティブシェア（Web Share API）
+    const nativeBtn = document.getElementById('shareNative');
+    if (navigator.share) {
+      nativeBtn.onclick = async () => {
+        try {
+          await navigator.share({
+            title: this.publishData.title,
+            text: shareText,
+            url: gameUrl
+          });
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            console.error('Share failed:', err);
+          }
+        }
+      };
+    } else {
+      // Web Share API非対応の場合は非表示
+      nativeBtn.style.display = 'none';
+    }
+
+    // QRモーダルの閉じるボタン
+    document.getElementById('qrCloseBtn').onclick = () => {
+      document.getElementById('qrModal').classList.add('hidden');
     };
 
     document.getElementById('shareViewGame').onclick = () => {
@@ -868,6 +918,44 @@ class PublishPage {
   getAuthenticatedUrl(url) {
     // V2: Return URL as-is (no token needed for new endpoints)
     return url;
+  }
+
+  showQRCode(url) {
+    const modal = document.getElementById('qrModal');
+    const canvas = document.getElementById('qrCanvas');
+
+    // QRコード生成（シンプルなCanvas実装）
+    this.generateQRCode(canvas, url);
+
+    modal.classList.remove('hidden');
+  }
+
+  generateQRCode(canvas, text) {
+    // QRコードライブラリがない場合は、Google Chart APIを使用
+    const size = 200;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+    };
+    img.onerror = () => {
+      // フォールバック：URLを表示
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = '#000';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('QR生成エラー', size/2, size/2);
+    };
+    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}`;
   }
 }
 
