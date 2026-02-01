@@ -781,26 +781,46 @@ class PublishPage {
     const gameUrl = `${window.location.origin}/game/${gameId}`;
 
     // Bind share buttons
+    const shareText = `${this.publishData.title} を作りました！`;
+
+    // X (Twitter)
     document.getElementById('shareX').onclick = () => {
-      const text = `${this.publishData.title} を作りました！`;
-      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(gameUrl)}`;
+      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(gameUrl)}`;
       window.open(url, '_blank', 'width=550,height=420');
     };
 
+    // Facebook
+    document.getElementById('shareFacebook').onclick = () => {
+      const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(gameUrl)}`;
+      window.open(url, '_blank', 'width=550,height=420');
+    };
+
+    // LINE
     document.getElementById('shareLine').onclick = () => {
       const url = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(gameUrl)}`;
       window.open(url, '_blank', 'width=550,height=420');
     };
 
+    // WhatsApp
+    document.getElementById('shareWhatsApp').onclick = () => {
+      const url = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + gameUrl)}`;
+      window.open(url, '_blank', 'width=550,height=420');
+    };
+
+    // Threads
+    document.getElementById('shareThreads').onclick = () => {
+      const url = `https://www.threads.net/intent/post?text=${encodeURIComponent(shareText + ' ' + gameUrl)}`;
+      window.open(url, '_blank', 'width=550,height=420');
+    };
+
+    // URLコピー
     document.getElementById('shareCopy').onclick = async () => {
       try {
         await navigator.clipboard.writeText(gameUrl);
         const btn = document.getElementById('shareCopy');
         btn.classList.add('copied');
-        btn.querySelector('span').textContent = 'コピーしました';
         setTimeout(() => {
           btn.classList.remove('copied');
-          btn.querySelector('span').textContent = 'URLをコピー';
         }, 2000);
       } catch (err) {
         console.error('Failed to copy:', err);
