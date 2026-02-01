@@ -2458,19 +2458,32 @@
                 });
             });
 
-            // Native Share
+            // Native Share - 非対応時はURLコピーにフォールバック
             const nativeBtn = document.getElementById('shareBtnNative');
-            if (navigator.share && nativeBtn) {
+            if (nativeBtn) {
                 nativeBtn.addEventListener('click', async () => {
                     const url = getShareUrl('native', 'share_api');
-                    try {
-                        await navigator.share({ title: gameTitle, text: shareText, url: url });
-                    } catch (err) {
-                        if (err.name !== 'AbortError') console.error('Share failed:', err);
+                    if (navigator.share) {
+                        try {
+                            await navigator.share({ title: gameTitle, text: shareText, url: url });
+                        } catch (err) {
+                            if (err.name !== 'AbortError') console.error('Share failed:', err);
+                        }
+                    } else {
+                        // Web Share API非対応: URLをコピー
+                        try {
+                            await navigator.clipboard.writeText(url);
+                            const label = nativeBtn.querySelector('.share-btn-label');
+                            if (label) {
+                                const original = label.textContent;
+                                label.textContent = 'コピー!';
+                                setTimeout(() => { label.textContent = original; }, 1500);
+                            }
+                        } catch (err) {
+                            console.error('Copy failed:', err);
+                        }
                     }
                 });
-            } else if (nativeBtn) {
-                nativeBtn.style.display = 'none';
             }
         })();
 

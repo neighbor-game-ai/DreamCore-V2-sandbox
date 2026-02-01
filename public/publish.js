@@ -870,11 +870,11 @@ class PublishPage {
       }
     };
 
-    // ネイティブシェア（Web Share API）
+    // ネイティブシェア（Web Share API）- 非対応時はURLコピーにフォールバック
     const nativeBtn = document.getElementById('shareNative');
-    if (navigator.share) {
-      nativeBtn.onclick = async () => {
-        const url = getShareUrl('native', 'share_api');
+    nativeBtn.onclick = async () => {
+      const url = getShareUrl('native', 'share_api');
+      if (navigator.share) {
         try {
           await navigator.share({
             title: this.publishData.title,
@@ -886,10 +886,21 @@ class PublishPage {
             console.error('Share failed:', err);
           }
         }
-      };
-    } else {
-      nativeBtn.style.display = 'none';
-    }
+      } else {
+        // Web Share API非対応: URLをコピー
+        try {
+          await navigator.clipboard.writeText(url);
+          const label = nativeBtn.querySelector('.share-btn-label');
+          if (label) {
+            const original = label.textContent;
+            label.textContent = 'コピー!';
+            setTimeout(() => { label.textContent = original; }, 1500);
+          }
+        } catch (err) {
+          console.error('Copy failed:', err);
+        }
+      }
+    };
 
     // QRモーダルの閉じるボタン
     document.getElementById('qrCloseBtn').onclick = () => {
