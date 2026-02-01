@@ -189,6 +189,32 @@ Supabase に関する変更が必要な場合は、**まず DreamCore-V2 側で�
 - `db.getProject()` は使用禁止 - `db.getProjectById()` を使用
 - Cookie認証は使用しない - localStorage + Authorization ヘッダー方式を採用
 
+### ハードコード禁止
+
+**環境依存の値をコードに直接書くことは禁止。** 環境が変わると壊れる原因になる。
+
+| ❌ 禁止 | ✅ 代替方法 |
+|--------|------------|
+| Supabase プロジェクト ID をコードに埋め込む | パターンマッチで検索（例: `sb-*-auth-token`） |
+| API エンドポイント URL を直接記述 | 環境変数 or `/api/config` から取得 |
+| シークレットキーをコードに記述 | 環境変数で管理 |
+| 特定ユーザー ID をコードに記述 | DB から動的に取得 |
+
+**例（早期認証チェック）:**
+```javascript
+// ❌ ハードコード
+var session = localStorage.getItem('sb-tcynrijrovktirsvwiqb-auth-token');
+
+// ✅ パターンマッチ
+for (var i = 0; i < localStorage.length; i++) {
+  var key = localStorage.key(i);
+  if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+    session = localStorage.getItem(key);
+    break;
+  }
+}
+```
+
 ## 認証ルール
 
 - **認証方式**: Supabase Auth + Google OAuth
