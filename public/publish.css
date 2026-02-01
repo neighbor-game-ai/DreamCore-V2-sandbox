@@ -876,194 +876,159 @@ body[data-page="publish"] {
   overflow: hidden;
 }
 
+/* ============================================
+   Nintendo-Style Share Buttons
+   - Card-like buttons with labels
+   - Soft shadows and playful animations
+   ============================================ */
+
 .share-buttons {
-  padding: 24px 20px 8px;
-  display: flex;
+  padding: 20px 16px 12px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
 }
 
 .share-btn {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  padding: 0;
+  gap: 6px;
+  padding: 14px 8px 12px;
   border: none;
-  border-radius: 50%;
+  border-radius: 16px;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #fff;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow:
+    0 2px 8px -2px rgba(0, 0, 0, 0.08),
+    0 4px 16px -4px rgba(0, 0, 0, 0.06),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
 }
 
-.share-btn svg {
+/* Subtle gradient overlay for depth */
+.share-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.4) 0%, transparent 50%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.share-btn-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.share-btn-icon svg {
   width: 22px;
   height: 22px;
-  flex-shrink: 0;
 }
 
-/* X (Twitter) */
-.share-btn.share-x {
-  background: #0f0f0f;
-  color: #fff;
+.share-btn-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gray-600);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition: color 0.2s ease;
 }
 
-/* Facebook */
-.share-btn.share-facebook {
-  background: #1877F2;
-  color: #fff;
-}
-
-/* WhatsApp */
-.share-btn.share-whatsapp {
-  background: #25D366;
-  color: #fff;
-}
-
-/* LINE */
-.share-btn.share-line {
-  background: #06C755;
-  color: #fff;
-}
-
-/* Telegram */
-.share-btn.share-telegram {
-  background: #0088cc;
-  color: #fff;
-}
-
-/* Email */
-.share-btn.share-email {
+/* Individual button colors - icon backgrounds */
+.share-btn.share-x .share-btn-icon { background: #0f0f0f; color: #fff; }
+.share-btn.share-facebook .share-btn-icon { background: #1877F2; color: #fff; }
+.share-btn.share-whatsapp .share-btn-icon { background: #25D366; color: #fff; }
+.share-btn.share-line .share-btn-icon { background: #06C755; color: #fff; }
+.share-btn.share-telegram .share-btn-icon { background: #0088cc; color: #fff; }
+.share-btn.share-email .share-btn-icon {
   background: linear-gradient(135deg, #EA4335 0%, #FBBC05 25%, #34A853 50%, #4285F4 75%, #EA4335 100%);
   color: #fff;
 }
-
-/* SMS/iMessage */
-.share-btn.share-sms {
-  background: #34C759;
-  color: #fff;
-}
-
-/* Reddit */
-.share-btn.share-reddit {
-  background: #FF4500;
-  color: #fff;
-}
-
-/* Threads */
-.share-btn.share-threads {
-  background: #000;
-  color: #fff;
-}
-
-/* QRコード */
-.share-btn.share-qr {
-  background: #fff;
+.share-btn.share-sms .share-btn-icon { background: #34C759; color: #fff; }
+.share-btn.share-reddit .share-btn-icon { background: #FF4500; color: #fff; }
+.share-btn.share-threads .share-btn-icon { background: #000; color: #fff; }
+.share-btn.share-qr .share-btn-icon {
+  background: var(--gray-100);
   color: var(--gray-700);
-  border: 2px solid var(--gray-200);
 }
-
-/* URLコピー */
-.share-btn.share-copy {
-  background: #fff;
+.share-btn.share-copy .share-btn-icon {
+  background: var(--gray-100);
   color: var(--gray-700);
-  border: 2px solid var(--gray-200);
 }
+.share-btn.share-native .share-btn-icon { background: var(--gray-800); color: #fff; }
 
-.share-btn.share-copy.copied {
+/* Copied state */
+.share-btn.share-copy.copied .share-btn-icon {
   background: #22c55e;
   color: #fff;
-  border-color: #22c55e;
+}
+.share-btn.share-copy.copied .share-btn-label {
+  color: #22c55e;
 }
 
-/* ネイティブシェア */
-.share-btn.share-native {
-  background: var(--gray-800);
-  color: #fff;
-}
-
-/* タップフィードバック（タッチデバイス用） */
+/* Tap feedback for touch devices */
 .share-btn:active {
-  transform: scale(0.92);
-  opacity: 0.85;
+  transform: scale(0.94);
+  box-shadow:
+    0 1px 4px -1px rgba(0, 0, 0, 0.1),
+    0 2px 8px -2px rgba(0, 0, 0, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.04);
 }
 
-.share-btn.share-copy:active {
-  background: var(--gray-100);
+.share-btn:active .share-btn-icon {
+  transform: scale(0.95);
 }
 
-/* ホバー効果（マウスがあるデバイスのみ） */
+/* Hover effects for mouse devices */
 @media (hover: hover) {
   .share-btn:hover {
-    transform: translateY(-3px) scale(1.05);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow:
+      0 8px 24px -4px rgba(0, 0, 0, 0.12),
+      0 12px 32px -8px rgba(0, 0, 0, 0.1),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.04);
+  }
+
+  .share-btn:hover .share-btn-icon {
+    transform: scale(1.08);
+  }
+
+  .share-btn:hover .share-btn-label {
+    color: var(--gray-900);
   }
 
   .share-btn:active {
     transform: translateY(-1px) scale(1);
-    opacity: 1;
+    box-shadow:
+      0 2px 8px -2px rgba(0, 0, 0, 0.1),
+      0 4px 12px -4px rgba(0, 0, 0, 0.08),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.04);
   }
 
-  .share-btn.share-x:hover {
-    background: #262626;
-    box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.3);
+  .share-btn:active .share-btn-icon {
+    transform: scale(0.98);
   }
 
-  .share-btn.share-facebook:hover {
-    background: #166fe5;
-    box-shadow: 0 6px 20px -4px rgba(24, 119, 242, 0.4);
-  }
-
-  .share-btn.share-whatsapp:hover {
-    background: #20bd5a;
-    box-shadow: 0 6px 20px -4px rgba(37, 211, 102, 0.4);
-  }
-
-  .share-btn.share-line:hover {
-    background: #05b34c;
-    box-shadow: 0 6px 20px -4px rgba(6, 199, 85, 0.4);
-  }
-
-  .share-btn.share-telegram:hover {
-    background: #0077b5;
-    box-shadow: 0 6px 20px -4px rgba(0, 136, 204, 0.4);
-  }
-
-  .share-btn.share-email:hover {
-    box-shadow: 0 6px 20px -4px rgba(66, 133, 244, 0.4);
-  }
-
-  .share-btn.share-sms:hover {
-    background: #2eb350;
-    box-shadow: 0 6px 20px -4px rgba(52, 199, 89, 0.4);
-  }
-
-  .share-btn.share-reddit:hover {
-    background: #e03d00;
-    box-shadow: 0 6px 20px -4px rgba(255, 69, 0, 0.4);
-  }
-
-  .share-btn.share-threads:hover {
-    background: #1a1a1a;
-    box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.3);
-  }
-
-  .share-btn.share-qr:hover,
-  .share-btn.share-copy:hover {
-    background: var(--gray-50);
-    border-color: var(--gray-300);
-    box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.1);
-  }
-
-  .share-btn.share-qr:active,
-  .share-btn.share-copy:active {
-    background: var(--gray-100);
-  }
-
-  .share-btn.share-native:hover {
-    background: var(--gray-700);
-    box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.3);
-  }
+  /* Color-specific hover glows */
+  .share-btn.share-x:hover { box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.2), 0 12px 32px -8px rgba(0, 0, 0, 0.15); }
+  .share-btn.share-facebook:hover { box-shadow: 0 8px 24px -4px rgba(24, 119, 242, 0.25), 0 12px 32px -8px rgba(24, 119, 242, 0.15); }
+  .share-btn.share-whatsapp:hover { box-shadow: 0 8px 24px -4px rgba(37, 211, 102, 0.25), 0 12px 32px -8px rgba(37, 211, 102, 0.15); }
+  .share-btn.share-line:hover { box-shadow: 0 8px 24px -4px rgba(6, 199, 85, 0.25), 0 12px 32px -8px rgba(6, 199, 85, 0.15); }
+  .share-btn.share-telegram:hover { box-shadow: 0 8px 24px -4px rgba(0, 136, 204, 0.25), 0 12px 32px -8px rgba(0, 136, 204, 0.15); }
+  .share-btn.share-email:hover { box-shadow: 0 8px 24px -4px rgba(66, 133, 244, 0.25), 0 12px 32px -8px rgba(66, 133, 244, 0.15); }
+  .share-btn.share-sms:hover { box-shadow: 0 8px 24px -4px rgba(52, 199, 89, 0.25), 0 12px 32px -8px rgba(52, 199, 89, 0.15); }
+  .share-btn.share-reddit:hover { box-shadow: 0 8px 24px -4px rgba(255, 69, 0, 0.25), 0 12px 32px -8px rgba(255, 69, 0, 0.15); }
+  .share-btn.share-threads:hover { box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.2), 0 12px 32px -8px rgba(0, 0, 0, 0.15); }
 }
 
 /* QRコードモーダル */
@@ -1196,18 +1161,29 @@ body[data-page="publish"] {
   }
 
   .share-buttons {
-    padding: 20px 16px 8px;
-    gap: 10px;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 16px 12px 8px;
+    gap: 8px;
   }
 
   .share-btn {
-    width: 44px;
-    height: 44px;
+    padding: 10px 4px 8px;
+    border-radius: 12px;
   }
 
-  .share-btn svg {
-    width: 20px;
-    height: 20px;
+  .share-btn-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .share-btn-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .share-btn-label {
+    font-size: 9px;
   }
 
   .share-modal-footer {
