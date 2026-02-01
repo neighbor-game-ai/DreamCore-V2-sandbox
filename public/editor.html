@@ -18,7 +18,15 @@
     (function() {
       // Check our session cache (sessionStorage) OR Supabase's session (localStorage)
       var cached = sessionStorage.getItem('dreamcore_session_cache');
-      var supabaseSession = localStorage.getItem('sb-tcynrijrovktirsvwiqb-auth-token');
+      // Find Supabase session by pattern (sb-*-auth-token) to avoid hardcoding project ID
+      var supabaseSession = null;
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+          supabaseSession = localStorage.getItem(key);
+          break;
+        }
+      }
       if (!cached && !supabaseSession) { window.location.href = '/'; return; }
       if (!cached && supabaseSession) { return; } // Let auth.js restore session
       try {

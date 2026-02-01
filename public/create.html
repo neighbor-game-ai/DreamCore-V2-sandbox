@@ -44,7 +44,15 @@
       // Check our session cache (sessionStorage) OR Supabase's session (localStorage)
       // This allows cross-tab navigation while keeping sessionStorage for security
       var cached = sessionStorage.getItem('dreamcore_session_cache');
-      var supabaseSession = localStorage.getItem('sb-tcynrijrovktirsvwiqb-auth-token');
+      // Find Supabase session by pattern (sb-*-auth-token) to avoid hardcoding project ID
+      var supabaseSession = null;
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+          supabaseSession = localStorage.getItem(key);
+          break;
+        }
+      }
       if (!cached && !supabaseSession) {
         window.location.href = '/';
         return;

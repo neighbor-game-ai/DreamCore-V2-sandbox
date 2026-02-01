@@ -467,6 +467,34 @@ if (response.status === 401) {
 - `waitlist.html` が `DreamCoreAuth` を使用しているか確認
 - セッションが正しく取得できているか確認
 
+#### パターン3: 別タブでの無限ループ
+
+**症状**:
+- 別タブでページを開くと無限リダイレクト
+- 同じタブでは正常に動作する
+
+**原因**:
+- sessionStorage はタブ間で共有されない
+- 早期チェックで sessionStorage のみを確認していた
+- Supabase は localStorage にセッションを保存するが、それを見ていなかった
+
+**解決策**（実装済み 2026-02-01）:
+- 早期チェックで localStorage の Supabase セッションもフォールバックとして確認
+- sessionStorage がなくても localStorage があればリダイレクトせず auth.js に任せる
+
+**関連コード**（各 HTML の早期チェック）:
+```javascript
+var cached = sessionStorage.getItem('dreamcore_session_cache');
+var supabaseSession = localStorage.getItem('sb-tcynrijrovktirsvwiqb-auth-token');
+if (!cached && !supabaseSession) {
+  window.location.href = '/';  // 両方ない → ログインページへ
+  return;
+}
+if (!cached && supabaseSession) {
+  return;  // Supabase セッションあり → auth.js に任せる
+}
+```
+
 ### ページが一瞬見えてからリダイレクトされる
 
 **原因**: `visibility: hidden` スタイルがない
@@ -503,3 +531,5 @@ if (response.status === 401) {
 | 2026-01-30 | OAuth code exchange 対応追加 |
 | 2026-01-30 | waitlist.html を DreamCoreAuth 使用に修正 |
 | 2026-02-01 | トークン期限切れ時の自動リフレッシュ機能追加（無限リダイレクト修正） |
+| 2026-02-01 | 別タブ問題修正（localStorage フォールバック追加） |
+| 2026-02-01 | notifications.js に checkAccess 追加 |
