@@ -192,7 +192,7 @@
   </div>
 
   <script>
-    let supabase = null;
+    let supabaseClient = null;
     let session = null;
     let userCode = null;
 
@@ -211,13 +211,16 @@
     // Supabase を初期化
     async function initSupabase() {
       const config = await getSupabaseConfig();
-      supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
-      return supabase;
+      if (!window.supabase || !window.supabase.createClient) {
+        throw new Error('Supabase SDK not loaded');
+      }
+      supabaseClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+      return supabaseClient;
     }
 
     // セッションを取得
     async function getSession() {
-      const { data: { session: s } } = await supabase.auth.getSession();
+      const { data: { session: s } } = await supabaseClient.auth.getSession();
       return s;
     }
 
@@ -231,7 +234,7 @@
       const returnUrl = window.location.href;
       localStorage.setItem('cli_auth_return_url', returnUrl);
 
-      await supabase.auth.signInWithOAuth({
+      await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: returnUrl
