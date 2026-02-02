@@ -1,0 +1,11 @@
+name = "cli-dreamcore"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# カスタムドメイン設定（Cloudflare Dashboard で設定後に有効化）
+# routes = [
+#   { pattern = "cli.dreamcore.gg/*", zone_name = "dreamcore.gg" }
+# ]
+
+[observability]
+enabled = true

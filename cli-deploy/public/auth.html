@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CLI 認証 - DreamCore</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+    }
+    .logo {
+      font-size: 2em;
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+    .user-code {
+      font-size: 2.5em;
+      font-family: 'SF Mono', Monaco, monospace;
+      letter-spacing: 0.1em;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 12px;
+      margin: 20px 0;
+    }
+    .message {
+      color: rgba(255, 255, 255, 0.7);
+      margin: 20px 0;
+      line-height: 1.6;
+    }
+    .btn {
+      display: inline-block;
+      padding: 14px 32px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: #4f46e5;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #4338ca;
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      margin-left: 10px;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .buttons {
+      margin-top: 30px;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+    }
+    .status.success {
+      background: rgba(34, 197, 94, 0.2);
+      border: 1px solid rgba(34, 197, 94, 0.5);
+      color: #86efac;
+    }
+    .status.error {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+    }
+    .status.loading {
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.5);
+      color: #93c5fd;
+    }
+    .user-info {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      font-size: 0.9em;
+    }
+    .user-info .email {
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .login-section {
+      display: none;
+    }
+    .login-section.visible {
+      display: block;
+    }
+    .auth-section {
+      display: none;
+    }
+    .auth-section.visible {
+      display: block;
+    }
+    .no-code-section {
+      display: none;
+    }
+    .no-code-section.visible {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">DreamCore</div>
+    <h1>CLI 認証</h1>
+
+    <!-- ログインが必要な場合 -->
+    <div id="login-section" class="login-section">
+      <p class="message">
+        CLI からゲームをデプロイするには、DreamCore アカウントでログインしてください。
+      </p>
+      <div class="buttons">
+        <button id="login-btn" class="btn btn-primary" onclick="login()">
+          Google でログイン
+        </button>
+      </div>
+    </div>
+
+    <!-- 認可画面 -->
+    <div id="auth-section" class="auth-section">
+      <div id="user-info" class="user-info">
+        <div id="user-email" class="email"></div>
+      </div>
+
+      <p class="message">
+        以下のコードが CLI に表示されているか確認してください。
+      </p>
+
+      <div id="user-code" class="user-code">----</div>
+
+      <p class="message">
+        「認可」をクリックすると、CLI からこのアカウントでゲームをデプロイできるようになります。
+      </p>
+
+      <div id="status" class="status" style="display: none;"></div>
+
+      <div class="buttons">
+        <button id="authorize-btn" class="btn btn-primary" onclick="authorize()">
+          認可する
+        </button>
+        <button id="deny-btn" class="btn btn-secondary" onclick="deny()">
+          拒否
+        </button>
+      </div>
+    </div>
+
+    <!-- コードが指定されていない場合 -->
+    <div id="no-code-section" class="no-code-section">
+      <p class="message">
+        認証コードが指定されていません。<br>
+        CLI から認証フローを開始してください。
+      </p>
+      <div class="buttons">
+        <a href="/" class="btn btn-secondary">DreamCore に戻る</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let supabase = null;
+    let session = null;
+    let userCode = null;
+
+    // URL からコードを取得
+    function getCodeFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('code');
+    }
+
+    // Supabase 設定を取得
+    async function getSupabaseConfig() {
+      const res = await fetch('/api/config');
+      return res.json();
+    }
+
+    // Supabase を初期化
+    async function initSupabase() {
+      const config = await getSupabaseConfig();
+      supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+      return supabase;
+    }
+
+    // セッションを取得
+    async function getSession() {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      return s;
+    }
+
+    // ログイン
+    async function login() {
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true;
+      btn.textContent = 'リダイレクト中...';
+
+      // 現在の URL を保持（コード付き）
+      const returnUrl = window.location.href;
+      localStorage.setItem('cli_auth_return_url', returnUrl);
+
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: returnUrl
+        }
+      });
+    }
+
+    // 認可
+    async function authorize() {
+      if (!userCode) return;
+
+      const btn = document.getElementById('authorize-btn');
+      const denyBtn = document.getElementById('deny-btn');
+      const status = document.getElementById('status');
+
+      btn.disabled = true;
+      denyBtn.disabled = true;
+      btn.textContent = '認可中...';
+
+      status.style.display = 'block';
+      status.className = 'status loading';
+      status.textContent = 'CLI に認証情報を送信しています...';
+
+      try {
+        const res = await fetch('/api/cli/device/authorize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ user_code: userCode })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          status.className = 'status success';
+          status.textContent = '認可が完了しました。このタブを閉じて CLI に戻ってください。';
+          btn.textContent = '完了';
+        } else {
+          throw new Error(data.message || 'Authorization failed');
+        }
+      } catch (err) {
+        status.className = 'status error';
+        status.textContent = `エラー: ${err.message}`;
+        btn.disabled = false;
+        denyBtn.disabled = false;
+        btn.textContent = '認可する';
+      }
+    }
+
+    // 拒否
+    async function deny() {
+      if (!userCode) return;
+
+      const btn = document.getElementById('deny-btn');
+      const authorizeBtn = document.getElementById('authorize-btn');
+      const status = document.getElementById('status');
+
+      btn.disabled = true;
+      authorizeBtn.disabled = true;
+      btn.textContent = '拒否中...';
+
+      status.style.display = 'block';
+      status.className = 'status loading';
+      status.textContent = '拒否を送信しています...';
+
+      try {
+        const res = await fetch('/api/cli/device/deny', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ user_code: userCode })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          status.className = 'status';
+          status.textContent = '認可を拒否しました。このタブを閉じてください。';
+          btn.textContent = '拒否済み';
+        } else {
+          throw new Error(data.message || 'Deny failed');
+        }
+      } catch (err) {
+        status.className = 'status error';
+        status.textContent = `エラー: ${err.message}`;
+        btn.disabled = false;
+        authorizeBtn.disabled = false;
+        btn.textContent = '拒否';
+      }
+    }
+
+    // UI を更新
+    function showSection(sectionId) {
+      document.querySelectorAll('.login-section, .auth-section, .no-code-section').forEach(el => {
+        el.classList.remove('visible');
+      });
+      document.getElementById(sectionId).classList.add('visible');
+    }
+
+    // 初期化
+    async function init() {
+      userCode = getCodeFromUrl();
+
+      // コードがない場合
+      if (!userCode) {
+        showSection('no-code-section');
+        return;
+      }
+
+      // コードを表示
+      document.getElementById('user-code').textContent = userCode;
+
+      // Supabase SDK をロード
+      await loadSupabaseSDK();
+      await initSupabase();
+
+      // セッションを確認
+      session = await getSession();
+
+      if (session) {
+        // ログイン済み
+        document.getElementById('user-email').textContent = session.user.email;
+        showSection('auth-section');
+      } else {
+        // ログインが必要
+        showSection('login-section');
+      }
+    }
+
+    // Supabase SDK を動的ロード
+    function loadSupabaseSDK() {
+      return new Promise((resolve, reject) => {
+        if (window.supabase) {
+          resolve();
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    // ページロード時に初期化
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
