@@ -6,42 +6,53 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ---
 
-## 進行中のタスク
+## 最近の作業
 
-### CLI Deploy 実装
+### 2026-02-02: CLI Deploy 実装完了 ✅
 
-**セッション再開:** `claude --resume 1066e873-0ca7-4a51-9715-06aa61d60092`
+**詳細:** `.claude/logs/2026-02-02-cli-deploy-e2e-test.md`
 
-**計画:** `.claude/plans/tender-leaping-cook.md`
+CLI Deploy 機能の実装と E2E テストが完了:
 
-| ステップ | 状態 | 内容 |
-|----------|------|------|
-| Step 1 | ✅ 完了 | Supabase B セットアップ（`dgusszutzzoeadmpyira`） |
-| Step 2 | ✅ 完了 | サーバー実装（セキュリティレビュー済） |
-| Step 3 | ✅ 完了 | 認証ページ |
-| Step 4 | ✅ 完了 | server/index.js 統合 |
-| Step 5 | ✅ 完了 | Claude Code Skills |
-| Step 6 | ✅ 完了 | Cloudflare Worker（`cli-dreamcore.notef.workers.dev`） |
-| Step 7 | ✅ 完了 | GCE デプロイ |
+| テスト | 結果 |
+|--------|------|
+| デバイスコード発行 | ✅ |
+| 認証ページ（auth.html） | ✅ |
+| ユーザー認可 | ✅ |
+| トークン取得 | ✅ |
+| ゲームデプロイ | ✅ |
+| Cloudflare Worker 配信 | ✅ |
 
-**本番テスト:** ✅ 成功（2026-02-02）
-```json
-{
-  "device_code": "4bcd8fb0-c5fb-445d-91e2-d12af63f74d0",
-  "user_code": "57BH-9ZXE",
-  "verification_uri": "https://v2.dreamcore.gg/cli-auth/auth.html",
-  "expires_in": 900
-}
-```
+**テストデプロイ:**
+- URL: `https://cli-dreamcore.notef.workers.dev/g_dBvt9feIFW/`
 
-**次のアクション:**
-1. 認証フローの E2E テスト（verification_uri を開いて認証 → トークン取得）
-2. ゲームデプロイのテスト（`POST /api/cli/deploy`）
-3. Cloudflare Worker でゲーム配信テスト
+**修正した問題:**
+- Supabase SDK 変数名衝突（`supabase` → `supabaseClient`）
+- CSP が `/cli-auth/` をブロック → 除外対象に追加
+
+**残作業:**
+- [ ] デバッグログ削除
+- [ ] Claude Code Skills テスト
+- [ ] ユーザー向けドキュメント
 
 ---
 
-## 最近の作業
+### 2026-02-02: CLI Deploy GCE デプロイ
+
+**詳細:** `.claude/logs/2026-02-02-cli-deploy-gce.md`
+
+CLI Deploy 機能を GCE 本番環境にデプロイ:
+
+| ステップ | 内容 |
+|----------|------|
+| server/index.js 統合 | 条件付きロード（`SUPABASE_CLI_URL` で有効化） |
+| Cloudflare Worker | `cli-dreamcore.notef.workers.dev` にデプロイ |
+| 環境変数設定 | GCE .env に CLI Deploy 用変数追加 |
+| 本番テスト | `POST /api/cli/device/code` → 成功 |
+
+**発見:** bcrypt/adm-zip 不足、IPv6 Rate Limit 警告（非ブロッキング）
+
+---
 
 ### 2026-02-02: Remix機能UI + 環境差分対応
 
@@ -1141,4 +1152,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-02 (CLI Deploy GCE デプロイ完了)
+最終更新: 2026-02-02 (CLI Deploy E2E テスト完了)
