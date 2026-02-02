@@ -207,10 +207,11 @@ const helmetWithoutCSP = helmet({
   frameguard: false,
 });
 
-// ゲームページは CSP を適用しない（AI 生成コンテンツで CDN が予測不能）
-// ゲームは iframe sandbox で隔離されているため、CSP なしでも安全
+// ゲームページ・CLI認証ページは CSP を適用しない
+// - ゲーム: AI 生成コンテンツで CDN が予測不能、iframe sandbox で隔離
+// - CLI認証: cdn.jsdelivr.net から Supabase SDK をロード
 app.use((req, res, next) => {
-  if (req.path.startsWith('/g/') || req.path.startsWith('/game/')) {
+  if (req.path.startsWith('/g/') || req.path.startsWith('/game/') || req.path.startsWith('/cli-auth/')) {
     return helmetWithoutCSP(req, res, next);
   }
   return helmetWithCSP(req, res, next);
