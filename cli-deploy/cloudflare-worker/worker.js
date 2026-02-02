@@ -13,6 +13,31 @@ const SUPABASE_STORAGE_URL = 'https://dgusszutzzoeadmpyira.supabase.co/storage/v
 // public_id の形式: g_ + 10文字の英数字
 const PUBLIC_ID_REGEX = /^\/g_[A-Za-z0-9]{10}(\/|$)/;
 
+// 拡張子 → Content-Type マッピング
+const CONTENT_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.htm': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.txt': 'text/plain; charset=utf-8',
+};
+
 export default {
   async fetch(request) {
     const url = new URL(request.url);
@@ -51,6 +76,13 @@ export default {
 
     // レスポンスヘッダーを調整
     const headers = new Headers(response.headers);
+
+    // 拡張子から Content-Type を設定（Supabase が text/plain を返すことがあるため）
+    const ext = storagePath.substring(storagePath.lastIndexOf('.')).toLowerCase();
+    const correctContentType = CONTENT_TYPES[ext];
+    if (correctContentType) {
+      headers.set('Content-Type', correctContentType);
+    }
 
     // セキュリティヘッダー
     headers.set('X-Content-Type-Options', 'nosniff');

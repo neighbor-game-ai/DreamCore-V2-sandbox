@@ -71,6 +71,28 @@ url: https://cli-dreamcore.notef.workers.dev/g_dBvt9feIFW/
 | `server/index.js` | `/cli-auth/` を CSP 除外に追加 |
 | `cli-deploy/server/routes.js` | デバッグログ追加（後で削除予定） |
 
+## 本番ドメイン移行（追記）
+
+**cli.dreamcore.gg** への移行完了:
+
+| 項目 | 状態 |
+|------|------|
+| DNS (Cloudflare) | ✅ |
+| SSL/TLS | ✅ |
+| Worker Custom Domain | ✅ |
+| Content-Type 修正 | ✅ (拡張子ベース) |
+| CLI_GAMES_DOMAIN | ✅ `cli.dreamcore.gg` |
+
+**修正内容:**
+- Supabase Storage が `text/plain` を返す問題 → Worker で拡張子から Content-Type を設定
+
+**テストデプロイ:**
+```
+https://cli.dreamcore.gg/g_goV6zFkAlD/
+```
+
+---
+
 ## 残作業
 
 - [ ] デバッグログの削除（`routes.js` の `console.log`）

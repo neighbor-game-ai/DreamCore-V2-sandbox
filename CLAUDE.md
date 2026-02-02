@@ -479,3 +479,41 @@ USING (owner_id = auth.uid() AND is_deleted = FALSE)
 - **スケルトンカード**: create.html でプロジェクト一覧の即時表示
 - **iframe 遅延表示**: 新規プロジェクトでは非表示（HTTP リクエスト削減）
 - **画像 WebP 化**: PNG → WebP で約 90% サイズ削減
+
+## agent-browser 自動ログイン
+
+**詳細:** `.claude/skills/auto-login/SKILL.md`
+
+agent-browser で認証が必要なページにアクセスする際、Google OAuth をバイパスして Supabase Magic Link でログインできる。
+
+### 手順
+
+```bash
+# 1. Magic Link を生成
+node -e "
+const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config();
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+supabase.auth.admin.generateLink({
+  type: 'magiclink',
+  email: 'notef@neighbor.gg'  // 対象ユーザーのメール
+}).then(r => console.log(r.data.properties.action_link));
+"
+
+# 2. agent-browser でアクセス
+agent-browser open "生成されたMagic Link URL"
+
+# 3. 認証完了後、目的のページへ
+agent-browser open "https://v2.dreamcore.gg/create"
+```
+
+### 用途
+
+- スクリーンショット撮影（ログイン後の画面）
+- E2E テスト
+- 自動化スクリプト
+
+### 注意
+
+- Magic Link は一度しか使えない
+- Service Role Key が必要（`.env` に設定済み）
