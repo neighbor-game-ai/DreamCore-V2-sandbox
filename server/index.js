@@ -34,6 +34,9 @@ const helmet = require('helmet');
 const { JSDOM } = require('jsdom');
 const createDOMPurify = require('dompurify');
 
+// CLI Deploy（条件付きロード）
+const cliDeploy = process.env.SUPABASE_CLI_URL ? require('../cli-deploy/server') : null;
+
 // SVG サニタイズ（XSS 攻撃防止）
 const SVG_WINDOW = new JSDOM('').window;
 const SVG_PURIFY = createDOMPurify(SVG_WINDOW);
@@ -299,11 +302,17 @@ app.use((req, res, next) => {
 // 公開API（ゲーム情報取得等）はレート制限から除外
 app.use('/api/', (req, res, next) => {
   // 公開APIはレート制限から除外（UX優先）
+  // CLI Deploy は独自のレート制限を実装しているため除外
   const publicPaths = [
     '/api/published-games/',  // ゲーム情報取得
     '/api/config',            // フロントエンド設定
+    '/api/cli/',              // CLI Deploy（独自レート制限）
   ];
   if (publicPaths.some(p => req.path.startsWith(p))) {
+    return next();
+  }
+  // サムネイル取得は静的ファイル配信に近いため除外
+  if (/^\/api\/projects\/[^/]+\/thumbnail$/.test(req.path)) {
     return next();
   }
 
@@ -376,6 +385,14 @@ waitlist.setupRoutes(app);
 
 // ==================== Remix API ====================
 remixService.setupRoutes(app);
+
+// ==================== CLI Deploy ====================
+// CLI からゲームをデプロイする機能。無効化: SUPABASE_CLI_URL を未設定にする
+if (cliDeploy) {
+  app.use('/api/cli', cliDeploy.router);
+  app.use('/cli-auth', express.static(path.join(__dirname, '../cli-deploy/public')));
+  console.log('[CLI Deploy] Mounted at /api/cli');
+}
 
 // ==================== REST API Endpoints ====================
 
