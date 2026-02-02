@@ -878,6 +878,121 @@ AI でサムネイルを生成。
 
 ---
 
+### Remix & Lineage (V2)
+
+#### `POST /api/games/:gameId/remix`
+
+公開ゲームをリミックス（コピー）して自分のプロジェクトとして作成。
+
+**認証:** 必須
+
+**パラメータ:**
+- `gameId` (path): ゲーム ID (UUID または public_id `g_xxxxxxxxxx`)
+
+**レスポンス:**
+```json
+{
+  "success": true,
+  "project": {
+    "id": "uuid",
+    "name": "Original Game (Remix)",
+    "user_id": "uuid",
+    "remixed_from": "uuid"
+  }
+}
+```
+
+**エラー:**
+- 400: `{ "error": "Invalid game ID format" }`
+- 404: `{ "error": "Game not found" }` - 存在しない、または非公開
+- 403: `{ "error": "Remix not allowed for this game" }` - `allow_remix = false`
+
+---
+
+#### `GET /api/games/:gameId/lineage`
+
+ゲームの系譜（先祖・子孫のツリー）を取得。
+
+**認証:** 不要
+
+**パラメータ:**
+- `gameId` (path): ゲーム ID (UUID または public_id `g_xxxxxxxxxx`)
+
+**レスポンス:**
+```json
+{
+  "actualRoot": {
+    "projectId": "uuid",
+    "name": "Original Game",
+    "isPublic": true,
+    "creatorName": "User Name",
+    "avatarUrl": "https://...",
+    "publishedGame": {
+      "id": "uuid",
+      "publicId": "g_xxxxxxxxxx",
+      "title": "Original Game",
+      "thumbnailUrl": "/api/projects/{id}/thumbnail"
+    }
+  },
+  "visibleAncestors": [
+    {
+      "projectId": "uuid",
+      "name": "Ancestor Game",
+      "userId": "uuid",
+      "creatorName": "...",
+      "avatarUrl": "...",
+      "publishedGame": { ... },
+      "createdAt": "2026-01-29T12:00:00.000Z"
+    }
+  ],
+  "current": { ... },
+  "descendants": [
+    {
+      "projectId": "uuid",
+      "name": "Child Game",
+      "children": [ ... ]
+    }
+  ],
+  "stats": {
+    "actualDepth": 3,
+    "visibleDepth": 2,
+    "visibleRemixes": 5,
+    "totalRemixes": 8,
+    "totalRemixesExact": true,
+    "maxDepth": 10,
+    "depthCapped": false
+  }
+}
+```
+
+**非公開ルートの場合:**
+```json
+{
+  "actualRoot": {
+    "projectId": null,
+    "name": "(非公開)",
+    "isPublic": false,
+    "publishedGame": null
+  }
+}
+```
+
+**stats フィールド:**
+- `actualDepth`: 実際の世代数（非公開含む）
+- `visibleDepth`: 表示される公開先祖の数
+- `visibleRemixes`: 表示される公開 Remix 数（maxDepth 制限付き）
+- `totalRemixes`: 全 Remix 数（非公開含む）
+- `totalRemixesExact`: RPC 成功時 `true`、フォールバック時 `false`
+- `totalRemixesFallbackMaxDepth`: RPC 失敗時のフォールバック探索深さ（`exact=false` 時のみ）
+- `maxDepth`: 子孫の最大探索深さ (10)
+- `depthCapped`: 深さ制限に達したか
+
+**エラー:**
+- 400: `{ "error": "Invalid game ID format" }`
+- 404: `{ "error": "Game not found" }`
+
+---
+
 ### Published Games (V2)
 
 #### `POST /api/projects/:projectId/publish`
@@ -1943,3 +2058,4 @@ ws.send(JSON.stringify({
 | `server/jobManager.js` | ジョブ管理・スロット制御 |
 | `server/database-supabase.js` | Supabase DB 操作 |
 | `server/geminiClient.js` | Gemini API クライアント |
+| `server/remixService.js` | Remix API + 系譜 API |

@@ -8,6 +8,31 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-02: Remix機能 + 系譜API 実装
+
+**詳細:** `.claude/logs/2026-02-02-remix-lineage-api.md`
+
+公開ゲームをリミックスする機能と、系譜（先祖・子孫ツリー）を追跡するAPIを実装:
+
+| エンドポイント | 認証 | 説明 |
+|---------------|------|------|
+| `POST /api/games/:id/remix` | 必須 | 公開ゲームをリミックス |
+| `GET /api/games/:id/lineage` | 不要 | 系譜情報を取得 |
+
+**設計方針（itch.io/Roblox モデル）:**
+- 非公開ノードは伏せて繋げる（UUID/名前を隠す）
+- 先祖は無制限、子孫は maxDepth=10
+- CORS: ALLOWED_ORIGINS のみ
+- RPC `count_all_remixes` はサーバー専用
+
+**変更ファイル:**
+- `server/remixService.js` (新規)
+- `server/index.js` (CORS移動 + setupRoutes)
+- `supabase/migrations/014_count_all_remixes_rpc.sql` (新規)
+- `docs/API-REFERENCE.md` (更新)
+
+---
+
 ### 2026-02-01: CSP Report-Only 導入 (Phase 2b)
 
 **詳細:** `.claude/logs/2026-02-01-csp-report-only.md`
@@ -1067,4 +1092,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-01 (CSP Report-Only Phase 2b)
+最終更新: 2026-02-02 (Remix機能 + 系譜API)
