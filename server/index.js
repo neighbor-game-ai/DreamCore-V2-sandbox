@@ -28,6 +28,7 @@ const { ErrorCodes, createWsError, sendHttpError } = require('./errorResponse');
 const config = require('./config');
 const waitlist = require('./waitlist');
 const quotaService = require('./quotaService');
+const remixService = require('./remixService');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const { JSDOM } = require('jsdom');
@@ -265,6 +266,34 @@ const upload = multer({
 // JSON body parser with increased limit for base64 images
 app.use(express.json({ limit: '50mb' }));
 
+// CORS for Phase 2 subdomain architecture (play.dreamcore.gg)
+// Assets need to be accessible from the play subdomain where games run
+// NOTE: Moved here (before rate limiter) for lineage CORS to work properly
+const ALLOWED_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);  // Remove empty strings
+
+// Lineage API CORS - must be before rate limiter for OPTIONS preflight
+app.use((req, res, next) => {
+  const isLineageRequest = req.path.match(/^\/api\/games\/[^/]+\/lineage$/) &&
+    (req.method === 'GET' || req.method === 'OPTIONS');
+
+  if (isLineageRequest) {
+    const origin = req.headers.origin;
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With');
+      res.header('Vary', 'Origin');
+    }
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(204);
+    }
+  }
+  next();
+});
+
 // 一般APIレート制限（認証済み: 60 req/min, 未認証: 60 req/min）
 // AI系APIは個別にさらに厳しい制限（5 req/min）が適用される
 // 公開API（ゲーム情報取得等）はレート制限から除外
@@ -285,13 +314,6 @@ app.use('/api/', (req, res, next) => {
   // 認証ヘッダーがない場合は未認証レート制限を適用
   return publicRateLimiter(req, res, next);
 });
-
-// CORS for Phase 2 subdomain architecture (play.dreamcore.gg)
-// Assets need to be accessible from the play subdomain where games run
-const ALLOWED_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);  // Remove empty strings
 
 // Host detection middleware for play.dreamcore.gg
 app.use((req, res, next) => {
@@ -351,6 +373,9 @@ app.get('/api/config', (req, res) => {
 // ==================== Waitlist/Access Control ====================
 // V2 初期リリース用。無効化方法: この行をコメントアウト
 waitlist.setupRoutes(app);
+
+// ==================== Remix API ====================
+remixService.setupRoutes(app);
 
 // ==================== REST API Endpoints ====================
 
