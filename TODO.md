@@ -8,41 +8,43 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
-### 2026-02-02: 系譜デモページ作成
-
-**詳細:** `.claude/logs/2026-02-02-lineage-showcase-demo.md`
-
-複雑な系譜ツリーのデモページを作成（`public/demo/lineage-showcase.html`）。
-深さ制限（現在10世代）の緩和は将来の拡張として TODO に記載。
-
----
-
-### 2026-02-02: CLI Deploy 実装完了 ✅
+### 2026-02-02: CLI Deploy 本番ドメイン移行完了 ✅
 
 **詳細:** `.claude/logs/2026-02-02-cli-deploy-e2e-test.md`
 
-CLI Deploy 機能の実装と E2E テストが完了:
+cli.dreamcore.gg への本番ドメイン移行が完了:
 
-| テスト | 結果 |
-|--------|------|
-| デバイスコード発行 | ✅ |
-| 認証ページ（auth.html） | ✅ |
-| ユーザー認可 | ✅ |
-| トークン取得 | ✅ |
-| ゲームデプロイ | ✅ |
-| Cloudflare Worker 配信 | ✅ |
+| 項目 | 状態 |
+|------|------|
+| DNS (Cloudflare) | ✅ |
+| SSL/TLS | ✅ |
+| Worker Custom Domain | ✅ |
+| Content-Type 修正 | ✅ |
+| CLI_GAMES_DOMAIN 更新 | ✅ |
 
-**テストデプロイ:**
-- URL: `https://cli-dreamcore.notef.workers.dev/g_dBvt9feIFW/`
+**本番 URL:**
+- API: `https://v2.dreamcore.gg/api/cli/*`
+- 認証: `https://v2.dreamcore.gg/cli-auth/auth.html`
+- ゲーム配信: `https://cli.dreamcore.gg/g_xxxxx/`
 
 **修正した問題:**
-- Supabase SDK 変数名衝突（`supabase` → `supabaseClient`）
+- Supabase Storage が `text/plain` を返す → Worker で拡張子から Content-Type 設定
+- auth.html で Supabase SDK 変数名衝突 → `supabaseClient` にリネーム
 - CSP が `/cli-auth/` をブロック → 除外対象に追加
 
 **残作業:**
 - [ ] デバッグログ削除
 - [ ] Claude Code Skills テスト
 - [ ] ユーザー向けドキュメント
+
+---
+
+### 2026-02-02: 系譜デモページ作成
+
+**詳細:** `.claude/logs/2026-02-02-lineage-showcase-demo.md`
+
+複雑な系譜ツリーのデモページを作成（`public/demo/lineage-showcase.html`）。
+深さ制限（現在10世代）の緩和は将来の拡張として TODO に記載。
 
 ---
 
@@ -1162,4 +1164,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-02 (CLI Deploy E2E テスト完了)
+最終更新: 2026-02-02 (CLI Deploy 本番ドメイン移行完了)
