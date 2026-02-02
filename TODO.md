@@ -6,7 +6,56 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ---
 
+## 進行中のタスク
+
+### CLI Deploy 実装
+
+**セッション再開:** `claude --resume 1066e873-0ca7-4a51-9715-06aa61d60092`
+
+**計画:** `.claude/plans/tender-leaping-cook.md`
+
+| ステップ | 状態 | 内容 |
+|----------|------|------|
+| Step 1 | ✅ 完了 | Supabase B セットアップ（`dgusszutzzoeadmpyira`） |
+| Step 2 | ✅ 完了 | サーバー実装（セキュリティレビュー済） |
+| Step 3 | ✅ 完了 | 認証ページ |
+| Step 4 | ✅ 完了 | server/index.js 統合 |
+| Step 5 | ✅ 完了 | Claude Code Skills |
+| Step 6 | ✅ 完了 | Cloudflare Worker（`cli-dreamcore.notef.workers.dev`） |
+| Step 7 | ✅ 完了 | GCE デプロイ |
+
+**本番テスト:** ✅ 成功（2026-02-02）
+```json
+{
+  "device_code": "4bcd8fb0-c5fb-445d-91e2-d12af63f74d0",
+  "user_code": "57BH-9ZXE",
+  "verification_uri": "https://v2.dreamcore.gg/cli-auth/auth.html",
+  "expires_in": 900
+}
+```
+
+**次のアクション:**
+1. 認証フローの E2E テスト（verification_uri を開いて認証 → トークン取得）
+2. ゲームデプロイのテスト（`POST /api/cli/deploy`）
+3. Cloudflare Worker でゲーム配信テスト
+
+---
+
 ## 最近の作業
+
+### 2026-02-02: Remix機能UI + 環境差分対応
+
+**詳細:** `.claude/logs/2026-02-02-remix-ui-and-fixes.md`
+
+| 作業 | 内容 |
+|------|------|
+| Remix UI | ボタン、系譜ビュー、成功メッセージ（フラッシュ回避） |
+| サムネイル修正 | レート制限から除外（429エラー解消） |
+| 環境差分検出 | `/api/health` にコミットハッシュ追加 |
+
+**学び:** PM2再起動後は `uptime` で新プロセス確認が確実
+
+---
 
 ### 2026-02-02: Remix機能 + 系譜API 実装
 
@@ -1092,4 +1141,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-02 (Remix機能 + 系譜API)
+最終更新: 2026-02-02 (CLI Deploy GCE デプロイ完了)
