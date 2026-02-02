@@ -155,12 +155,14 @@ router.post('/device/code', deviceCodeLimiter, async (req, res) => {
 router.post('/device/authorize', authenticateSupabaseToken, authorizeLimiter, async (req, res) => {
   try {
     const { user_code } = req.body;
+    console.log('[CLI Auth] Authorize request:', { user_code, userId: req.userId });
 
     if (!user_code) {
       return res.status(400).json({ error: 'invalid_request', message: 'user_code is required' });
     }
 
     const result = await authorizeUserCode(user_code, req.userId);
+    console.log('[CLI Auth] Authorize result:', result);
 
     if (!result.success) {
       return res.status(400).json(result);
@@ -168,7 +170,7 @@ router.post('/device/authorize', authenticateSupabaseToken, authorizeLimiter, as
 
     res.json({ success: true, message: 'Authorization successful' });
   } catch (error) {
-    console.error('Authorize error:', error);
+    console.error('[CLI Auth] Authorize error:', error);
     res.status(500).json({ error: 'server_error', message: 'Failed to authorize' });
   }
 });
