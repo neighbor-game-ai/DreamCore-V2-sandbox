@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系譜デモ - DreamCore</title>
+    <style>
+        :root {
+            --bg: #f5f5f5;
+            --white: #ffffff;
+            --black: #1a1a1a;
+            --gray-100: #f0f0f0;
+            --gray-200: #e0e0e0;
+            --gray-300: #c0c0c0;
+            --gray-500: #888888;
+            --gray-600: #666666;
+            --red: #ff3b30;
+            --green: #34c759;
+            --blue: #007aff;
+            --purple: #af52de;
+            --orange: #ff9500;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--black);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 12px;
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--gray-600);
+            text-decoration: none;
+        }
+
+        .back-btn:hover {
+            background: var(--gray-100);
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 24px;
+            padding: 16px 20px;
+            background: var(--white);
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--red);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .section {
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--gray-200);
+        }
+
+        /* Lineage Card */
+        .lineage-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: var(--white);
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .lineage-card:hover {
+            border-color: var(--gray-300);
+            transform: translateX(4px);
+        }
+
+        .lineage-card.current {
+            border-color: var(--red);
+            background: rgba(255, 59, 48, 0.05);
+        }
+
+        .lineage-card.current::before {
+            content: '現在';
+            position: absolute;
+            top: -8px;
+            left: 12px;
+            background: var(--red);
+            color: white;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .lineage-card.private {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        .lineage-card.private:hover {
+            transform: none;
+        }
+
+        .card-thumb {
+            width: 56px;
+            height: 56px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: linear-gradient(135deg, var(--gray-200), var(--gray-300));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .card-title {
+            font-weight: 600;
+            font-size: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--gray-500);
+        }
+
+        .card-creator {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .avatar {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--gray-300);
+        }
+
+        .card-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge-root {
+            background: var(--purple);
+            color: white;
+        }
+
+        .badge-gen {
+            background: var(--gray-200);
+            color: var(--gray-600);
+        }
+
+        /* Ancestor Chain */
+        .ancestor-chain {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .ancestor-item {
+            position: relative;
+        }
+
+        .ancestor-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 28px;
+            top: 100%;
+            width: 2px;
+            height: 16px;
+            background: var(--gray-300);
+        }
+
+        .ancestor-item + .ancestor-item {
+            margin-top: 16px;
+        }
+
+        .arrow-down {
+            display: flex;
+            justify-content: center;
+            padding: 8px 0;
+            color: var(--gray-400);
+        }
+
+        /* Descendant Tree */
+        .descendant-tree {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .descendant-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-left: 24px;
+            border-left: 2px solid var(--gray-200);
+            margin-left: 28px;
+        }
+
+        .descendant-level-1 {
+            border-left-color: var(--blue);
+        }
+
+        .descendant-level-2 {
+            border-left-color: var(--green);
+        }
+
+        .descendant-level-3 {
+            border-left-color: var(--orange);
+        }
+
+        .depth-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--gray-100);
+            border-radius: 8px;
+            color: var(--gray-500);
+            font-size: 13px;
+        }
+
+        .depth-indicator svg {
+            flex-shrink: 0;
+        }
+
+        /* Current Game Highlight */
+        .current-wrapper {
+            position: relative;
+            margin: 16px 0;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding: 16px;
+            background: var(--white);
+            border-radius: 12px;
+            margin-top: 24px;
+            font-size: 13px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .container {
+                padding: 16px;
+            }
+
+            .stats-bar {
+                gap: 16px;
+            }
+
+            .stat-value {
+                font-size: 24px;
+            }
+
+            .card-thumb {
+                width: 48px;
+                height: 48px;
+            }
+
+            .descendant-group {
+                padding-left: 16px;
+                margin-left: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="/explore" class="back-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                戻る
+            </a>
+            <h1 class="title">🌳 スペースインベーダー 系譜</h1>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat">
+                <span class="stat-value">47</span>
+                <span class="stat-label">総リミックス</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">23</span>
+                <span class="stat-label">公開</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">5</span>
+                <span class="stat-label">世代</span>
+            </div>
+        </div>
+
+        <!-- 先祖セクション -->
+        <div class="section">
+            <div class="section-title">先祖 (Ancestors)</div>
+            <div class="ancestor-chain">
+                <div class="ancestor-item">
+                    <div class="lineage-card private">
+                        <div class="card-thumb">🔒</div>
+                        <div class="card-info">
+                            <div class="card-title">(非公開)</div>
+                            <div class="card-meta">
+                                <span class="card-badge badge-root">ルート</span>
+                                <span>オリジナル作品</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ancestor-item">
+                    <a href="#" class="lineage-card">
+                        <div class="card-thumb">🚀</div>
+                        <div class="card-info">
+                            <div class="card-title">ギャラクシーシューター</div>
+                            <div class="card-meta">
+                                <span class="card-badge badge-gen">第2世代</span>
+                                <div class="card-creator">
+                                    <div class="avatar" style="background: #ff9500;"></div>
+                                    galaxy_master
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="ancestor-item">
+                    <a href="#" class="lineage-card">
+                        <div class="card-thumb">👾</div>
+                        <div class="card-info">
+                            <div class="card-title">レトロエイリアン</div>
+                            <div class="card-meta">
+                                <span class="card-badge badge-gen">第3世代</span>
+                                <div class="card-creator">
+                                    <div class="avatar" style="background: #af52de;"></div>
+                                    retro_lover
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 現在のゲーム -->
+        <div class="section">
+            <div class="section-title">現在のゲーム</div>
+            <div class="current-wrapper">
+                <div class="lineage-card current">
+                    <div class="card-thumb">🛸</div>
+                    <div class="card-info">
+                        <div class="card-title">スペースインベーダー リミックス</div>
+                        <div class="card-meta">
+                            <span class="card-badge badge-gen">第4世代</span>
+                            <div class="card-creator">
+                                <div class="avatar" style="background: #007aff;"></div>
+                                space_hero
+                            </div>
+                            <span>• 2026-02-01</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 子孫セクション -->
+        <div class="section">
+            <div class="section-title">子孫 (Descendants) - 12件</div>
+            <div class="descendant-tree">
+
+                <!-- 第1世代子孫 -->
+                <div class="descendant-group descendant-level-1">
+                    <a href="#" class="lineage-card">
+                        <div class="card-thumb">🌟</div>
+                        <div class="card-info">
+                            <div class="card-title">スターブラスター</div>
+                            <div class="card-meta">
+                                <div class="card-creator">
+                                    <div class="avatar" style="background: #34c759;"></div>
+                                    star_player
+                                </div>
+                                <span>• 3 リミックス</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- 第2世代子孫（スターブラスターの子） -->
+                    <div class="descendant-group descendant-level-2">
+                        <a href="#" class="lineage-card">
+                            <div class="card-thumb">✨</div>
+                            <div class="card-info">
+                                <div class="card-title">ネオンスター</div>
+                                <div class="card-meta">
+                                    <div class="card-creator">
+                                        <div class="avatar" style="background: #ff3b30;"></div>
+                                        neon_master
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        <a href="#" class="lineage-card">
+                            <div class="card-thumb">💫</div>
+                            <div class="card-info">
+                                <div class="card-title">コズミックダンス</div>
+                                <div class="card-meta">
+                                    <div class="card-creator">
+                                        <div class="avatar" style="background: #5856d6;"></div>
+                                        cosmic_dancer
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+
+                        <!-- 第3世代子孫 -->
+                        <div class="descendant-group descendant-level-3">
+                            <a href="#" class="lineage-card">
+                                <div class="card-thumb">🎆</div>
+                                <div class="card-info">
+                                    <div class="card-title">ファイアワークス</div>
+                                    <div class="card-meta">
+                                        <div class="card-creator">
+                                            <div class="avatar" style="background: #ff9500;"></div>
+                                            firework_fan
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 別の第1世代子孫 -->
+                <div class="descendant-group descendant-level-1">
+                    <a href="#" class="lineage-card">
+                        <div class="card-thumb">🎮</div>
+                        <div class="card-info">
+                            <div class="card-title">アーケードシューター</div>
+                            <div class="card-meta">
+                                <div class="card-creator">
+                                    <div class="avatar" style="background: #00c7be;"></div>
+                                    arcade_king
+                                </div>
+                                <span>• 5 リミックス</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <div class="descendant-group descendant-level-2">
+                        <a href="#" class="lineage-card">
+                            <div class="card-thumb">🕹️</div>
+                            <div class="card-info">
+                                <div class="card-title">レトロアーケード</div>
+                                <div class="card-meta">
+                                    <div class="card-creator">
+                                        <div class="avatar" style="background: #ff2d55;"></div>
+                                        retro_gamer
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        <a href="#" class="lineage-card">
+                            <div class="card-thumb">👻</div>
+                            <div class="card-info">
+                                <div class="card-title">ゴーストハンター</div>
+                                <div class="card-meta">
+                                    <div class="card-creator">
+                                        <div class="avatar" style="background: #8e8e93;"></div>
+                                        ghost_buster
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        <a href="#" class="lineage-card">
+                            <div class="card-thumb">🤖</div>
+                            <div class="card-info">
+                                <div class="card-title">ロボットウォーズ</div>
+                                <div class="card-meta">
+                                    <div class="card-creator">
+                                        <div class="avatar" style="background: #5ac8fa;"></div>
+                                        robot_fighter
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- さらに別の第1世代子孫 -->
+                <div class="descendant-group descendant-level-1">
+                    <a href="#" class="lineage-card">
+                        <div class="card-thumb">🌈</div>
+                        <div class="card-info">
+                            <div class="card-title">レインボーシューター</div>
+                            <div class="card-meta">
+                                <div class="card-creator">
+                                    <div class="avatar" style="background: linear-gradient(135deg, #ff3b30, #ff9500, #ffcc00, #34c759, #007aff, #af52de);"></div>
+                                    rainbow_artist
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- 深さ制限インジケータ -->
+                <div class="depth-indicator">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 8v4M12 16h.01"/>
+                    </svg>
+                    さらに 24 件のリミックスがあります（深さ制限: 10世代）
+                </div>
+            </div>
+        </div>
+
+        <!-- 凡例 -->
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--blue);"></div>
+                <span>第1世代</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--green);"></div>
+                <span>第2世代</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--orange);"></div>
+                <span>第3世代</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--gray-300);"></div>
+                <span>先祖チェーン</span>
+            </div>
+        </div>
+
+        <p style="text-align: center; margin-top: 32px; color: var(--gray-500); font-size: 13px;">
+            💡 各カードをクリックするとそのゲームに移動します
+        </p>
+    </div>
+</body>
+</html>

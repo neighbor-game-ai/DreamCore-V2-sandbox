@@ -8,6 +8,15 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-02: 系譜デモページ作成
+
+**詳細:** `.claude/logs/2026-02-02-lineage-showcase-demo.md`
+
+複雑な系譜ツリーのデモページを作成（`public/demo/lineage-showcase.html`）。
+深さ制限（現在10世代）の緩和は将来の拡張として TODO に記載。
+
+---
+
 ### 2026-02-02: CLI Deploy 実装完了 ✅
 
 **詳細:** `.claude/logs/2026-02-02-cli-deploy-e2e-test.md`
@@ -372,6 +381,7 @@ Content-Security-Policy-Report-Only ヘッダーを導入:
 - [ ] **Sandbox 上限** - ユーザーあたり最大3個の制限（Phase 2）
 
 ### 低優先度（将来）
+- [ ] **系譜表示の深さ制限緩和** - 現在10世代、50〜無制限に拡張可能（`remixService.js:198`）
 - [ ] **play_count レート制限** - IP+gameId で短時間重複を抑制（悪用対策）
 - [ ] **Bottom Navigation 共通化** - 各HTMLに直接記述 → JS動的挿入 or Web Components
 - [ ] カスタムスキル ZIP 配布（ゲームテンプレート）
