@@ -1196,10 +1196,15 @@ const getPublicProjects = async (limit = 50) => {
  * @returns {Promise<Object>} New remixed project
  */
 const remixProject = async (client, userId, sourceProjectId) => {
-  // Get source project (uses admin to read public projects)
-  const sourceProject = await db.getPublicProjectById(sourceProjectId);
-  if (!sourceProject || !sourceProject.is_public) {
-    throw new Error('Project not found or not public');
+  // Get source project via admin (caller already verified published_games.allow_remix)
+  const { data: sourceProject, error } = await supabaseAdmin
+    .from('projects')
+    .select('*')
+    .eq('id', sourceProjectId)
+    .single();
+
+  if (error || !sourceProject) {
+    throw new Error('Project not found');
   }
 
   // Create new project as remix
@@ -1211,13 +1216,23 @@ const remixProject = async (client, userId, sourceProjectId) => {
   );
 
   // Copy files from source to new project
+  // If USE_MODAL, sync source files from Modal to local FS first
+  if (config.USE_MODAL) {
+    await syncFromModal(sourceProject.user_id, sourceProjectId);
+  }
+
   const sourceDir = getProjectDir(sourceProject.user_id, sourceProjectId);
   const targetDir = ensureProjectDir(userId, newProject.id);
 
-  const files = listProjectFiles(sourceProject.user_id, sourceProjectId);
+  // listProjectFiles returns Promise when USE_MODAL=true
+  const files = await listProjectFiles(sourceProject.user_id, sourceProjectId);
   for (const file of files) {
-    const content = fs.readFileSync(path.join(sourceDir, file));
-    fs.writeFileSync(path.join(targetDir, file), content);
+    const sourcePath = path.join(sourceDir, file);
+    const targetPath = path.join(targetDir, file);
+    // Ensure subdirectories exist
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    const content = fs.readFileSync(sourcePath);
+    fs.writeFileSync(targetPath, content);
   }
 
   // Commit the remix

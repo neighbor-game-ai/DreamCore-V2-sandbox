@@ -371,8 +371,8 @@ function setupRoutes(app) {
       console.log(`[Remix] User ${req.user.id} remixed ${gameId} → ${newProject.id}`);
       res.json({ success: true, project: newProject });
     } catch (error) {
-      console.error('[Remix] Error:', error.message);
-      res.status(500).json({ error: 'Failed to remix game' });
+      console.error('[Remix] Error:', error.message, error.stack);
+      res.status(500).json({ error: 'Failed to remix game', detail: error.message });
     }
   });
 

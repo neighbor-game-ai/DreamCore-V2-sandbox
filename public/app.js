@@ -441,6 +441,12 @@ class GameCreatorApp {
     this.setupStyleSelectListeners();
     this.setupRouting();
     this.setupErrorListeners();
+
+    // Early detection for remixed projects: show success message immediately
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('remixed') === 'true') {
+      this.showRemixSuccessMessage();
+    }
   }
 
   // ==================== Authentication ====================
@@ -1908,11 +1914,29 @@ class GameCreatorApp {
             this.addMessage(h.content, h.role, options);
           });
         } else {
-          // Show welcome message for new/empty projects
-          this.showWelcomeMessage();
-          // Hide iframe for new projects (no game yet)
-          if (this.gamePreview) {
-            this.updatePreviewVisibility(false);
+          // Check if this is a remixed project
+          const urlParams = new URLSearchParams(window.location.search);
+          const isRemixed = urlParams.get('remixed') === 'true';
+
+          if (isRemixed) {
+            // Show remix success message instead of welcome
+            this.showRemixSuccessMessage();
+            // Show preview for remixed projects (they have files)
+            if (this.gamePreview) {
+              this.refreshPreview();
+              this.updatePreviewVisibility(true);
+            }
+            // Clear the remixed param from URL
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('remixed');
+            history.replaceState({}, '', newUrl);
+          } else {
+            // Show welcome message for new/empty projects
+            this.showWelcomeMessage();
+            // Hide iframe for new projects (no game yet)
+            if (this.gamePreview) {
+              this.updatePreviewVisibility(false);
+            }
           }
         }
 
@@ -2770,6 +2794,60 @@ class GameCreatorApp {
         }
       }, 100);
     });
+  }
+
+  showRemixSuccessMessage() {
+    // Replace existing #welcomeMessage content to avoid flash
+    const existingWelcome = document.getElementById('welcomeMessage');
+
+    const remixContent = `
+      <div class="welcome-icon remix-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M7 16V4m0 0L3 8m4-4l4 4"/>
+          <path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
+        </svg>
+      </div>
+      <h3>リミックス完了！</h3>
+      <p>ゲームをリミックスしました。<br>自由にカスタマイズしてください。</p>
+      <div class="remix-tips">
+        <span class="example-label">例えば...</span>
+        <div class="example-chips">
+          <button class="example-chip" data-prompt="キャラクターを変えて">キャラ変更</button>
+          <button class="example-chip" data-prompt="難易度を上げて">難易度UP</button>
+          <button class="example-chip" data-prompt="新しいステージを追加して">ステージ追加</button>
+        </div>
+      </div>
+    `;
+
+    if (existingWelcome) {
+      // Replace content in-place (no flash)
+      existingWelcome.className = 'welcome-message remix-success';
+      existingWelcome.innerHTML = remixContent;
+    } else {
+      // Fallback: create new element
+      if (this.chatMessages) {
+        this.chatMessages.innerHTML = '';
+      }
+      const remixDiv = document.createElement('div');
+      remixDiv.className = 'welcome-message remix-success';
+      remixDiv.id = 'welcomeMessage';
+      remixDiv.innerHTML = remixContent;
+      if (this.chatMessages) this.chatMessages.appendChild(remixDiv);
+    }
+
+    // Add click handlers for example chips
+    const welcomeEl = document.getElementById('welcomeMessage');
+    if (welcomeEl) {
+      welcomeEl.querySelectorAll('.example-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          if (this.chatInput) {
+            this.chatInput.value = chip.dataset.prompt;
+            this.chatInput.focus();
+          }
+          this.hideWelcomeMessage();
+        });
+      });
+    }
   }
 
   showWelcomeMessage() {

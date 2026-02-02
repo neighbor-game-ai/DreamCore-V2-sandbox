@@ -1127,6 +1127,25 @@ body::before {
   box-shadow: 0 6px 20px rgba(255, 59, 48, 0.2);
 }
 
+/* ===== Remix Success Message ===== */
+.remix-success .remix-icon {
+  background: linear-gradient(135deg, #10B981 0%, #34D399 100%);
+  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3);
+}
+
+.remix-success h3 {
+  color: #10B981;
+}
+
+.remix-tips {
+  width: 100%;
+  max-width: 340px;
+}
+
+.remix-tips .example-label {
+  margin-bottom: var(--s-8);
+}
+
 /* ===== Input Area ===== */
 .chat-input-container {
   flex-shrink: 0;

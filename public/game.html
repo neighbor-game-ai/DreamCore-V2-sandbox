@@ -177,6 +177,29 @@
             color: var(--red);
         }
 
+        /* Remix Button - テキスト付きボタン */
+        .remix-btn {
+            width: auto;
+            padding: 0 16px;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .remix-btn.loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .remix-btn.loading svg {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
         /* ===== Reaction Menu ===== */
         .reaction-container {
             position: relative;
@@ -1523,7 +1546,257 @@
         .gb-collapse-btn:active {
             transform: scale(0.95);
         }
+
+        /* ===== Lineage View ===== */
+        .lineage-view {
+            position: fixed;
+            inset: 0;
+            background: var(--white);
+            z-index: 100;
+            overflow-y: auto;
+            padding: 0 16px 32px;
+        }
+
+        .lineage-view.hidden {
+            display: none;
+        }
+
+        .lineage-header {
+            position: sticky;
+            top: 0;
+            background: var(--white);
+            padding: 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-bottom: 1px solid var(--gray-200);
+            margin-bottom: 24px;
+            z-index: 10;
+        }
+
+        .lineage-back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--r-full);
+            background: var(--surface);
+            border: none;
+            color: var(--gray-600);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+
+        .lineage-back-btn:hover {
+            background: var(--surface-hover);
+        }
+
+        .lineage-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin: 0;
+        }
+
+        .lineage-stats {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .lineage-stat {
+            flex: 1;
+            text-align: center;
+            padding: 16px;
+            background: var(--surface);
+            border-radius: 12px;
+        }
+
+        .lineage-stat-value {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .lineage-stat-label {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        .lineage-section {
+            margin-bottom: 24px;
+        }
+
+        .lineage-section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+        }
+
+        .lineage-chain {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .lineage-connector {
+            width: 2px;
+            height: 16px;
+            background: var(--gray-200);
+            margin-left: 23px;
+        }
+
+        .lineage-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .lineage-card:hover {
+            border-color: var(--gray-300);
+            transform: translateX(4px);
+        }
+
+        .lineage-card.current {
+            border-color: var(--red);
+            background: var(--red-light);
+        }
+
+        .lineage-card.private {
+            opacity: 0.6;
+        }
+
+        .lineage-card.private .lineage-card-title {
+            font-style: italic;
+        }
+
+        .lineage-card-thumb {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: var(--gray-100);
+        }
+
+        .lineage-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .lineage-card-title {
+            font-weight: 600;
+            font-size: 0.9375rem;
+            color: var(--gray-900);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .lineage-card-creator {
+            font-size: 0.8125rem;
+            color: var(--gray-500);
+        }
+
+        .lineage-tree {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .lineage-tree-children {
+            margin-left: 24px;
+            padding-left: 16px;
+            border-left: 2px solid var(--gray-200);
+        }
+
+        .lineage-empty {
+            text-align: center;
+            padding: 24px;
+            color: var(--gray-400);
+            font-size: 0.875rem;
+        }
+
+        .lineage-more {
+            text-align: center;
+            padding: 12px;
+            color: var(--gray-500);
+            font-size: 0.875rem;
+            background: var(--surface);
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        /* Info Panel Lineage Link */
+        .info-lineage-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--surface);
+            border-radius: 12px;
+            color: var(--gray-900);
+            text-decoration: none;
+            font-weight: 500;
+            margin-top: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .info-lineage-link:hover {
+            background: var(--surface-hover);
+        }
+
+        .info-lineage-link svg {
+            color: var(--gray-500);
+        }
+
+        .info-lineage-count {
+            color: var(--gray-500);
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 640px) {
+            .lineage-card {
+                padding: 8px;
+            }
+
+            .lineage-card-thumb {
+                width: 40px;
+                height: 40px;
+            }
+
+            .lineage-stats {
+                flex-direction: column;
+                gap: 8px;
+            }
+        }
     </style>
+    <script>
+    // Supabase lazy loader for auth
+    window.__SUPABASE__ = {
+      url: 'https://tcynrijrovktirsvwiqb.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjeW5yaWpyb3ZrdGlyc3Z3aXFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjY5OTAsImV4cCI6MjA4NDYwMjk5MH0.y-_E-vuQg84t8BGISdPL18oaYcayS8ip1OLJsZwM3hI'
+    };
+    window.__loadSupabase = function() {
+      if (window.supabase) return Promise.resolve();
+      return new Promise(function(resolve) {
+        var s = document.createElement('script');
+        s.src = '/lib/supabase.min.js';
+        s.onload = resolve;
+        document.head.appendChild(s);
+      });
+    };
+    </script>
 </head>
 <body>
     <!-- Loading -->
@@ -1579,6 +1852,16 @@
                     <polyline points="16 6 12 2 8 6"/>
                     <line x1="12" y1="2" x2="12" y2="15"/>
                 </svg>
+            </button>
+            <button class="action-btn remix-btn" id="remixBtn" aria-label="リミックス" title="Remix">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="16 3 21 3 21 8"/>
+                    <line x1="4" y1="20" x2="21" y2="3"/>
+                    <polyline points="21 16 21 21 16 21"/>
+                    <line x1="15" y1="15" x2="21" y2="21"/>
+                    <line x1="4" y1="4" x2="9" y2="9"/>
+                </svg>
+                <span>Remix</span>
             </button>
             <button class="action-btn" id="infoBtn" aria-label="情報">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1654,6 +1937,17 @@
                     <div class="info-section-title">タグ</div>
                     <div class="info-tags" id="infoTags"></div>
                 </div>
+                <a href="?view=lineage" class="info-lineage-link" id="lineageLink">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="5" r="3"/>
+                        <line x1="12" y1="8" x2="12" y2="14"/>
+                        <circle cx="6" cy="19" r="3"/>
+                        <circle cx="18" cy="19" r="3"/>
+                        <line x1="12" y1="14" x2="6" y2="16"/>
+                        <line x1="12" y1="14" x2="18" y2="16"/>
+                    </svg>
+                    <span>系譜を見る (<span id="lineageCountBadge">0</span> リミックス)</span>
+                </a>
             </div>
         </div>
     </div>
@@ -2030,13 +2324,287 @@
         </div>
     </div>
 
+    <!-- Lineage View -->
+    <div class="lineage-view hidden" id="lineageView">
+        <div class="lineage-header">
+            <button class="lineage-back-btn" onclick="backToGame()" aria-label="戻る">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m15 18-6-6 6-6"/>
+                </svg>
+            </button>
+            <h1 class="lineage-title">系譜</h1>
+        </div>
+
+        <div class="lineage-stats">
+            <div class="lineage-stat">
+                <span class="lineage-stat-value" id="lineageRemixCount">-</span>
+                <span class="lineage-stat-label">リミックス</span>
+            </div>
+            <div class="lineage-stat">
+                <span class="lineage-stat-value" id="lineageDepth">-</span>
+                <span class="lineage-stat-label">世代</span>
+            </div>
+        </div>
+
+        <div class="lineage-section" id="ancestorSection">
+            <div class="lineage-section-title">先祖</div>
+            <div class="lineage-chain" id="ancestorChain"></div>
+        </div>
+
+        <div id="currentGameSection"></div>
+
+        <div class="lineage-section" id="descendantSection">
+            <div class="lineage-section-title">子孫</div>
+            <div class="lineage-tree" id="descendantTree"></div>
+        </div>
+    </div>
+
     <!-- Reaction Toast -->
     <div class="reaction-toast" id="reactionToast"></div>
 
+    <!-- Auth Library for Remix -->
+    <script src="/auth.js"></script>
     <script>
         const gameId = window.location.pathname.split('/')[2];
         let gameData = null;
         let playDomain = 'https://play.dreamcore.gg';
+
+        // ===== Toast Notification =====
+        function showToast(message, duration = 3000) {
+            const toast = document.getElementById('reactionToast');
+            toast.textContent = message;
+            toast.classList.add('visible');
+            setTimeout(() => toast.classList.remove('visible'), duration);
+        }
+
+        // ===== Remix Button Handler =====
+        async function handleRemix() {
+            const remixBtn = document.getElementById('remixBtn');
+
+            // Check authentication
+            const session = await DreamCoreAuth.getSession();
+            if (!session) {
+                // Redirect to login with return URL
+                const currentUrl = window.location.pathname;
+                window.location.href = `/?redirect=${encodeURIComponent(currentUrl)}`;
+                return;
+            }
+
+            // Show loading state
+            remixBtn.classList.add('loading');
+
+            try {
+                const response = await DreamCoreAuth.authFetch(`/api/games/${gameId}/remix`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    if (response.status === 403) {
+                        showToast('このゲームはリミックスが許可されていません');
+                    } else {
+                        showToast(error.error || 'リミックスに失敗しました');
+                    }
+                    return;
+                }
+
+                const result = await response.json();
+                // Redirect to the new project
+                window.location.href = `/project/${result.project.id}?remixed=true`;
+            } catch (error) {
+                console.error('Remix error:', error);
+                showToast('リミックスに失敗しました');
+            } finally {
+                remixBtn.classList.remove('loading');
+            }
+        }
+
+        // Initialize Remix button
+        const remixBtnEl = document.getElementById('remixBtn');
+        if (remixBtnEl) {
+            remixBtnEl.addEventListener('click', handleRemix);
+        }
+
+        // ===== Lineage View =====
+        let lineageData = null;
+
+        async function loadLineage() {
+            try {
+                const response = await fetch(`/api/games/${gameId}/lineage`);
+                if (!response.ok) return null;
+                return await response.json();
+            } catch (error) {
+                console.error('Failed to load lineage:', error);
+                return null;
+            }
+        }
+
+        function showLineageView() {
+            document.getElementById('lineageView').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            renderLineage();
+        }
+
+        function hideLineageView() {
+            document.getElementById('lineageView').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function backToGame() {
+            // Remove ?view=lineage from URL
+            const url = new URL(window.location);
+            url.searchParams.delete('view');
+            history.pushState({}, '', url);
+            hideLineageView();
+        }
+
+        function renderLineage() {
+            if (!lineageData) {
+                // Show error message when lineage data failed to load
+                document.getElementById('ancestorChain').innerHTML = '';
+                document.getElementById('currentGameSection').innerHTML = '';
+                document.getElementById('descendantTree').innerHTML =
+                    '<div class="lineage-empty">系譜データを読み込めませんでした</div>';
+                document.getElementById('lineageRemixCount').textContent = '-';
+                document.getElementById('lineageDepth').textContent = '-';
+                return;
+            }
+
+            const { actualRoot, visibleAncestors, current, descendants, stats } = lineageData;
+
+            // Stats
+            document.getElementById('lineageRemixCount').textContent = stats.totalRemixes;
+            document.getElementById('lineageDepth').textContent = stats.actualDepth;
+
+            // Ancestors
+            const ancestorChain = document.getElementById('ancestorChain');
+            ancestorChain.innerHTML = '';
+
+            if (actualRoot && !actualRoot.isPublic) {
+                ancestorChain.appendChild(createLineageCard({
+                    title: actualRoot.name,
+                    isPrivate: true
+                }));
+                if (visibleAncestors.length > 0 || current) {
+                    ancestorChain.appendChild(createConnector());
+                }
+            }
+
+            visibleAncestors.forEach((ancestor, index) => {
+                ancestorChain.appendChild(createLineageCard({
+                    id: ancestor.publishedGame?.publicId,
+                    title: ancestor.publishedGame?.title || ancestor.name,
+                    thumbnailUrl: ancestor.publishedGame?.thumbnailUrl,
+                    creatorName: ancestor.creatorName
+                }));
+                if (index < visibleAncestors.length - 1 || current) {
+                    ancestorChain.appendChild(createConnector());
+                }
+            });
+
+            // Show/hide ancestor section
+            const ancestorSection = document.getElementById('ancestorSection');
+            if (!actualRoot && visibleAncestors.length === 0) {
+                ancestorSection.style.display = 'none';
+            } else {
+                ancestorSection.style.display = 'block';
+            }
+
+            // Current
+            const currentSection = document.getElementById('currentGameSection');
+            currentSection.innerHTML = '';
+            if (current) {
+                const card = createLineageCard({
+                    id: current.publishedGame?.publicId,
+                    title: current.publishedGame?.title || current.name,
+                    thumbnailUrl: current.publishedGame?.thumbnailUrl,
+                    creatorName: current.creatorName,
+                    isCurrent: true
+                });
+                currentSection.appendChild(card);
+            }
+
+            // Descendants
+            const descendantTree = document.getElementById('descendantTree');
+            descendantTree.innerHTML = '';
+
+            if (descendants.length === 0) {
+                descendantTree.innerHTML = '<div class="lineage-empty">まだリミックスはありません</div>';
+            } else {
+                renderDescendants(descendants, descendantTree);
+                if (stats.depthCapped) {
+                    descendantTree.innerHTML += '<div class="lineage-more">さらに多くのリミックスがあります</div>';
+                }
+            }
+        }
+
+        function createLineageCard({ id, title, thumbnailUrl, creatorName, isCurrent, isPrivate }) {
+            const card = document.createElement('div');
+            card.className = 'lineage-card' + (isCurrent ? ' current' : '') + (isPrivate ? ' private' : '');
+
+            if (id && !isPrivate && !isCurrent) {
+                card.onclick = () => window.location.href = `/game/${id}`;
+                card.style.cursor = 'pointer';
+            } else {
+                card.style.cursor = 'default';
+            }
+
+            const thumbSrc = thumbnailUrl || '/placeholder-game.png';
+
+            card.innerHTML = `
+                <img class="lineage-card-thumb" src="${escapeHtml(thumbSrc)}" alt="" onerror="this.src='/placeholder-game.png'">
+                <div class="lineage-card-info">
+                    <div class="lineage-card-title">${escapeHtml(title)}</div>
+                    ${creatorName ? `<div class="lineage-card-creator">by ${escapeHtml(creatorName)}</div>` : ''}
+                </div>
+            `;
+
+            return card;
+        }
+
+        function createConnector() {
+            const connector = document.createElement('div');
+            connector.className = 'lineage-connector';
+            return connector;
+        }
+
+        function renderDescendants(descendants, container, depth = 0) {
+            descendants.forEach(desc => {
+                container.appendChild(createLineageCard({
+                    id: desc.publishedGame?.publicId,
+                    title: desc.publishedGame?.title || desc.name,
+                    thumbnailUrl: desc.publishedGame?.thumbnailUrl,
+                    creatorName: desc.creatorName
+                }));
+
+                if (desc.children && desc.children.length > 0) {
+                    const childContainer = document.createElement('div');
+                    childContainer.className = 'lineage-tree-children';
+                    renderDescendants(desc.children, childContainer, depth + 1);
+                    container.appendChild(childContainer);
+                }
+            });
+        }
+
+        // Check URL params for view mode
+        function checkViewMode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewMode = urlParams.get('view');
+            if (viewMode === 'lineage' && lineageData) {
+                showLineageView();
+            }
+        }
+
+        // Handle browser back/forward
+        window.addEventListener('popstate', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewMode = urlParams.get('view');
+            if (viewMode === 'lineage') {
+                showLineageView();
+            } else {
+                hideLineageView();
+            }
+        });
 
         async function loadGame() {
             if (!gameId) {
@@ -2061,6 +2629,14 @@
                 displayGame(gameData);
 
                 fetch(`/api/published-games/${gameId}/play`, { method: 'POST' }).catch(() => {});
+
+                // Load lineage data
+                lineageData = await loadLineage();
+                if (lineageData) {
+                    const count = lineageData.stats.totalRemixes || 0;
+                    document.getElementById('lineageCountBadge').textContent = count;
+                    checkViewMode();
+                }
             } catch (err) {
                 console.error('Failed to load game:', err);
                 showError();
