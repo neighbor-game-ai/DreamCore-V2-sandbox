@@ -356,9 +356,20 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ==================== Health Check ====================
+// Get git commit hash at startup
+let GIT_COMMIT = 'unknown';
+try {
+  GIT_COMMIT = require('child_process')
+    .execSync('git rev-parse --short HEAD', { cwd: __dirname })
+    .toString().trim();
+} catch (e) {
+  console.warn('[Health] Could not get git commit hash');
+}
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
+    commit: GIT_COMMIT,
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
