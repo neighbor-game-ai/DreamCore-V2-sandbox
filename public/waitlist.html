@@ -133,6 +133,7 @@
     /* 招待コード入力セクション */
     .invite-code-section {
       margin-top: 24px;
+      margin-bottom: 24px;
       padding-top: 24px;
       border-top: 1px solid var(--gray-100);
     }
@@ -145,26 +146,39 @@
 
     .invite-code-form {
       display: flex;
+      flex-direction: row;
+      align-items: stretch;
       gap: 8px;
+      width: 100%;
     }
 
     .invite-code-form input {
-      flex: 1;
+      flex: 1 1 auto;
+      min-width: 0;
       padding: 12px 14px;
-      border: 1px solid var(--gray-300);
+      border: 2px solid #e5e7eb;
       border-radius: 8px;
       font-size: 16px;
       text-transform: uppercase;
       font-family: inherit;
+      box-sizing: border-box;
+      background: #f9fafb;
+    }
+
+    .invite-code-form input::placeholder {
+      color: #9ca3af;
+      text-transform: none;
     }
 
     .invite-code-form input:focus {
       outline: none;
-      border-color: var(--red);
-      box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.1);
+      border-color: #ff3b30;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.15);
     }
 
     .invite-code-form button {
+      flex: 0 0 auto;
       padding: 12px 20px;
       white-space: nowrap;
       background: var(--red);
@@ -175,6 +189,7 @@
       font-size: 14px;
       cursor: pointer;
       transition: background 0.2s, transform 0.1s;
+      box-sizing: border-box;
     }
 
     .invite-code-form button:hover {
@@ -203,7 +218,7 @@
       margin-top: 8px;
     }
 
-    .hidden { display: none; }
+    .hidden { display: none !important; }
 
     .share-section {
       margin-top: 24px;
@@ -314,6 +329,23 @@
           <div class="user-name" id="userName">-</div>
           <div class="user-email" id="userEmail">-</div>
         </div>
+      </div>
+
+      <!-- 招待コード入力セクション -->
+      <div class="invite-code-section">
+        <p class="invite-code-label">招待コードをお持ちですか？</p>
+        <div class="invite-code-form">
+          <input
+            type="text"
+            id="inviteCodeInput"
+            placeholder="招待コードを入力"
+            maxlength="32"
+            autocomplete="off"
+          >
+          <button id="redeemCodeBtn">適用</button>
+        </div>
+        <p id="inviteCodeError" class="invite-code-error hidden"></p>
+        <p id="inviteCodeSuccess" class="invite-code-success hidden"></p>
       </div>
 
       <button class="logout-btn" id="logoutBtn">別のアカウントでログイン</button>
@@ -459,6 +491,66 @@
       // Facebook
       document.getElementById('shareFacebook').href =
         `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+
+      // 招待コード適用
+      const redeemBtn = document.getElementById('redeemCodeBtn');
+      const inviteInput = document.getElementById('inviteCodeInput');
+      const errorEl = document.getElementById('inviteCodeError');
+      const successEl = document.getElementById('inviteCodeSuccess');
+
+      redeemBtn.addEventListener('click', async () => {
+        const code = inviteInput.value.trim();
+        if (!code) {
+          errorEl.textContent = '招待コードを入力してください';
+          errorEl.classList.remove('hidden');
+          successEl.classList.add('hidden');
+          return;
+        }
+
+        redeemBtn.disabled = true;
+        redeemBtn.textContent = '確認中...';
+        errorEl.classList.add('hidden');
+        successEl.classList.add('hidden');
+
+        try {
+          const response = await fetch('/api/invitation/redeem', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ code })
+          });
+
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+            successEl.textContent = 'アクセスが承認されました！リダイレクト中...';
+            successEl.classList.remove('hidden');
+            // 成功 → create.html へリダイレクト
+            setTimeout(() => {
+              window.location.href = '/create.html';
+            }, 1000);
+          } else {
+            errorEl.textContent = result.error || 'エラーが発生しました';
+            errorEl.classList.remove('hidden');
+            redeemBtn.disabled = false;
+            redeemBtn.textContent = '適用';
+          }
+        } catch (error) {
+          errorEl.textContent = 'ネットワークエラーが発生しました';
+          errorEl.classList.remove('hidden');
+          redeemBtn.disabled = false;
+          redeemBtn.textContent = '適用';
+        }
+      });
+
+      // Enter キーで送信
+      inviteInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          redeemBtn.click();
+        }
+      });
     })();
   </script>
 </body>

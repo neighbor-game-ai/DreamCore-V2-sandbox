@@ -204,16 +204,16 @@ async function redeemInvitationCode(code, userId, userEmail) {
   }
 
   // 3. user_access を approved に更新（または作成）
+  // email が主キーなので onConflict: 'email' を使用
   const { error: upsertError } = await supabaseAdmin
     .from('user_access')
     .upsert({
-      user_id: userId,
       email: userEmail.toLowerCase(),
       status: 'approved',
       approved_at: new Date().toISOString(),
       invitation_code: normalizedCode
     }, {
-      onConflict: 'user_id'
+      onConflict: 'email'
     });
 
   if (upsertError) {
