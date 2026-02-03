@@ -19,7 +19,7 @@ const { createDeviceCode, authorizeUserCode, pollForToken } = require('./deviceA
 /**
  * CLI公開ゲームをpublic_idで取得
  * @param {string} publicId - g_XXXXXXXXXX 形式
- * @returns {object|null} ゲーム情報
+ * @returns {object|null} ゲーム情報（Play の published_games と同じ形式）
  */
 async function getCliPublishedGame(publicId) {
   if (!isCliDeployEnabled()) return null;
@@ -32,12 +32,22 @@ async function getCliPublishedGame(publicId) {
         id,
         public_id,
         url,
+        title,
+        description,
+        how_to_play,
+        thumbnail_url,
+        tags,
+        visibility,
+        allow_remix,
+        play_count,
+        like_count,
         published_at,
+        updated_at,
         cli_projects (
           id,
-          title,
-          description,
-          user_id
+          name,
+          user_id,
+          game_type
         )
       `)
       .eq('public_id', publicId)
@@ -45,16 +55,24 @@ async function getCliPublishedGame(publicId) {
 
     if (error || !data) return null;
 
-    // 通常のpublished_gamesと同じ形式で返す
+    // Play の published_games と同じ形式で返す
     return {
       id: data.id,
       public_id: data.public_id,
-      title: data.cli_projects?.title || 'Untitled',
-      description: data.cli_projects?.description || null,
+      project_id: data.cli_projects?.id,
       user_id: data.cli_projects?.user_id,
-      visibility: 'public',  // CLI games are always public
+      title: data.title || data.cli_projects?.name || 'Untitled',
+      description: data.description,
+      how_to_play: data.how_to_play,
+      thumbnail_url: data.thumbnail_url,
+      tags: data.tags || [],
+      visibility: data.visibility || 'public',
+      allow_remix: data.allow_remix,
+      play_count: data.play_count || 0,
+      like_count: data.like_count || 0,
       published_at: data.published_at,
-      play_count: 0,  // CLI games don't track play count yet
+      updated_at: data.updated_at,
+      game_type: data.cli_projects?.game_type || '2d',
       // CLI ゲームを識別するフラグとドメイン
       is_cli_game: true,
       play_domain: process.env.CLI_GAMES_DOMAIN || 'cli.dreamcore.gg'

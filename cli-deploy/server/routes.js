@@ -266,7 +266,7 @@ router.post('/deploy', authenticateCliToken, deployLimiter, upload.single('file'
     if (publicId) {
       const { data: project } = await supabase
         .from('cli_projects')
-        .select('id, user_id, public_id')
+        .select('id, user_id, public_id, name')
         .eq('public_id', publicId)
         .single();
 
@@ -318,7 +318,7 @@ router.post('/deploy', authenticateCliToken, deployLimiter, upload.single('file'
       await supabase
         .from('cli_projects')
         .update({
-          title: metadata?.title || existingProject.title,
+          name: metadata?.title || existingProject.name,
           description: metadata?.description,
           updated_at: new Date().toISOString()
         })
@@ -332,6 +332,8 @@ router.post('/deploy', authenticateCliToken, deployLimiter, upload.single('file'
           user_id: req.userId,
           public_id: publicId,
           url: gameUrl,
+          title: metadata?.title || existingProject.name,
+          description: metadata?.description,
           published_at: new Date().toISOString()
         }, { onConflict: 'project_id' });
 
@@ -342,7 +344,7 @@ router.post('/deploy', authenticateCliToken, deployLimiter, upload.single('file'
         .insert({
           user_id: req.userId,
           public_id: publicId,
-          title: metadata?.title || 'Untitled Game',
+          name: metadata?.title || 'New Game',
           description: metadata?.description
         })
         .select('id')
@@ -359,7 +361,9 @@ router.post('/deploy', authenticateCliToken, deployLimiter, upload.single('file'
           project_id: newProject.id,
           user_id: req.userId,
           public_id: publicId,
-          url: gameUrl
+          url: gameUrl,
+          title: metadata?.title || 'New Game',
+          description: metadata?.description
         });
     }
 
@@ -393,12 +397,17 @@ router.get('/projects', authenticateCliToken, projectsGetLimiter, async (req, re
       .select(`
         id,
         public_id,
-        title,
+        name,
         description,
+        game_type,
         created_at,
         updated_at,
         cli_published_games (
           url,
+          title,
+          thumbnail_url,
+          visibility,
+          play_count,
           published_at
         )
       `)
@@ -411,9 +420,14 @@ router.get('/projects', authenticateCliToken, projectsGetLimiter, async (req, re
 
     const result = projects.map(p => ({
       id: p.public_id,
-      title: p.title,
+      name: p.name,
+      title: p.cli_published_games?.[0]?.title || p.name,
       description: p.description,
+      game_type: p.game_type,
       url: `https://v2.dreamcore.gg/game/${p.public_id}`,
+      thumbnail_url: p.cli_published_games?.[0]?.thumbnail_url,
+      visibility: p.cli_published_games?.[0]?.visibility || 'public',
+      play_count: p.cli_published_games?.[0]?.play_count || 0,
       created_at: p.created_at,
       updated_at: p.updated_at,
       published_at: p.cli_published_games?.[0]?.published_at
