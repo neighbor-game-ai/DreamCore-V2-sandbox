@@ -293,6 +293,12 @@ class ProfileEditor {
     this.modal.offsetHeight;
     this.modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+
+    // Hide bottom navigation on mobile
+    const bottomNav = document.getElementById('bottomNav');
+    if (bottomNav) {
+      bottomNav.style.display = 'none';
+    }
   }
 
   /**
@@ -302,6 +308,12 @@ class ProfileEditor {
     this.modal.classList.remove('active');
     document.body.style.overflow = '';
     document.removeEventListener('keydown', this.handleEscape);
+
+    // Restore bottom navigation
+    const bottomNav = document.getElementById('bottomNav');
+    if (bottomNav) {
+      bottomNav.style.display = '';
+    }
 
     setTimeout(() => {
       this.modal.classList.add('hidden');
