@@ -130,6 +130,81 @@
       background: var(--gray-200);
     }
 
+    /* 招待コード入力セクション */
+    .invite-code-section {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--gray-100);
+    }
+
+    .invite-code-label {
+      font-size: 14px;
+      color: var(--gray-600);
+      margin-bottom: 12px;
+    }
+
+    .invite-code-form {
+      display: flex;
+      gap: 8px;
+    }
+
+    .invite-code-form input {
+      flex: 1;
+      padding: 12px 14px;
+      border: 1px solid var(--gray-300);
+      border-radius: 8px;
+      font-size: 16px;
+      text-transform: uppercase;
+      font-family: inherit;
+    }
+
+    .invite-code-form input:focus {
+      outline: none;
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.1);
+    }
+
+    .invite-code-form button {
+      padding: 12px 20px;
+      white-space: nowrap;
+      background: var(--red);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .invite-code-form button:hover {
+      background: #e0342d;
+    }
+
+    .invite-code-form button:active {
+      transform: scale(0.98);
+    }
+
+    .invite-code-form button:disabled {
+      background: var(--gray-300);
+      cursor: not-allowed;
+    }
+
+    .invite-code-error {
+      color: var(--red);
+      font-size: 13px;
+      margin-top: 8px;
+      text-align: left;
+    }
+
+    .invite-code-success {
+      color: #22c55e;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    .hidden { display: none; }
+
     .share-section {
       margin-top: 24px;
       padding-top: 24px;

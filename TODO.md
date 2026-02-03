@@ -8,6 +8,26 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-03: CLI Deploy スキーマ統一 & Worker 修正 ✅
+
+**詳細:** `.claude/logs/2026-02-03-cli-schema-alignment.md`
+
+CLI Deploy のデータベーススキーマを Play と統一:
+
+| テーブル | 変更内容 |
+|----------|----------|
+| **cli_projects** | `title` → `name` リネーム、`game_type`, `storage_path`, `is_public`, `remixed_from` 追加 |
+| **cli_published_games** | `title`, `description`, `how_to_play`, `thumbnail_url`, `tags`, `visibility`, `allow_remix`, `play_count`, `like_count`, `updated_at` 追加 |
+
+**Worker 修正:**
+- CLI ゲームが 404 になる問題を解決
+- 原因: `SUPABASE_SERVICE_ROLE_KEY` が間違っていた（DB lookup 401 エラー）
+- 対応: 正しい Supabase B の service_role key を Worker secret に設定
+
+**効果:** CLI と Play で同じデータ構造、同じ API レスポンス形式に統一
+
+---
+
 ### 2026-02-03: R2/CDN 完全移行 ✅
 
 **詳細:** `.claude/logs/2026-02-03-r2-cdn-migration.md`
@@ -85,9 +105,13 @@ cli.dreamcore.gg への本番ドメイン移行が完了:
 - CSP が `/cli-auth/` をブロック → 除外対象に追加
 
 **残作業:**
+- [x] スキーマ統一（Play と同じ構造に）✅ 2026-02-03
+- [x] Worker 認証修正（SUPABASE_SERVICE_ROLE_KEY）✅ 2026-02-03
 - [ ] デバッグログ削除
 - [ ] Claude Code Skills テスト
 - [ ] ユーザー向けドキュメント
+- [ ] `/api/published-games/:id/play` の CLI 対応
+- [ ] `/api/games/:id/lineage` の CLI 対応
 
 ---
 
@@ -1220,4 +1244,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-03 (R2/CDN 完全移行 + 404キャッシュ無効化)
+最終更新: 2026-02-03 (CLI Deploy スキーマ統一 + Worker 修正)

@@ -159,6 +159,86 @@ async function registerToWaitlist(userInfo) {
 }
 
 /**
+ * 招待コードを検証して適用
+ * @param {string} code - 招待コード
+ * @param {string} userId - ユーザーID
+ * @param {string} userEmail - ユーザーのメールアドレス
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function redeemInvitationCode(code, userId, userEmail) {
+  if (!code || typeof code !== 'string') {
+    return { success: false, error: '招待コードを入力してください' };
+  }
+
+  const normalizedCode = code.trim().toUpperCase();
+
+  // 1. コードの有効性チェック
+  const { data: invitation, error: fetchError } = await supabaseAdmin
+    .from('invitation_codes')
+    .select('*')
+    .eq('code', normalizedCode)
+    .single();
+
+  if (fetchError || !invitation) {
+    return { success: false, error: '無効な招待コードです' };
+  }
+
+  if (!invitation.is_active) {
+    return { success: false, error: 'この招待コードは無効化されています' };
+  }
+
+  if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
+    return { success: false, error: 'この招待コードは期限切れです' };
+  }
+
+  // 2. 既に使用済みかチェック
+  const { data: existingUse } = await supabaseAdmin
+    .from('invitation_code_uses')
+    .select('id')
+    .eq('code', normalizedCode)
+    .eq('user_id', userId)
+    .single();
+
+  if (existingUse) {
+    return { success: false, error: 'このコードは既に使用済みです' };
+  }
+
+  // 3. user_access を approved に更新（または作成）
+  const { error: upsertError } = await supabaseAdmin
+    .from('user_access')
+    .upsert({
+      user_id: userId,
+      email: userEmail.toLowerCase(),
+      status: 'approved',
+      approved_at: new Date().toISOString(),
+      invitation_code: normalizedCode
+    }, {
+      onConflict: 'user_id'
+    });
+
+  if (upsertError) {
+    console.error('[Waitlist] Failed to update user_access:', upsertError);
+    return { success: false, error: '承認処理に失敗しました' };
+  }
+
+  // 4. 使用履歴を記録
+  const { error: useError } = await supabaseAdmin
+    .from('invitation_code_uses')
+    .insert({
+      code: normalizedCode,
+      user_id: userId
+    });
+
+  if (useError) {
+    console.error('[Waitlist] Failed to record invitation use:', useError);
+    // 使用履歴の記録失敗は致命的ではないので続行
+  }
+
+  console.log(`[Waitlist] Invitation code ${normalizedCode} redeemed by ${userEmail}`);
+  return { success: true };
+}
+
+/**
  * Express ルーターをセットアップ
  * @param {Express} app - Express アプリ
  */
@@ -248,10 +328,48 @@ function setupRoutes(app) {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
+
+  /**
+   * POST /api/invitation/redeem
+   * 招待コードを適用してアクセスを承認
+   *
+   * Headers: Authorization: Bearer <access_token>
+   * Body: { code: string }
+   * Response: { success: boolean, error?: string }
+   */
+  app.post('/api/invitation/redeem', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    try {
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+      if (error || !user) {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+
+      const { code } = req.body;
+      const result = await redeemInvitationCode(code, user.id, user.email);
+
+      if (result.success) {
+        res.json({ success: true, message: 'アクセスが承認されました' });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (err) {
+      console.error('[Waitlist] Invitation redeem error:', err.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 }
 
 module.exports = {
   checkUserAccess,
   registerToWaitlist,
+  redeemInvitationCode,
   setupRoutes
 };
