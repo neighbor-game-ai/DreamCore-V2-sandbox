@@ -9,6 +9,7 @@
  * - POST /deploy - デプロイ
  * - GET /projects - プロジェクト一覧
  * - DELETE /projects/:id - プロジェクト削除
+ * - PATCH /projects/:id - メタデータ更新
  */
 
 const express = require('express');
@@ -25,7 +26,8 @@ const {
   uploadToStorage,
   deleteFromStorage,
   generatePublicId,
-  isValidPublicId
+  isValidPublicId,
+  validateMetadataUpdate
 } = require('./upload');
 const sharp = require('sharp');
 
@@ -82,6 +84,14 @@ const projectsDeleteLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
   message: { error: 'rate_limit', message: 'Too many delete requests' },
+  keyGenerator: (req) => req.userId || req.ip
+});
+
+// /projects PATCH 用（メタデータ編集）
+const projectsPatchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'rate_limit', message: 'Too many update requests' },
   keyGenerator: (req) => req.userId || req.ip
 });
 
@@ -559,6 +569,99 @@ router.delete('/projects/:id', authenticateCliToken, projectsDeleteLimiter, asyn
   } catch (error) {
     console.error('Delete project error:', error);
     res.status(500).json({ error: 'server_error', message: 'Failed to delete project' });
+  }
+});
+
+/**
+ * PATCH /projects/:id - メタデータ更新
+ *
+ * 許可フィールド:
+ * - title: 50字以内
+ * - description: 500字以内
+ * - howToPlay: 1000字以内
+ * - tags: 最大5個、各20字以内
+ * - visibility: "public" | "unlisted"
+ * - allowRemix: boolean
+ */
+router.patch('/projects/:id', authenticateCliToken, projectsPatchLimiter, async (req, res) => {
+  try {
+    const publicId = req.params.id;
+
+    // public_id 形式を検証
+    if (!isValidPublicId(publicId)) {
+      return res.status(400).json({ error: 'invalid_request', message: 'Invalid project ID format' });
+    }
+
+    // リクエストボディを検証
+    const validation = validateMetadataUpdate(req.body);
+    if (validation.error) {
+      return res.status(400).json({ error: 'validation_error', message: validation.error });
+    }
+
+    const supabase = getSupabaseCli();
+
+    // プロジェクトを取得
+    const { data: project, error: fetchError } = await supabase
+      .from('cli_projects')
+      .select('id, user_id, name')
+      .eq('public_id', publicId)
+      .single();
+
+    if (fetchError || !project) {
+      return res.status(404).json({ error: 'not_found', message: 'Project not found' });
+    }
+
+    // 所有権チェック
+    if (project.user_id !== req.userId) {
+      return res.status(403).json({ error: 'forbidden', message: 'You do not own this project' });
+    }
+
+    const updateData = validation.data;
+    const now = new Date().toISOString();
+
+    // cli_projects を更新（title, description のみ）
+    const projectUpdate = {};
+    if (updateData.title) {
+      projectUpdate.name = updateData.title;
+    }
+    if (updateData.description !== undefined) {
+      projectUpdate.description = updateData.description;
+    }
+    if (Object.keys(projectUpdate).length > 0) {
+      projectUpdate.updated_at = now;
+      await supabase
+        .from('cli_projects')
+        .update(projectUpdate)
+        .eq('id', project.id);
+    }
+
+    // cli_published_games を更新
+    const publishedUpdate = { ...updateData, updated_at: now };
+    // title は cli_published_games でも更新
+    if (updateData.title) {
+      publishedUpdate.title = updateData.title;
+      delete publishedUpdate.name; // cli_projects 用の name は削除
+    }
+
+    const { error: updateError } = await supabase
+      .from('cli_published_games')
+      .update(publishedUpdate)
+      .eq('project_id', project.id);
+
+    if (updateError) {
+      console.error('Update published game error:', updateError);
+      return res.status(500).json({ error: 'database_error', message: 'Failed to update metadata' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Metadata updated',
+      updated_fields: Object.keys(req.body)
+    });
+
+  } catch (error) {
+    console.error('Update project error:', error);
+    res.status(500).json({ error: 'server_error', message: 'Failed to update project' });
   }
 });
 

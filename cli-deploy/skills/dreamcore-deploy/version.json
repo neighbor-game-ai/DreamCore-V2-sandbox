@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "updated": "2026-02-03",
-  "changelog": "HTTP API 直接使用、上書き確認フロー追加、自動更新機能追加"
+  "changelog": "メタデータ編集 API 追加（PATCH /projects/:id）"
 }

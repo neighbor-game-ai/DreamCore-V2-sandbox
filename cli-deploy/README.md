@@ -115,6 +115,7 @@ rm -rf cli-deploy/
 | POST | `/api/cli/deploy` | Bearer (dc_xxx) | ゲームデプロイ |
 | GET | `/api/cli/projects` | Bearer (dc_xxx) | プロジェクト一覧 |
 | DELETE | `/api/cli/projects/:id` | Bearer (dc_xxx) | プロジェクト削除 |
+| PATCH | `/api/cli/projects/:id` | Bearer (dc_xxx) | メタデータ更新 |
 
 ## 配信ドメイン
 

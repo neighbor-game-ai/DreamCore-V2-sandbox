@@ -2,13 +2,19 @@
 
 ゲームを DreamCore にデプロイする。
 
-**バージョン:** 1.1.0
+**バージョン:** 1.2.0
 
 ## トリガー
 
+### デプロイ
 - 「DreamCoreにデプロイして」
 - 「ゲームを公開して」
 - 「DreamCoreにアップロードして」
+
+### メタデータ編集
+- 「ゲームのタイトルを変更して」
+- 「説明を更新して」
+- 「メタデータを編集して」
 
 ## 前提条件
 
@@ -242,6 +248,64 @@ dreamcore.json に ID を保存しました。
 |----------|------|------|
 | トークン | `~/.dreamcore/token` | 認証トークン（`dc_` + 32文字） |
 | バージョン | `~/.dreamcore/skill-version` | インストール済みスキルのバージョン |
+
+---
+
+## メタデータ編集（ファイル更新なし）
+
+ゲームファイルを変更せず、タイトルや説明などのメタデータのみを更新する場合。
+
+### トリガー
+
+ユーザーが以下のような依頼をした場合:
+- 「タイトルを〇〇に変更して」
+- 「説明文を更新して」
+- 「公開設定を限定公開に変えて」
+- 「タグを追加して」
+
+### フロー
+
+1. `dreamcore.json` から現在の `id` を取得
+2. 認証トークンを確認（なければ Step 7 の認証フローを実行）
+3. 変更内容を確認してユーザーに提示
+4. API を呼び出して更新:
+
+```bash
+curl -X PATCH https://v2.dreamcore.gg/api/cli/projects/{id} \
+  -H "Authorization: Bearer dc_xxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "新しいタイトル",
+    "description": "新しい説明",
+    "howToPlay": "新しい操作説明",
+    "tags": ["タグ1", "タグ2"],
+    "visibility": "public",
+    "allowRemix": true
+  }'
+```
+
+**注意:** 変更するフィールドのみを送信する。全フィールドは不要。
+
+### レスポンス例
+
+成功時:
+```json
+{
+  "success": true,
+  "message": "Metadata updated",
+  "updated_fields": ["title", "description"]
+}
+```
+
+エラー時:
+```json
+{
+  "error": "validation_error",
+  "message": "title must be 50 characters or less"
+}
+```
+
+5. ローカルの `dreamcore.json` も更新する
 
 ---
 

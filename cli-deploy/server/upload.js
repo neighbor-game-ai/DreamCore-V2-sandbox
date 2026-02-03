@@ -503,6 +503,115 @@ function getContentType(ext) {
   return types[ext] || 'application/octet-stream';
 }
 
+/**
+ * メタデータ更新を検証
+ *
+ * 許可フィールド（ホワイトリスト）:
+ * - title: 50字以内
+ * - description: 500字以内
+ * - howToPlay: 1000字以内
+ * - tags: 最大5個、各20字以内
+ * - visibility: "public" | "unlisted"
+ * - allowRemix: boolean
+ */
+function validateMetadataUpdate(data) {
+  if (!data || typeof data !== 'object') {
+    return { error: 'Invalid request body' };
+  }
+
+  const result = {};
+  const allowedFields = ['title', 'description', 'howToPlay', 'tags', 'visibility', 'allowRemix'];
+
+  // 許可されていないフィールドをチェック
+  const providedFields = Object.keys(data);
+  const unknownFields = providedFields.filter(f => !allowedFields.includes(f));
+  if (unknownFields.length > 0) {
+    return { error: `Unknown fields: ${unknownFields.join(', ')}` };
+  }
+
+  // 少なくとも1つのフィールドが必要
+  if (providedFields.length === 0) {
+    return { error: 'At least one field is required' };
+  }
+
+  // title: 50字以内
+  if (data.title !== undefined) {
+    if (typeof data.title !== 'string') {
+      return { error: 'title must be a string' };
+    }
+    if (data.title.trim().length === 0) {
+      return { error: 'title cannot be empty' };
+    }
+    if (data.title.length > 50) {
+      return { error: 'title must be 50 characters or less' };
+    }
+    result.title = data.title.trim();
+  }
+
+  // description: 500字以内
+  if (data.description !== undefined) {
+    if (data.description !== null && typeof data.description !== 'string') {
+      return { error: 'description must be a string or null' };
+    }
+    if (data.description && data.description.length > 500) {
+      return { error: 'description must be 500 characters or less' };
+    }
+    result.description = data.description || null;
+  }
+
+  // howToPlay: 1000字以内
+  if (data.howToPlay !== undefined) {
+    if (data.howToPlay !== null && typeof data.howToPlay !== 'string') {
+      return { error: 'howToPlay must be a string or null' };
+    }
+    if (data.howToPlay && data.howToPlay.length > 1000) {
+      return { error: 'howToPlay must be 1000 characters or less' };
+    }
+    result.how_to_play = data.howToPlay || null;
+  }
+
+  // tags: 最大5個、各20字以内
+  if (data.tags !== undefined) {
+    if (data.tags !== null && !Array.isArray(data.tags)) {
+      return { error: 'tags must be an array or null' };
+    }
+    if (data.tags) {
+      if (data.tags.length > 5) {
+        return { error: 'tags must have at most 5 items' };
+      }
+      for (const tag of data.tags) {
+        if (typeof tag !== 'string') {
+          return { error: 'each tag must be a string' };
+        }
+        if (tag.length > 20) {
+          return { error: 'each tag must be 20 characters or less' };
+        }
+      }
+      result.tags = data.tags;
+    } else {
+      result.tags = [];
+    }
+  }
+
+  // visibility: "public" | "unlisted"
+  if (data.visibility !== undefined) {
+    if (!['public', 'unlisted'].includes(data.visibility)) {
+      return { error: 'visibility must be "public" or "unlisted"' };
+    }
+    result.visibility = data.visibility;
+  }
+
+  // allowRemix: boolean
+  if (data.allowRemix !== undefined) {
+    if (typeof data.allowRemix !== 'boolean') {
+      return { error: 'allowRemix must be a boolean (true or false)' };
+    }
+    result.allow_remix = data.allowRemix;
+  }
+
+  return { data: result };
+}
+
 module.exports = {
   isValidPublicId,
   generatePublicId,
@@ -515,6 +624,7 @@ module.exports = {
   extractThumbnail,
   uploadToStorage,
   deleteFromStorage,
+  validateMetadataUpdate,
   ALLOWED_EXTENSIONS,
   FORBIDDEN_DIRECTORIES,
   MAX_FILE_SIZE,

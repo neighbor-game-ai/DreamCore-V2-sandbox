@@ -172,6 +172,126 @@ JWT 検証は `jose` ライブラリ + JWKS を使用し、Supabase API 呼び�
 
 ---
 
+### Users / Profile
+
+#### `GET /api/users/me`
+
+認証ユーザーの完全プロフィールを取得。
+
+**認証:** 必須
+
+**レスポンス:**
+```json
+{
+  "id": "uuid",
+  "email": "user@example.com",
+  "display_name": "User Name",
+  "avatar_url": "https://cdn.dreamcore.gg/avatars/{userId}/avatar.webp",
+  "bio": "自己紹介文",
+  "social_links": {
+    "x": "https://x.com/username",
+    "youtube": "https://youtube.com/@channel",
+    "github": "https://github.com/username",
+    "tiktok": null,
+    "instagram": null,
+    "custom": [
+      { "label": "Blog", "url": "https://example.com" }
+    ]
+  },
+  "public_id": "u_Abc123XYZ0",
+  "created_at": "2026-01-29T12:00:00.000Z",
+  "updated_at": "2026-01-29T12:00:00.000Z"
+}
+```
+
+---
+
+#### `PATCH /api/users/me`
+
+プロフィールを更新。
+
+**認証:** 必須
+
+**Content-Type:** `application/json` (max 64KB)
+
+**リクエストボディ:**
+```json
+{
+  "display_name": "New Name",
+  "bio": "新しい自己紹介",
+  "social_links": {
+    "x": "https://x.com/newusername"
+  }
+}
+```
+
+**バリデーション:**
+- `display_name`: 最大 50 文字、空文字は null
+- `bio`: 最大 500 文字、空文字は null
+- `social_links`: HTTPS URL のみ、custom は最大 5 件（各 label 最大 30 文字）
+
+**エラー:**
+- 400: `{ "error": "display_name max 50 chars" }`
+- 400: `{ "error": "bio max 500 chars" }`
+- 400: `{ "error": "x must start with https://" }`
+
+**レスポンス:** 更新後のユーザーオブジェクト（`GET /api/users/me` と同形式）
+
+---
+
+#### `POST /api/users/me/avatar`
+
+アバター画像をアップロード。WebP に変換して R2 に保存。
+
+**認証:** 必須
+
+**Content-Type:** `multipart/form-data`
+
+**パラメータ:**
+- `avatar` (required): 画像ファイル（最大 2MB、4096x4096 ピクセル以内）
+
+**レスポンス:**
+```json
+{
+  "avatar_url": "https://cdn.dreamcore.gg/avatars/{userId}/avatar.webp"
+}
+```
+
+**エラー:**
+- 400: `{ "error": "No file uploaded" }`
+- 400: `{ "error": "画像が大きすぎます（最大 4096x4096）" }`
+- 503: `{ "error": "Avatar upload not available (R2 not configured)" }`
+
+---
+
+#### `GET /api/users/:id/public`
+
+ユーザーの公開プロフィールを取得。email は含まれない。
+
+**認証:** 不要
+
+**パラメータ:**
+- `id` (path): UUID または public_id (`u_XXXXXXXXXX`)
+
+**レスポンス:**
+```json
+{
+  "id": "uuid",
+  "display_name": "User Name",
+  "avatar_url": "https://cdn.dreamcore.gg/avatars/{userId}/avatar.webp",
+  "bio": "自己紹介文",
+  "social_links": { ... },
+  "public_id": "u_Abc123XYZ0",
+  "created_at": "2026-01-29T12:00:00.000Z"
+}
+```
+
+**エラー:**
+- 400: `{ "error": "Invalid user ID" }`
+- 404: `{ "error": "User not found" }`
+
+---
+
 ### Jobs
 
 #### `GET /api/jobs/:jobId`
@@ -1307,6 +1427,144 @@ BRIA RMBG 2.0 (Replicate API) で背景を除去。
 | `/discover` | ディスカバーページ | 不要 |
 | `/mypage` | マイページ | 不要（JS で認証） |
 | `/notifications` | 通知ページ | 不要 |
+
+---
+
+## CLI Deploy API
+
+外部 CLI からゲームをデプロイ・管理するための API。
+
+**ベース URL:** `/api/cli`
+
+**認証:** CLI トークン（`dc_` + 32文字）を `Authorization: Bearer` で送信
+
+### POST /device/code
+
+デバイスフロー認証のコードを発行。
+
+**レスポンス:**
+```json
+{
+  "device_code": "xxx",
+  "user_code": "ABCD-1234",
+  "verification_uri": "https://v2.dreamcore.gg/cli-auth/auth.html",
+  "expires_in": 900,
+  "interval": 5
+}
+```
+
+### POST /device/authorize
+
+ユーザーコードを認可（Supabase Auth トークン必須）。
+
+**リクエスト:**
+```json
+{ "user_code": "ABCD-1234" }
+```
+
+### POST /device/token
+
+トークンをポーリングで取得。
+
+**リクエスト:**
+```json
+{
+  "device_code": "xxx",
+  "grant_type": "urn:ietf:params:oauth:grant-type:device_code"
+}
+```
+
+**レスポンス（成功）:**
+```json
+{
+  "access_token": "dc_xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "token_type": "bearer"
+}
+```
+
+### POST /deploy
+
+ゲームをデプロイ（ZIP ファイル）。
+
+**リクエスト:** `multipart/form-data` で `file` フィールドに ZIP を送信
+
+**レスポンス:**
+```json
+{
+  "success": true,
+  "public_id": "g_7F2cK9wP1x",
+  "url": "https://v2.dreamcore.gg/game/g_7F2cK9wP1x",
+  "files_uploaded": 15,
+  "is_update": false
+}
+```
+
+### GET /projects
+
+自分のプロジェクト一覧を取得。
+
+**レスポンス:**
+```json
+{
+  "projects": [
+    {
+      "id": "g_7F2cK9wP1x",
+      "title": "My Game",
+      "url": "https://v2.dreamcore.gg/game/g_7F2cK9wP1x",
+      "visibility": "public",
+      "play_count": 42,
+      "created_at": "2026-02-03T10:00:00Z",
+      "updated_at": "2026-02-03T12:00:00Z"
+    }
+  ]
+}
+```
+
+### DELETE /projects/:id
+
+プロジェクトを削除（Storage ファイルも削除）。
+
+**レスポンス:**
+```json
+{ "success": true, "message": "Project deleted" }
+```
+
+### PATCH /projects/:id
+
+メタデータのみを更新（ファイル変更なし）。
+
+**リクエスト:**
+```json
+{
+  "title": "新しいタイトル",
+  "description": "新しい説明",
+  "howToPlay": "操作方法",
+  "tags": ["アクション", "パズル"],
+  "visibility": "public",
+  "allowRemix": true
+}
+```
+
+**注意:** 変更するフィールドのみ送信。全フィールド不要。
+
+**バリデーション:**
+| フィールド | 制約 |
+|-----------|------|
+| `title` | 50字以内 |
+| `description` | 500字以内 |
+| `howToPlay` | 1000字以内 |
+| `tags` | 最大5個、各20字以内 |
+| `visibility` | `"public"` or `"unlisted"` |
+| `allowRemix` | boolean |
+
+**レスポンス:**
+```json
+{
+  "success": true,
+  "message": "Metadata updated",
+  "updated_fields": ["title", "description"]
+}
+```
 
 ---
 
