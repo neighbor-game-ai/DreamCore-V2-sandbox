@@ -120,6 +120,7 @@ V2 初期リリース用のアクセス制御機能。承認されたユーザ�
 | avatar_url | TEXT | Google アカウントのアバター URL |
 | requested_at | TIMESTAMPTZ | 登録日時 |
 | approved_at | TIMESTAMPTZ | 承認日時（手動更新） |
+| invitation_code | TEXT | 使用した招待コード（あれば） |
 | note | TEXT | 管理者メモ |
 
 **マイグレーション**: `supabase/migrations/009_user_access.sql`
@@ -314,6 +315,137 @@ async function registerToWaitlist(userInfo) {
       ignoreDuplicates: true  // 既存ユーザーは更新しない
     });
 }
+```
+
+---
+
+## 招待コード
+
+招待コードを持つユーザーは、手動承認を待たずに即座にアクセスが承認される。
+
+### 仕組み
+
+```
+1. ユーザーがウェイトリストページで招待コードを入力
+2. POST /api/invitation/redeem を呼び出し
+3. コードが有効なら user_access を approved に更新
+4. 使用履歴を invitation_code_uses に記録
+5. create.html へリダイレクト
+```
+
+### テーブル構造
+
+**invitation_codes** - 招待コード管理
+
+| カラム | 型 | 説明 |
+|--------|-----|------|
+| code | TEXT (PK) | 招待コード（大文字） |
+| description | TEXT | 管理用の説明 |
+| expires_at | TIMESTAMPTZ | 有効期限（null=無期限） |
+| is_active | BOOLEAN | 有効/無効フラグ |
+| created_at | TIMESTAMPTZ | 作成日時 |
+
+**invitation_code_uses** - 使用履歴
+
+| カラム | 型 | 説明 |
+|--------|-----|------|
+| id | UUID (PK) | レコードID |
+| code | TEXT (FK) | 使用されたコード |
+| user_id | UUID (FK) | 使用したユーザー |
+| used_at | TIMESTAMPTZ | 使用日時 |
+
+※ 同一ユーザーが同一コードを複数回使用することはできない（UNIQUE制約）
+
+### API エンドポイント
+
+#### POST /api/invitation/redeem
+
+招待コードを適用してアクセスを承認。
+
+**Headers**:
+```
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+**Body**:
+```json
+{
+  "code": "WFMY7CHS"
+}
+```
+
+**Response (成功)**:
+```json
+{
+  "success": true
+}
+```
+
+**Response (エラー)**:
+```json
+{
+  "success": false,
+  "error": "無効な招待コードです"
+}
+```
+
+| エラー | 意味 |
+|--------|------|
+| `招待コードを入力してください` | コードが空 |
+| `無効な招待コードです` | コードが存在しない or 無効 |
+| `この招待コードは期限切れです` | expires_at を過ぎている |
+| `このコードは既に使用済みです` | 同一ユーザーが使用済み |
+| `承認処理に失敗しました` | DB更新エラー |
+
+### 現在の招待コード
+
+| コード | 用途 | 作成日 |
+|--------|------|--------|
+| `BETATESTER` | βテスター用 | 2026-02-03 |
+| `WFMY7CHS` | コアユーザー向け | 2026-02-03 |
+| `K60ZYE2U` | X告知用 | 2026-02-03 |
+
+### 招待コードの管理
+
+#### コードを追加
+
+```sql
+INSERT INTO invitation_codes (code, description)
+VALUES ('NEWCODE', '説明');
+```
+
+#### 有効期限付きで追加
+
+```sql
+INSERT INTO invitation_codes (code, description, expires_at)
+VALUES ('LIMITED', '期間限定', '2026-03-01');
+```
+
+#### コードを無効化
+
+```sql
+UPDATE invitation_codes SET is_active = false WHERE code = 'OLDCODE';
+```
+
+#### 使用状況を確認
+
+```sql
+SELECT
+  c.code,
+  c.description,
+  c.is_active,
+  COUNT(u.id) as use_count
+FROM invitation_codes c
+LEFT JOIN invitation_code_uses u ON c.code = u.code
+GROUP BY c.code, c.description, c.is_active
+ORDER BY c.created_at DESC;
+```
+
+#### ランダムコードを生成（シェル）
+
+```bash
+cat /dev/urandom | LC_ALL=C tr -dc 'A-Z0-9' | head -c 8
 ```
 
 ---
@@ -517,7 +649,8 @@ if (!cached && supabaseSession) {
 | `public/app.js` | `revealPage()`, アクセスチェック | 289-327, 366-372 |
 | `public/mypage.js` | mypage のアクセスチェック | init() 内 |
 | `public/discover.html` | discover のアクセスチェック | script 内 |
-| `supabase/migrations/009_user_access.sql` | テーブル定義 | 全体 |
+| `supabase/migrations/009_user_access.sql` | user_access テーブル定義 | 全体 |
+| Supabase migration `add_invitation_codes` | 招待コードテーブル定義 | 全体 |
 | `docs/WAITLIST.md` | このドキュメント | - |
 
 ---
@@ -533,3 +666,4 @@ if (!cached && supabaseSession) {
 | 2026-02-01 | トークン期限切れ時の自動リフレッシュ機能追加（無限リダイレクト修正） |
 | 2026-02-01 | 別タブ問題修正（localStorage フォールバック追加） |
 | 2026-02-01 | notifications.js に checkAccess 追加 |
+| 2026-02-03 | 招待コード機能追加（invitation_codes, invitation_code_uses テーブル） |
