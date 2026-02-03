@@ -155,14 +155,12 @@ router.post('/device/code', deviceCodeLimiter, async (req, res) => {
 router.post('/device/authorize', authenticateSupabaseToken, authorizeLimiter, async (req, res) => {
   try {
     const { user_code } = req.body;
-    console.log('[CLI Auth] Authorize request:', { user_code, userId: req.userId });
 
     if (!user_code) {
       return res.status(400).json({ error: 'invalid_request', message: 'user_code is required' });
     }
 
     const result = await authorizeUserCode(user_code, req.userId);
-    console.log('[CLI Auth] Authorize result:', result);
 
     if (!result.success) {
       return res.status(400).json(result);
@@ -472,7 +470,7 @@ router.delete('/projects/:id', authenticateCliToken, projectsDeleteLimiter, asyn
     }
 
     // Storage からファイルを削除
-    const deleteSuccess = await deleteFromStorage(publicId);
+    const deleteSuccess = await deleteFromStorage(req.userId, publicId);
     if (!deleteSuccess) {
       return res.status(500).json({
         error: 'storage_error',
