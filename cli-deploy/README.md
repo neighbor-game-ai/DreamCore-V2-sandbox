@@ -5,6 +5,19 @@ CLI からゲームを DreamCore にデプロイする機能。
 **設計ドキュメント:** `../.claude/docs/cli-deploy-design.md`
 **実装計画:** `../.claude/plans/tender-leaping-cook.md`
 
+## Important: No Standalone CLI Tool
+
+**`dreamcore` という CLI ツールは存在しません。**
+
+この機能は HTTP API ベースで動作し、Claude Code Skills が以下を代行します:
+
+- デバイスフロー認証
+- ZIP ファイル作成
+- curl による HTTP アップロード
+
+ユーザーは `npm install -g dreamcore` などを実行する必要はありません。
+Skills が直接 API を呼び出します。
+
 ## 概要
 
 この機能は DreamCore 本体と**完全に分離**されています。

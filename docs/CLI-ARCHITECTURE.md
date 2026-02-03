@@ -2,6 +2,18 @@
 
 This document is the source of truth for the CLI deploy/update architecture.
 
+## Important: No Standalone CLI Tool
+
+**`dreamcore` CLI ツールは存在しません。**
+
+CLI Deploy は HTTP API ベースで動作します。Claude Code Skills がユーザーの代わりに以下を実行します:
+
+1. デバイスフロー認証（`/api/cli/device/*`）
+2. ZIP 作成（`zip` コマンド）
+3. HTTP アップロード（`curl` で `/api/cli/deploy`）
+
+ユーザーは `npm install -g dreamcore` などを実行する必要はありません。
+
 ## Overview
 
 CLI Deploy is fully separated from the main DreamCore runtime:

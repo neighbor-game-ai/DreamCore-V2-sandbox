@@ -79,6 +79,29 @@ modal serve app.py
 - `DreamCore-V2-modal` は旧リポジトリで、更新されていない
 - 間違ったリポジトリからデプロイすると修正が反映されない
 
+### CLI Deploy（重要）
+
+**⚠️ `dreamcore` という CLI ツールは存在しない。**
+
+CLI Deploy は HTTP API ベースで動作します:
+
+| 誤解 | 実際 |
+|------|------|
+| `npm install -g dreamcore` が必要 | **不要** - CLI ツールは存在しない |
+| `dreamcore deploy` コマンドを使う | **使わない** - curl で API を直接呼ぶ |
+| `dreamcore login` で認証する | **使わない** - デバイスフローで認証 |
+
+**実際のフロー:**
+1. Claude Code Skills が HTTP API を直接呼び出す
+2. `zip` コマンドで ZIP 作成
+3. `curl` で `/api/cli/deploy` にアップロード
+4. トークンは `~/.dreamcore/token` に保存
+
+**ドキュメント:**
+- `docs/CLI-ARCHITECTURE.md`
+- `cli-deploy/README.md`
+- `.claude/skills/dreamcore-deploy/SKILL.md`
+
 ## 将来の機能拡張
 
 計画書: `.claude/docs/session-persistence-plan.md`（セッション永続化、CIDR Allowlist 等）
