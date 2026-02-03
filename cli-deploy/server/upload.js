@@ -268,12 +268,13 @@ function parseDreamcoreJson(files) {
 /**
  * ファイルを Storage にアップロード
  */
-async function uploadToStorage(publicId, files) {
+async function uploadToStorage(userId, publicId, files) {
   const supabase = getSupabaseCli();
   const results = [];
 
   for (const file of files) {
-    const storagePath = `${publicId}/${file.path}`;
+    // Play と同じ構造: users/{user_id}/projects/{public_id}/{file.path}
+    const storagePath = `users/${userId}/projects/${publicId}/${file.path}`;
 
     // Content-Type を推定
     const ext = path.extname(file.path).toLowerCase();
@@ -299,9 +300,12 @@ async function uploadToStorage(publicId, files) {
 /**
  * Storage から既存ファイルを再帰的に削除
  */
-async function deleteFromStorage(publicId) {
+async function deleteFromStorage(userId, publicId) {
   const supabase = getSupabaseCli();
   const allFiles = [];
+
+  // Play と同じ構造: users/{user_id}/projects/{public_id}/
+  const basePath = `users/${userId}/projects/${publicId}`;
 
   // 再帰的にファイルを列挙
   async function listRecursive(prefix) {
@@ -324,7 +328,7 @@ async function deleteFromStorage(publicId) {
     }
   }
 
-  await listRecursive(publicId);
+  await listRecursive(basePath);
 
   if (allFiles.length === 0) {
     return true; // 何もなければ成功扱い

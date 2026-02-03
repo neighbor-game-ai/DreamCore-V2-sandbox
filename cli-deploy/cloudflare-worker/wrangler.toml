@@ -9,3 +9,11 @@ compatibility_date = "2024-01-01"
 
 [observability]
 enabled = true
+
+# 環境変数（公開可能な値）
+[vars]
+SUPABASE_STORAGE_URL = "https://dgusszutzzoeadmpyira.supabase.co/storage/v1/object/public/games"
+SUPABASE_URL = "https://dgusszutzzoeadmpyira.supabase.co"
+
+# Secrets（wrangler secret put で設定）
+# - SUPABASE_SERVICE_ROLE_KEY

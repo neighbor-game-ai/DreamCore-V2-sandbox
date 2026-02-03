@@ -2,17 +2,17 @@
  * cli.dreamcore.gg Cloudflare Worker
  *
  * Supabase Storage から UGC を配信するプロキシ
+ * Play と同じ構造: users/{user_id}/projects/{public_id}/
  *
  * URL マッピング:
- *   cli.dreamcore.gg/{public_id}/*
- *   → https://dgusszutzzoeadmpyira.supabase.co/storage/v1/object/public/games/{public_id}/*
+ *   cli.dreamcore.gg/g/{public_id}/*
+ *   → DB lookup で user_id 取得
+ *   → https://dgusszutzzoeadmpyira.supabase.co/storage/v1/object/public/games/users/{user_id}/projects/{public_id}/*
  */
-
-const SUPABASE_STORAGE_URL = 'https://dgusszutzzoeadmpyira.supabase.co/storage/v1/object/public/games';
 
 // URL 形式: /g/{public_id}/ （play.dreamcore.gg と同じ構造）
 // public_id の形式: g_ + 10文字の英数字
-const PUBLIC_ID_REGEX = /^\/g\/g_[A-Za-z0-9]{10}(\/|$)/;
+const PUBLIC_ID_REGEX = /^\/g\/(g_[A-Za-z0-9]{10})(\/|$)/;
 
 // 拡張子 → Content-Type マッピング
 const CONTENT_TYPES = {
@@ -39,8 +39,13 @@ const CONTENT_TYPES = {
   '.txt': 'text/plain; charset=utf-8',
 };
 
+// user_id キャッシュ（Worker インスタンス内、最大1000件）
+const userIdCache = new Map();
+const CACHE_MAX_SIZE = 1000;
+const CACHE_TTL = 3600000; // 1時間
+
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
 
@@ -49,24 +54,35 @@ export default {
       return Response.redirect('https://v2.dreamcore.gg', 302);
     }
 
-    // public_id 形式の検証
-    if (!PUBLIC_ID_REGEX.test(pathname)) {
+    // public_id 形式の検証と抽出
+    const match = pathname.match(PUBLIC_ID_REGEX);
+    if (!match) {
       return new Response('Not Found', { status: 404 });
     }
 
+    const publicId = match[1]; // g_xxxxxxxxxx
+    const subPath = pathname.slice(`/g/${publicId}`.length) || '/';
+
     // パストラバーサル防止
-    if (pathname.includes('..')) {
+    if (subPath.includes('..')) {
       return new Response('Bad Request', { status: 400 });
     }
 
-    // デフォルトで index.html を追加
-    let storagePath = pathname;
-    if (storagePath.endsWith('/')) {
-      storagePath += 'index.html';
+    // user_id を取得（キャッシュ or DB）
+    const userId = await getUserId(publicId, env);
+    if (!userId) {
+      return new Response('Game not found', { status: 404 });
     }
 
-    // Supabase Storage にプロキシ
-    const storageUrl = SUPABASE_STORAGE_URL + storagePath;
+    // ファイルパスを構築
+    let filePath = subPath;
+    if (filePath === '/' || filePath === '') {
+      filePath = '/index.html';
+    }
+
+    // Storage パス: users/{user_id}/projects/{public_id}/{file}
+    const storagePath = `users/${userId}/projects/${publicId}${filePath}`;
+    const storageUrl = `${env.SUPABASE_STORAGE_URL}/${storagePath}`;
 
     const response = await fetch(storageUrl, {
       method: request.method,
@@ -79,12 +95,11 @@ export default {
     const headers = new Headers(response.headers);
 
     // Supabase Storage の厳格な CSP を削除（UGC 実行に必要）
-    // Supabase は `default-src 'none'; sandbox` を返すが、これはゲーム実行をブロックする
     headers.delete('Content-Security-Policy');
     headers.delete('Content-Security-Policy-Report-Only');
 
-    // 拡張子から Content-Type を設定（Supabase が text/plain を返すことがあるため）
-    const ext = storagePath.substring(storagePath.lastIndexOf('.')).toLowerCase();
+    // 拡張子から Content-Type を設定
+    const ext = filePath.substring(filePath.lastIndexOf('.')).toLowerCase();
     const correctContentType = CONTENT_TYPES[ext];
     if (correctContentType) {
       headers.set('Content-Type', correctContentType);
@@ -92,23 +107,19 @@ export default {
 
     // セキュリティヘッダー
     headers.set('X-Content-Type-Options', 'nosniff');
-    // X-Frame-Options を削除（v2.dreamcore.gg からの iframe 埋め込みを許可）
     headers.delete('X-Frame-Options');
-    // frame-ancestors で v2.dreamcore.gg からの埋め込みのみ許可
     headers.set('Content-Security-Policy', "frame-ancestors 'self' https://v2.dreamcore.gg https://dreamcore.gg");
     headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
     // キャッシュ設定
     const contentType = headers.get('Content-Type') || '';
     if (contentType.includes('text/html')) {
-      // HTML は短めのキャッシュ（更新頻度が高い）
       headers.set('Cache-Control', 'public, max-age=300'); // 5分
     } else {
-      // 静的アセットは長めのキャッシュ
       headers.set('Cache-Control', 'public, max-age=86400'); // 24時間
     }
 
-    // CORS（必要に応じて）
+    // CORS
     headers.set('Access-Control-Allow-Origin', '*');
 
     return new Response(response.body, {
@@ -118,3 +129,52 @@ export default {
     });
   },
 };
+
+/**
+ * public_id から user_id を取得（キャッシュ付き）
+ */
+async function getUserId(publicId, env) {
+  // キャッシュチェック
+  const cached = userIdCache.get(publicId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.userId;
+  }
+
+  // Supabase REST API で cli_projects を検索
+  try {
+    const response = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/cli_projects?public_id=eq.${publicId}&select=user_id`,
+      {
+        headers: {
+          'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error('DB lookup failed:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    if (!data || data.length === 0) {
+      return null;
+    }
+
+    const userId = data[0].user_id;
+
+    // キャッシュに保存（サイズ制限）
+    if (userIdCache.size >= CACHE_MAX_SIZE) {
+      // 古いエントリを削除
+      const firstKey = userIdCache.keys().next().value;
+      userIdCache.delete(firstKey);
+    }
+    userIdCache.set(publicId, { userId, timestamp: Date.now() });
+
+    return userId;
+  } catch (err) {
+    console.error('getUserId error:', err);
+    return null;
+  }
+}

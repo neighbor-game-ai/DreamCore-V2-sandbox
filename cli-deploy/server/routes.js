@@ -287,7 +287,7 @@ router.post('/deploy', authenticateCliToken, deployLimiter, upload.single('file'
 
     // 既存ファイルを削除（上書きデプロイ）
     if (isUpdate) {
-      const deleteSuccess = await deleteFromStorage(publicId);
+      const deleteSuccess = await deleteFromStorage(req.userId, publicId);
       if (!deleteSuccess) {
         return res.status(500).json({
           error: 'storage_error',
@@ -296,8 +296,8 @@ router.post('/deploy', authenticateCliToken, deployLimiter, upload.single('file'
       }
     }
 
-    // ファイルをアップロード
-    const uploadResults = await uploadToStorage(publicId, validation.files);
+    // ファイルをアップロード（Play と同じ構造: users/{user_id}/projects/{public_id}/）
+    const uploadResults = await uploadToStorage(req.userId, publicId, validation.files);
     const failedUploads = uploadResults.filter(r => !r.success);
 
     if (failedUploads.length > 0) {
