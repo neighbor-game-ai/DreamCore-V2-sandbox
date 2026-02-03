@@ -152,6 +152,14 @@ const V2_DOMAIN = process.env.V2_DOMAIN || '';
 // Play domain for iframe embedding (e.g., https://play.dreamcore.gg)
 const PLAY_DOMAIN = process.env.PLAY_DOMAIN || '';
 
+// ==================== R2 Public Asset Settings ====================
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || '';
+const R2_ENDPOINT = process.env.R2_ENDPOINT || '';
+const R2_BUCKET = process.env.R2_BUCKET || '';
+const R2_PUBLIC_BASE_URL = process.env.R2_PUBLIC_BASE_URL || '';
+const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '';
+const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '';
+
 // ==================== Startup Guard ====================
 
 /**
@@ -320,6 +328,12 @@ module.exports = {
   ASSET_BASE_URL,
   V2_DOMAIN,
   PLAY_DOMAIN,
+  R2_ACCOUNT_ID,
+  R2_ENDPOINT,
+  R2_BUCKET,
+  R2_PUBLIC_BASE_URL,
+  R2_ACCESS_KEY_ID,
+  R2_SECRET_ACCESS_KEY,
   validateEnvironment,
 
   // GCS

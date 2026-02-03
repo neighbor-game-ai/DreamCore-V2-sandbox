@@ -2367,7 +2367,7 @@
     <script>
         const gameId = window.location.pathname.split('/')[2];
         let gameData = null;
-        let playDomain = 'https://play.dreamcore.gg';
+        let publicGameBaseUrl = 'https://play.dreamcore.gg';
 
         // ===== Toast Notification =====
         function showToast(message, duration = 3000) {
@@ -2616,7 +2616,7 @@
                 const configResponse = await fetch('/api/config');
                 if (configResponse.ok) {
                     const config = await configResponse.json();
-                    playDomain = config.playDomain || playDomain;
+                    publicGameBaseUrl = config.publicGameBaseUrl || config.playDomain || publicGameBaseUrl;
                 }
 
                 const response = await fetch(`/api/published-games/${gameId}`);
@@ -2648,7 +2648,7 @@
             document.title = `${game.title} - DreamCore`;
 
             const iframe = document.getElementById('gameFrame');
-            iframe.src = `${playDomain}/g/${gameId}/index.html`;
+            iframe.src = `${publicGameBaseUrl}/g/${gameId}/index.html`;
 
             // Inject user-select: none into iframe after load
             iframe.onload = function() {

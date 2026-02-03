@@ -26,6 +26,10 @@ const { execFile } = require('child_process');
 const { supabaseAdmin } = require('./supabaseClient');
 const { ErrorCodes, createWsError, sendHttpError } = require('./errorResponse');
 const config = require('./config');
+const { injectGameHtml, injectPublicGameHtml, rewriteUserAssets } = require('./gameHtmlUtils');
+const r2Publisher = require('./r2Publisher');
+const r2Client = require('./r2Client');
+const thumbnailGenerator = require('./thumbnailGenerator');
 const waitlist = require('./waitlist');
 const quotaService = require('./quotaService');
 const remixService = require('./remixService');
@@ -384,10 +388,12 @@ app.get('/api/health', (req, res) => {
 // Cache for 1 hour (config rarely changes)
 app.get('/api/config', (req, res) => {
   res.set('Cache-Control', 'public, max-age=3600');
+  const publicGameBaseUrl = config.R2_PUBLIC_BASE_URL || config.PLAY_DOMAIN || 'https://play.dreamcore.gg';
   res.json({
     supabaseUrl: SUPABASE_URL,
     supabaseAnonKey: SUPABASE_ANON_KEY,
-    playDomain: config.PLAY_DOMAIN || 'https://play.dreamcore.gg'
+    playDomain: config.PLAY_DOMAIN || 'https://play.dreamcore.gg',
+    publicGameBaseUrl
   });
 });
 
@@ -1088,82 +1094,6 @@ app.get('/api/projects/:projectId/preview', authenticate, checkProjectOwnership,
   }
 });
 
-// Error detection script to inject into game HTML
-const ERROR_DETECTION_SCRIPT = `
-<script>
-(function() {
-  var errors = [];
-  var MAX_ERRORS = 10;
-
-  // Capture JS errors
-  window.onerror = function(msg, url, line, col, error) {
-    if (errors.length < MAX_ERRORS) {
-      errors.push({
-        type: 'error',
-        message: msg,
-        file: url ? url.split('/').pop() : 'unknown',
-        line: line,
-        column: col,
-        stack: error ? error.stack : null
-      });
-      reportErrors();
-    }
-    return false;
-  };
-
-  // Capture unhandled promise rejections
-  window.onunhandledrejection = function(event) {
-    if (errors.length < MAX_ERRORS) {
-      errors.push({
-        type: 'unhandledrejection',
-        message: event.reason ? (event.reason.message || String(event.reason)) : 'Unknown promise rejection',
-        stack: event.reason ? event.reason.stack : null
-      });
-      reportErrors();
-    }
-  };
-
-  // Capture console.error
-  var originalConsoleError = console.error;
-  console.error = function() {
-    if (errors.length < MAX_ERRORS) {
-      errors.push({
-        type: 'console.error',
-        message: Array.from(arguments).map(function(a) {
-          return typeof a === 'object' ? JSON.stringify(a) : String(a);
-        }).join(' ')
-      });
-      reportErrors();
-    }
-    originalConsoleError.apply(console, arguments);
-  };
-
-  function reportErrors() {
-    try {
-      window.parent.postMessage({
-        type: 'gameError',
-        errors: errors
-      }, '*');
-    } catch(e) {}
-  }
-
-  // Report successful load
-  window.addEventListener('load', function() {
-    setTimeout(function() {
-      try {
-        window.parent.postMessage({
-          type: 'gameLoaded',
-          success: errors.length === 0,
-          errorCount: errors.length,
-          errors: errors
-        }, '*');
-      } catch(e) {}
-    }, 500);
-  });
-})();
-</script>
-`;
-
 // Inject asset base URL and normalize /user-assets/ to absolute URLs (optional)
 const getAssetBaseUrl = (req) => {
   if (config.ASSET_BASE_URL) {
@@ -1172,32 +1102,6 @@ const getAssetBaseUrl = (req) => {
   const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim();
   const host = (req.headers['x-forwarded-host'] || req.get('host') || '').split(',')[0].trim();
   return host ? `${proto}://${host}` : '';
-};
-
-const buildAssetInjectScript = (baseUrl) => {
-  return `\n<script>window.ASSET_BASE_URL=${JSON.stringify(baseUrl)};</script>\n`;
-};
-
-const rewriteUserAssets = (html, baseUrl) => {
-  if (!baseUrl) return html;
-  const prefix = `${baseUrl}/user-assets/`;
-  return html.replace(/(^|["'(\s])\/user-assets\//g, `$1${prefix}`);
-};
-
-const injectGameHtml = (html, req) => {
-  const assetBase = getAssetBaseUrl(req);
-  const injectScript = buildAssetInjectScript(assetBase) + ERROR_DETECTION_SCRIPT;
-  let content = rewriteUserAssets(html, assetBase);
-
-  if (content.includes('<head>')) {
-    content = content.replace('<head>', '<head>' + injectScript);
-  } else if (content.includes('<HEAD>')) {
-    content = content.replace('<HEAD>', '<HEAD>' + injectScript);
-  } else {
-    content = injectScript + content;
-  }
-
-  return content;
 };
 
 // ==================== Signed Game URL API ====================
@@ -1339,7 +1243,8 @@ app.get('/game/:userId/:projectId/*', optionalAuth, async (req, res) => {
 
     // Inject asset base + error detection script into HTML files
     if (ext === '.html' && filename === 'index.html') {
-      content = injectGameHtml(content, req);
+      const assetBase = getAssetBaseUrl(req);
+      content = injectGameHtml(content, assetBase);
     } else if (['.css', '.js', '.mjs', '.json', '.html'].includes(ext)) {
       // Normalize /user-assets/ to absolute URLs for other text assets
       const assetBase = getAssetBaseUrl(req);
@@ -1371,7 +1276,8 @@ app.get('/game/:userId/:projectId/*', optionalAuth, async (req, res) => {
 
         // Inject asset base + error detection script into HTML files
         if (ext === '.html' && filename === 'index.html') {
-          textContent = injectGameHtml(textContent, req);
+          const assetBase = getAssetBaseUrl(req);
+          textContent = injectGameHtml(textContent, assetBase);
         } else if (['.css', '.js', '.mjs', '.json', '.html'].includes(ext)) {
           // Normalize /user-assets/ to absolute URLs for other text assets
           const assetBase = getAssetBaseUrl(req);
@@ -1462,6 +1368,8 @@ app.post('/api/projects/:projectId/publish', authenticate, checkProjectOwnership
     return res.status(400).json({ error: 'Tags must be an array of strings' });
   }
 
+  const existingGame = await db.getPublishedGameByProjectId(req.supabase, projectId);
+
   const game = await db.publishGame(projectId, userId, {
     title: title.trim(),
     description: description || null,
@@ -1476,7 +1384,64 @@ app.post('/api/projects/:projectId/publish', authenticate, checkProjectOwnership
     return res.status(500).json({ error: 'Failed to publish game' });
   }
 
+  try {
+    if (r2Client.isR2Enabled()) {
+      const uploadResult = await r2Publisher.uploadProjectToR2({
+        projectId,
+        publicId: game.public_id,
+        userId
+      });
+
+      if (uploadResult.thumbnailUrl && uploadResult.thumbnailUrl !== game.thumbnail_url) {
+        await db.updatePublishedGame(req.supabase, game.id, {
+          thumbnailUrl: uploadResult.thumbnailUrl
+        });
+        game.thumbnail_url = uploadResult.thumbnailUrl;
+      }
+    }
+  } catch (error) {
+    console.error('[publish] R2 upload failed:', error.message);
+    // Roll back if this was a new publish and R2 failed
+    if (!existingGame) {
+      await db.unpublishGame(req.supabase, projectId);
+    }
+    return res.status(500).json({ error: 'Failed to publish game assets to CDN' });
+  }
+
   console.log(`[publish] Game published: ${game.id} / ${game.public_id} (project: ${projectId})`);
+
+  // Async thumbnail generation if not already uploaded
+  if (r2Client.isR2Enabled() && !game.thumbnail_url?.startsWith('https://')) {
+    // Fire-and-forget: generate thumbnail in background
+    setImmediate(async () => {
+      try {
+        // Read spec for better prompt
+        const projectDir = getProjectPath(userId, projectId);
+        let specContent = '';
+        const specPaths = [
+          path.join(projectDir, 'specs', 'game.md'),
+          path.join(projectDir, 'spec.md')
+        ];
+        for (const specPath of specPaths) {
+          if (fs.existsSync(specPath)) {
+            specContent = fs.readFileSync(specPath, 'utf-8');
+            break;
+          }
+        }
+
+        await thumbnailGenerator.generateThumbnailAsync({
+          projectId,
+          publicId: game.public_id,
+          userId,
+          title: game.title,
+          specContent
+        });
+      } catch (err) {
+        console.error(`[publish] Background thumbnail generation failed:`, err.message);
+      }
+    });
+  }
+
   res.json({ success: true, gameId: game.public_id, game });
 });
 
@@ -1515,43 +1480,6 @@ app.get('/api/my-published-games', authenticate, async (req, res) => {
   const games = await db.getPublishedGamesByUserId(req.supabase, req.user.id);
   res.json({ games });
 });
-
-// ==================== Public Game File Serving ====================
-
-// Inject script for public games (uses fixed V2_DOMAIN, no error detection)
-const injectPublicGameHtml = (html) => {
-  // Use fixed V2_DOMAIN for consistent asset URLs
-  const assetBaseUrl = config.V2_DOMAIN || '';
-
-  // Script injection for asset URL
-  const scriptInjection = `<script>window.ASSET_BASE_URL=${JSON.stringify(assetBaseUrl)};</script>`;
-
-  // Style injection to disable text selection and tap highlight (prevents blue highlight when dragging/tapping)
-  const styleInjection = `<style>
-    *,*::before,*::after{-webkit-user-select:none!important;-moz-user-select:none!important;-ms-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important;-webkit-tap-highlight-color:rgba(0,0,0,0)!important;}
-    *:focus,*:focus-visible{outline:none!important;box-shadow:none!important;-webkit-focus-ring-color:transparent!important;}
-    ::selection{background:transparent!important;}
-  </style>`;
-
-  const injection = styleInjection + scriptInjection;
-
-  // Rewrite /user-assets/ to absolute URLs
-  let content = html;
-  if (assetBaseUrl) {
-    const prefix = `${assetBaseUrl}/user-assets/`;
-    content = content.replace(/(^|["'(\s])\/user-assets\//g, `$1${prefix}`);
-  }
-
-  if (content.includes('<head>')) {
-    content = content.replace('<head>', '<head>' + injection);
-  } else if (content.includes('<HEAD>')) {
-    content = content.replace('<HEAD>', '<HEAD>' + injection);
-  } else {
-    content = injection + content;
-  }
-
-  return content;
-};
 
 // ==================== Public ID Routes ====================
 
@@ -1711,6 +1639,13 @@ app.get('/g/:gameId/*', async (req, res) => {
     return res.status(404).send('Game not found');
   }
 
+  // Prefer R2/CDN for public game assets when enabled
+  if (r2Client.isR2Enabled()) {
+    const publicId = game.public_id;
+    const r2Url = r2Client.getPublicUrl(`g/${publicId}/${filename}`);
+    return res.redirect(302, r2Url);
+  }
+
   const userId = game.user_id;
   const projectId = game.project_id;
   const projectDir = getProjectPath(userId, projectId);
@@ -1761,7 +1696,8 @@ app.get('/g/:gameId/*', async (req, res) => {
 
     // Inject ASSET_BASE_URL into index.html
     if (ext === '.html' && filename === 'index.html') {
-      content = injectPublicGameHtml(content);
+      const assetBaseUrl = config.ASSET_BASE_URL || config.V2_DOMAIN || '';
+      content = injectPublicGameHtml(content, assetBaseUrl);
     }
 
     return res.send(content);
@@ -1790,7 +1726,8 @@ app.get('/g/:gameId/*', async (req, res) => {
 
       // Inject ASSET_BASE_URL into index.html
       if (ext === '.html' && filename === 'index.html') {
-        textContent = injectPublicGameHtml(textContent);
+        const assetBaseUrl = config.ASSET_BASE_URL || config.V2_DOMAIN || '';
+        textContent = injectPublicGameHtml(textContent, assetBaseUrl);
       }
 
       return res.send(textContent);
@@ -2530,6 +2467,7 @@ app.get('/api/projects', authenticate, async (req, res) => {
       description: g.description || '',
       isPublic: true,
       isPublished: true,
+      thumbnailUrl: g.thumbnail_url || null,
       publishedGameId: g.public_id,  // Use short public_id for URLs
       createdAt: g.published_at,
       updatedAt: g.updated_at
@@ -2861,7 +2799,29 @@ ${limitedAssetPaths.length > 0 ? `- 参照画像が${limitedAssetPaths.length}�
         gitCommitAsync(projectDir, 'Update thumbnail');
 
         // Return URL to the generated thumbnail
-        const thumbnailUrl = `/api/projects/${projectId}/thumbnail?t=${Date.now()}`;
+        let thumbnailUrl = `/api/projects/${projectId}/thumbnail?t=${Date.now()}`;
+
+        try {
+          if (r2Client.isR2Enabled()) {
+            const published = await db.getPublishedGameByProjectId(req.supabase, projectId);
+            if (published) {
+              const upload = await r2Publisher.uploadThumbnailToR2({
+                projectId,
+                publicId: published.public_id,
+                userId: req.user.id
+              });
+              if (upload.thumbnailUrl) {
+                await db.updatePublishedGame(req.supabase, published.id, {
+                  thumbnailUrl: upload.thumbnailUrl
+                });
+                thumbnailUrl = upload.thumbnailUrl;
+              }
+            }
+          }
+        } catch (thumbErr) {
+          console.warn('[Thumbnail] R2 upload failed:', thumbErr.message);
+        }
+
         res.json({ success: true, thumbnailUrl });
       } else {
         res.status(500).json({ error: 'Failed to generate thumbnail', output: nbOutput });
@@ -2905,7 +2865,29 @@ app.post('/api/projects/:projectId/upload-thumbnail', authenticate, checkProject
     // Commit to git (non-blocking, safe)
     gitCommitAsync(projectDir, 'Upload thumbnail');
 
-    const thumbnailUrl = `/api/projects/${projectId}/thumbnail?t=${Date.now()}`;
+    let thumbnailUrl = `/api/projects/${projectId}/thumbnail?t=${Date.now()}`;
+
+    try {
+      if (r2Client.isR2Enabled()) {
+        const published = await db.getPublishedGameByProjectId(req.supabase, projectId);
+        if (published) {
+          const upload = await r2Publisher.uploadThumbnailToR2({
+            projectId,
+            publicId: published.public_id,
+            userId: req.user.id
+          });
+          if (upload.thumbnailUrl) {
+            await db.updatePublishedGame(req.supabase, published.id, {
+              thumbnailUrl: upload.thumbnailUrl
+            });
+            thumbnailUrl = upload.thumbnailUrl;
+          }
+        }
+      }
+    } catch (thumbErr) {
+      console.warn('[Thumbnail Upload] R2 upload failed:', thumbErr.message);
+    }
+
     res.json({ success: true, thumbnailUrl });
 
   } catch (error) {
@@ -2936,6 +2918,36 @@ app.get('/api/projects/:projectId/thumbnail', async (req, res) => {
       return res.status(404).send('Not found');
     }
 
+    // For published games with R2 enabled: on-demand upload to R2
+    if (r2Client.isR2Enabled()) {
+      const { data: published } = await supabaseAdmin
+        .from('published_games')
+        .select('id, public_id, thumbnail_url')
+        .eq('project_id', projectId)
+        .single();
+
+      if (published?.public_id) {
+        // Ensure thumbnail is on R2 (upload if not present)
+        const r2Url = await r2Publisher.ensureThumbnailOnR2({
+          projectId,
+          publicId: published.public_id,
+          userId: project.user_id
+        });
+
+        if (r2Url) {
+          // Update DB if URL changed
+          if (r2Url !== published.thumbnail_url) {
+            await supabaseAdmin
+              .from('published_games')
+              .update({ thumbnail_url: r2Url, updated_at: new Date().toISOString() })
+              .eq('id', published.id);
+          }
+          return res.redirect(302, r2Url);
+        }
+      }
+    }
+
+    // Fallback: serve from local filesystem
     const projectDir = getProjectPath(project.user_id, projectId);
 
     // Check for webp first (uploaded), then png (generated)
@@ -2947,10 +2959,12 @@ app.get('/api/projects/:projectId/thumbnail', async (req, res) => {
     } else if (fs.existsSync(pngPath)) {
       res.type('image/png').sendFile(pngPath);
     } else {
+      res.set('Cache-Control', 'no-store');
       res.status(404).send('Not found');
     }
   } catch (error) {
     console.error('Error serving thumbnail:', error);
+    res.set('Cache-Control', 'no-store');
     res.status(404).send('Not found');  // Hide errors as 404
   }
 });

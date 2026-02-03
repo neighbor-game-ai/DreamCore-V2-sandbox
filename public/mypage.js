@@ -142,7 +142,7 @@ class MyPageApp {
     // Render game cases (physical package style)
     const gameCases = this.projects.map((game, index) => {
       // Build thumbnail URL from project ID (public endpoint, no auth needed)
-      const thumbnailUrl = `/api/projects/${game.id}/thumbnail`;
+      const thumbnailUrl = game.thumbnailUrl || `/api/projects/${game.id}/thumbnail`;
       const gameName = this.escapeHtml(game.name);
       const gameDesc = this.escapeHtml(game.description || '');
       // Use publishedGameId for public game URL

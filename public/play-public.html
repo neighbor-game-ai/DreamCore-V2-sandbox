@@ -115,17 +115,27 @@
                 return;
             }
 
+            let publicGameBaseUrl = 'https://v2.dreamcore.gg';
+
+            // Load public config (for CDN base URL)
+            const configPromise = fetch('/api/config')
+                .then(res => res.ok ? res.json() : null)
+                .then(config => {
+                    if (config?.publicGameBaseUrl) {
+                        publicGameBaseUrl = config.publicGameBaseUrl;
+                    }
+                })
+                .catch(() => {});
+
             // Fetch game info to validate it exists and is public/unlisted
-            fetch('/api/published-games/' + gameId)
+            configPromise.then(() => fetch('/api/published-games/' + gameId))
                 .then(res => {
                     if (!res.ok) throw new Error('Game not found');
                     return res.json();
                 })
                 .then(game => {
-                    // Load game from v2.dreamcore.gg
-                    // The game's HTML will be served from the main domain
-                    const v2Domain = 'https://v2.dreamcore.gg';
-                    gameFrame.src = v2Domain + '/g/' + gameId + '/index.html';
+                    // Load game from CDN base URL
+                    gameFrame.src = publicGameBaseUrl + '/g/' + gameId + '/index.html';
                     gameFrame.style.display = 'block';
                     loadingEl.style.display = 'none';
                 })
