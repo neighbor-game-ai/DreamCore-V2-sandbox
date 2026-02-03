@@ -8,6 +8,29 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-03: CLI Deploy メタデータ拡張 ✅
+
+**詳細:** `.claude/logs/2026-02-03-cli-deploy-metadata.md`
+
+CLI Deploy の公開機能を Web 公開と同等に拡張:
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `howToPlay` | string | 操作方法・ルール（1000字以内） |
+| `tags` | string[] | 検索用タグ（最大5個） |
+| `visibility` | string | `"public"` or `"unlisted"` |
+| `allowRemix` | boolean | Remix許可 |
+| `thumbnail` | file | サムネイル画像（WebP変換） |
+
+**変更内容:**
+- `cli-deploy/server/upload.js` - dreamcore.json v2 パーサー、サムネイル抽出
+- `cli-deploy/server/routes.js` - サムネイル処理、新フィールド保存
+- `.claude/skills/dreamcore-deploy/SKILL.md` - デプロイスキル新規作成
+- `docs/CLI-ARCHITECTURE.md` - v2 仕様ドキュメント
+- Supabase B マイグレーション（新カラム追加）
+
+---
+
 ### 2026-02-03: 招待コード機能実装 ✅
 
 **詳細:** `.claude/logs/2026-02-03-invitation-code.md`
@@ -1267,4 +1290,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-03 (招待コード機能実装)
+最終更新: 2026-02-03 (CLI Deploy メタデータ拡張)
