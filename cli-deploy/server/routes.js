@@ -308,8 +308,9 @@ router.post('/deploy', authenticateCliToken, deployLimiter, upload.single('file'
       });
     }
 
-    const gamesDomain = process.env.CLI_GAMES_DOMAIN || 'cli.dreamcore.gg';
-    const gameUrl = `https://${gamesDomain}/${publicId}/`;
+    // 公開 URL は v2.dreamcore.gg/game/ （ユーザー向け）
+    // cli.dreamcore.gg は内部 CDN ドメイン（iframe src 用）
+    const gameUrl = `https://v2.dreamcore.gg/game/${publicId}`;
 
     // DB を更新
     if (isUpdate) {
@@ -408,13 +409,11 @@ router.get('/projects', authenticateCliToken, projectsGetLimiter, async (req, re
       return res.status(500).json({ error: 'database_error', message: 'Failed to fetch projects' });
     }
 
-    const gamesDomain = process.env.CLI_GAMES_DOMAIN || 'cli.dreamcore.gg';
-
     const result = projects.map(p => ({
       id: p.public_id,
       title: p.title,
       description: p.description,
-      url: p.cli_published_games?.[0]?.url || `https://${gamesDomain}/${p.public_id}/`,
+      url: `https://v2.dreamcore.gg/game/${p.public_id}`,
       created_at: p.created_at,
       updated_at: p.updated_at,
       published_at: p.cli_published_games?.[0]?.published_at

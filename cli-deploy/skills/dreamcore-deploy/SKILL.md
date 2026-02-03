@@ -84,7 +84,7 @@ curl -X POST https://v2.dreamcore.gg/api/cli/deploy \
 # {
 #   "success": true,
 #   "public_id": "g_7F2cK9wP1x",
-#   "url": "https://cli.dreamcore.gg/g_7F2cK9wP1x/",
+#   "url": "https://v2.dreamcore.gg/game/g_7F2cK9wP1x",
 #   "files_uploaded": 15,
 #   "is_update": false
 # }

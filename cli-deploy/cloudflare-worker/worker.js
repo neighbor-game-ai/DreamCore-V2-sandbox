@@ -91,7 +91,10 @@ export default {
 
     // セキュリティヘッダー
     headers.set('X-Content-Type-Options', 'nosniff');
-    headers.set('X-Frame-Options', 'SAMEORIGIN');
+    // X-Frame-Options を削除（v2.dreamcore.gg からの iframe 埋め込みを許可）
+    headers.delete('X-Frame-Options');
+    // frame-ancestors で v2.dreamcore.gg からの埋め込みのみ許可
+    headers.set('Content-Security-Policy', "frame-ancestors 'self' https://v2.dreamcore.gg https://dreamcore.gg");
     headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
     // キャッシュ設定
