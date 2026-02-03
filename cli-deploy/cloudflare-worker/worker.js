@@ -10,8 +10,9 @@
 
 const SUPABASE_STORAGE_URL = 'https://dgusszutzzoeadmpyira.supabase.co/storage/v1/object/public/games';
 
+// URL 形式: /g/{public_id}/ （play.dreamcore.gg と同じ構造）
 // public_id の形式: g_ + 10文字の英数字
-const PUBLIC_ID_REGEX = /^\/g_[A-Za-z0-9]{10}(\/|$)/;
+const PUBLIC_ID_REGEX = /^\/g\/g_[A-Za-z0-9]{10}(\/|$)/;
 
 // 拡張子 → Content-Type マッピング
 const CONTENT_TYPES = {
