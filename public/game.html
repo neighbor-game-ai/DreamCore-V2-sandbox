@@ -2648,7 +2648,15 @@
             document.title = `${game.title} - DreamCore`;
 
             const iframe = document.getElementById('gameFrame');
-            iframe.src = `${publicGameBaseUrl}/g/${gameId}/index.html`;
+            // CLI games use their own domain, regular games use play.dreamcore.gg
+            const gameDomain = game.play_domain
+                ? `https://${game.play_domain}`
+                : publicGameBaseUrl;
+            // CLI games don't use /g/ prefix in URL
+            const gameUrl = game.is_cli_game
+                ? `${gameDomain}/${gameId}/index.html`
+                : `${gameDomain}/g/${gameId}/index.html`;
+            iframe.src = gameUrl;
 
             // Inject user-select: none into iframe after load
             iframe.onload = function() {

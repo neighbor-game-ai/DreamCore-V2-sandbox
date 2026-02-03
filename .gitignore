@@ -62,3 +62,6 @@ analyze_classification.js
 !.claude/skills/
 !.claude/docs/
 !.claude/logs/
+
+# Wrangler local development state
+.wrangler/

@@ -399,6 +399,20 @@ USING (owner_id = auth.uid() AND is_deleted = FALSE)
 - `node test-ws-project-operations.js` - プロジェクトCRUD操作テスト
 - `node test-assets-api.js` - アセットAPIテスト
 - `node test-exception-boundary.js` - 例外・境界ケーステスト
+- `node test-prompt-injection.js` - **プロンプトインジェクションE2Eテスト**
+
+### プロンプトインジェクションテスト
+
+**詳細:** `.claude/skills/prompt-injection-test/SKILL.md`
+
+```bash
+node test-prompt-injection.js                           # 全テスト
+node test-prompt-injection.js --dry-run                 # ペイロード確認のみ
+node test-prompt-injection.js --category=tag_escape     # 特定カテゴリ
+node test-prompt-injection.js -v                        # 詳細ログ
+```
+
+17パターンの攻撃（タグ脱出、指示上書き、APIキー漏洩、コマンド実行等）をテスト。
 
 ## DreamCore-V2 完了ステータス（引き継ぎ対象）
 

@@ -1348,6 +1348,7 @@ app.get('/game/:userId/:projectId/*', optionalAuth, async (req, res) => {
 // GET /api/published-games/:id - Get published game info (public access)
 // Note: Does NOT increment play count (use POST /api/published-games/:id/play for that)
 // Supports both UUID and public_id (e.g., g_abc123XYZ0)
+// Also supports CLI-deployed games (stored in Supabase B)
 app.get('/api/published-games/:id', async (req, res) => {
   const { id } = req.params;
 
@@ -1357,11 +1358,23 @@ app.get('/api/published-games/:id', async (req, res) => {
     return res.status(400).json({ error: 'Invalid game ID' });
   }
 
-  const game = isUUID
+  // 1. まず通常のpublished_games（Supabase A）を検索
+  let game = isUUID
     ? await db.getPublishedGameById(id)
     : await db.getPublishedGameByPublicId(id);
+
+  // 2. 見つからない場合、CLI games（Supabase B）をフォールバック検索
+  if (!game && isPublicId && cliDeploy) {
+    game = await cliDeploy.getCliPublishedGame(id);
+  }
+
   if (!game) {
     return res.status(404).json({ error: 'Game not found' });
+  }
+
+  // 通常ゲームにはデフォルトのplay_domainを設定
+  if (!game.play_domain) {
+    game.play_domain = 'play.dreamcore.gg';
   }
 
   res.json(game);

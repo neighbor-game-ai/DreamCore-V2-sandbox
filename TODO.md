@@ -8,6 +8,58 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-03: R2/CDN 完全移行 ✅
+
+**詳細:** `.claude/logs/2026-02-03-r2-cdn-migration.md`
+
+公開ゲーム・サムネイル・アセットの配信を Cloudflare R2 + CDN に移行:
+
+| 機能 | 内容 |
+|------|------|
+| R2 クライアント | `server/r2Client.js` - S3互換 API |
+| ゲーム配信 | `/g/:id/*` → 302 リダイレクト |
+| サムネイル配信 | `/api/projects/:id/thumbnail` → 302 リダイレクト |
+| **user-assets 配信** | `/user-assets/:userId/:alias` → 302 リダイレクト |
+| **global-assets 配信** | `/global-assets/:category/:alias` → 302 リダイレクト |
+| サムネイル自動生成 | NanoBanana（Gemini）による新規公開時の自動生成 |
+| バックフィル | ゲーム12件 + アセット142件を R2 に移行 |
+
+**CDN URL:**
+- ゲーム: `https://cdn.dreamcore.gg/g/{public_id}/`
+- アセット: `https://cdn.dreamcore.gg/user-assets/{userId}/{alias}`
+
+**効果:** 「表示されたりされなかったり」問題を解消。Modal Volume の不安定さに依存しない配信基盤を構築。
+
+**追加対応:**
+- GCE 本番に R2 環境変数が未設定だった問題を修正
+- CSP imgSrc に `cdn.dreamcore.gg` を追加
+- **Cloudflare Cache Rules で 404 キャッシュを無効化**（再発防止）
+
+---
+
+### 2026-02-02: プロンプトインジェクション自動テストスイート作成 ✅
+
+**詳細:** `.claude/logs/2026-02-02-prompt-injection-test.md`
+
+プロンプトインジェクション脆弱性の E2E テストスイートを作成:
+
+- 17パターンの攻撃ベクトル（タグ脱出、指示上書き、APIキー漏洩、コマンド実行等）
+- 文脈認識の判定ロジック（VULNERABLE / REVIEW / REFUSED / SECURE）
+- 誤検出（Claude の拒否メッセージ）を除外する改善済み検出
+
+**テスト結果:** 全17テスト成功（全攻撃が Claude によりブロック）
+
+**使用方法:**
+```bash
+node test-prompt-injection.js              # 全テスト
+node test-prompt-injection.js --dry-run    # ペイロード確認
+node test-prompt-injection.js --category=tag_escape,api_key_exfil -v
+```
+
+**スキル:** `.claude/skills/prompt-injection-test/SKILL.md`
+
+---
+
 ### 2026-02-02: CLI Deploy 本番ドメイン移行完了 ✅
 
 **詳細:** `.claude/logs/2026-02-02-cli-deploy-e2e-test.md`
@@ -383,6 +435,10 @@ Content-Security-Policy-Report-Only ヘッダーを導入:
 - [ ] **Sandbox 上限** - ユーザーあたり最大3個の制限（Phase 2）
 
 ### 低優先度（将来）
+- [ ] **多言語化（i18n）** - 日本語/英語の2言語対応、ブラウザ言語で自動切替
+  - **計画書:** `/Users/admin/.claude/plans/quiet-imagining-rossum.md`
+  - 翻訳対象: HTML静的テキスト200+、JS動的テキスト120+
+  - 主要ファイル: app.js, editor.html, create.html, publish.js
 - [ ] **系譜表示の深さ制限緩和** - 現在10世代、50〜無制限に拡張可能（`remixService.js:198`）
 - [ ] **play_count レート制限** - IP+gameId で短時間重複を抑制（悪用対策）
 - [ ] **Bottom Navigation 共通化** - 各HTMLに直接記述 → JS動的挿入 or Web Components
@@ -1164,4 +1220,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-02 (CLI Deploy 本番ドメイン移行完了)
+最終更新: 2026-02-03 (R2/CDN 完全移行 + 404キャッシュ無効化)

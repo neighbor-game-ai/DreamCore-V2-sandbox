@@ -77,6 +77,11 @@ export default {
     // レスポンスヘッダーを調整
     const headers = new Headers(response.headers);
 
+    // Supabase Storage の厳格な CSP を削除（UGC 実行に必要）
+    // Supabase は `default-src 'none'; sandbox` を返すが、これはゲーム実行をブロックする
+    headers.delete('Content-Security-Policy');
+    headers.delete('Content-Security-Policy-Report-Only');
+
     // 拡張子から Content-Type を設定（Supabase が text/plain を返すことがあるため）
     const ext = storagePath.substring(storagePath.lastIndexOf('.')).toLowerCase();
     const correctContentType = CONTENT_TYPES[ext];

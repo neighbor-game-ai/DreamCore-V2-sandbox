@@ -38,7 +38,9 @@ const getR2Client = () => {
 
 const getPublicUrl = (key) => {
   const base = config.R2_PUBLIC_BASE_URL.replace(/\/+$/, '');
-  return `${base}/${key}`;
+  // URL-encode each path segment to handle special characters (spaces, #, etc.)
+  const encodedKey = key.split('/').map(encodeURIComponent).join('/');
+  return `${base}/${encodedKey}`;
 };
 
 const putObject = async ({ key, body, contentType, cacheControl }) => {

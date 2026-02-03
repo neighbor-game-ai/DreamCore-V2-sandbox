@@ -39,7 +39,10 @@ const ERROR_DETECTION_SCRIPT = `
       errors.push({
         type: 'console.error',
         message: Array.from(arguments).map(function(a) {
-          return typeof a === 'object' ? JSON.stringify(a) : String(a);
+          if (typeof a === 'object') {
+            try { return JSON.stringify(a); } catch(e) { return '[Object]'; }
+          }
+          return String(a);
         }).join(' ')
       });
       reportErrors();
