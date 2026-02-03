@@ -8,6 +8,20 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-03: CLI Deploy 機能拡張 ✅
+
+**詳細:** `.claude/logs/2026-02-03-cli-deploy-enhancements.md`
+
+| 機能 | 内容 |
+|------|------|
+| **Skills 自動更新** | `/skills/` 配信エンドポイント、version.json、Step 0 で更新確認 |
+| **メタデータ編集 API** | `PATCH /projects/:id` - ファイル再アップロード不要で title/description 等を更新 |
+| **CodeRabbit 対応** | cli_projects エラーハンドリング、cli_published_games 0件→404 |
+
+**コミット:** `0ea77c6`, `f3d84ba`, `4d650d7`, `adb2b13`
+
+---
+
 ### 2026-02-03: CLI Deploy メタデータ拡張 ✅
 
 **詳細:** `.claude/logs/2026-02-03-cli-deploy-metadata.md`
@@ -1290,4 +1304,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-03 (CLI Deploy メタデータ拡張)
+最終更新: 2026-02-03 (CLI Deploy 機能拡張 - Skills 自動更新、メタデータ編集 API)
