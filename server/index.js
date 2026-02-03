@@ -34,6 +34,7 @@ const thumbnailGenerator = require('./thumbnailGenerator');
 const waitlist = require('./waitlist');
 const quotaService = require('./quotaService');
 const remixService = require('./remixService');
+const profileRoutes = require('./modules/profile/routes');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const { JSDOM } = require('jsdom');
@@ -404,6 +405,9 @@ app.get('/api/config', (req, res) => {
 // V2 初期リリース用。無効化方法: この行をコメントアウト
 waitlist.setupRoutes(app);
 
+// ==================== Profile Module ====================
+app.use('/api/users', profileRoutes);
+
 // ==================== Remix API ====================
 remixService.setupRoutes(app);
 
@@ -414,6 +418,10 @@ if (cliDeploy) {
   app.use('/cli-auth', express.static(path.join(__dirname, '../cli-deploy/public')));
   console.log('[CLI Deploy] Mounted at /api/cli');
 }
+
+// ==================== Skills 配信 ====================
+// Claude Code Skills の配信（自動更新用）
+app.use('/skills', express.static(path.join(__dirname, '../cli-deploy/skills')));
 
 // ==================== REST API Endpoints ====================
 
@@ -1563,36 +1571,15 @@ app.get('/u/:id', async (req, res) => {
   return res.sendFile(path.join(__dirname, '..', 'public', 'user.html'));
 });
 
-// GET /api/users/:id/public - Get public user profile
-// Supports both UUID and public_id
-app.get('/api/users/:id/public', async (req, res) => {
-  const { id } = req.params;
-
-  const isUUID = isValidUUID(id);
-  const isPublicId = /^u_[A-Za-z0-9]{10}$/.test(id);
-  if (!isUUID && !isPublicId) {
-    return res.status(400).json({ error: 'Invalid user ID' });
-  }
-
-  let user;
-  if (isPublicId) {
-    user = await db.getUserByPublicId(id);
-  } else {
-    // For UUID, use admin client to get public fields only
-    const { data } = await db.supabaseAdmin
-      .from('users')
-      .select('id, display_name, avatar_url, public_id, created_at')
-      .eq('id', id)
-      .single();
-    user = data;
-  }
-
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-
-  res.json(user);
+// GET /@/:username - Reserved for future custom username feature
+// When implemented: lookup users.username -> redirect to /u/{public_id} or serve profile
+app.get('/@/:username', async (req, res) => {
+  // Reserved path - not yet implemented
+  // Future: lookup username in DB, serve profile or 404
+  return res.status(404).send('Not found');
 });
+
+// NOTE: GET /api/users/:id/public moved to modules/profile/routes.js
 
 // GET /p/:publicId - Project page (redirects to game if published)
 // Supports both UUID and public_id (e.g., p_abc123XYZ0)

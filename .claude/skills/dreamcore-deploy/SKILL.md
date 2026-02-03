@@ -2,6 +2,8 @@
 
 ゲームを DreamCore にデプロイする。
 
+**バージョン:** 1.1.0
+
 ## トリガー
 
 - 「DreamCoreにデプロイして」
@@ -13,6 +15,56 @@
 - プロジェクトルートに `index.html` が存在すること
 
 ## フロー
+
+### Step 0: スキル更新確認
+
+1. サーバーからバージョン情報を取得:
+```bash
+curl -s https://v2.dreamcore.gg/skills/dreamcore-deploy/version.json
+```
+
+2. ローカルのバージョンファイルを確認:
+```bash
+cat ~/.dreamcore/skill-version 2>/dev/null || echo "0.0.0"
+```
+
+3. サーバーのバージョンがローカルより新しい場合、ユーザーに確認:
+```
+DreamCore Deploy スキルの新バージョン (v{version}) があります。
+
+変更内容: {changelog}
+
+更新しますか？ [Y/n]
+```
+
+4. 更新する場合:
+   - インストール先を判定:
+     - `.claude/skills/dreamcore-deploy/SKILL.md` が存在 → ローカル（プロジェクト内）
+     - 存在しない → グローバル（`~/.claude/skills/dreamcore-deploy/`）
+   - SKILL.md をダウンロード:
+```bash
+# グローバルの場合
+mkdir -p ~/.claude/skills/dreamcore-deploy
+curl -sL https://v2.dreamcore.gg/skills/dreamcore-deploy/SKILL.md \
+  -o ~/.claude/skills/dreamcore-deploy/SKILL.md
+
+# ローカルの場合
+curl -sL https://v2.dreamcore.gg/skills/dreamcore-deploy/SKILL.md \
+  -o .claude/skills/dreamcore-deploy/SKILL.md
+```
+   - バージョンファイルを更新:
+```bash
+mkdir -p ~/.dreamcore
+echo "{version}" > ~/.dreamcore/skill-version
+```
+
+5. 更新完了後:
+```
+スキルを更新しました (v{version})
+引き続きデプロイを実行します...
+```
+
+更新しない場合はそのまま続行。
 
 ### Step 1: index.html の確認
 
@@ -87,15 +139,17 @@ ID: {id}
 ```bash
 # デバイスコードを取得
 curl -X POST https://v2.dreamcore.gg/api/cli/device/code
+```
 
-# レスポンス例:
-# {
-#   "device_code": "xxx",
-#   "user_code": "ABCD-1234",
-#   "verification_uri": "https://v2.dreamcore.gg/cli-auth/auth.html",
-#   "expires_in": 900,
-#   "interval": 5
-# }
+レスポンス例:
+```json
+{
+  "device_code": "xxx",
+  "user_code": "ABCD-1234",
+  "verification_uri": "https://v2.dreamcore.gg/cli-auth/auth.html",
+  "expires_in": 900,
+  "interval": 5
+}
 ```
 
 ユーザーに以下を表示:
@@ -139,10 +193,10 @@ rm game.zip
 
 成功時:
 ```
-✅ デプロイ完了！
+デプロイ完了！
 
-🎮 ゲームURL: https://v2.dreamcore.gg/game/g_xxxxxxxxxx
-📋 ID: g_xxxxxxxxxx
+ゲームURL: https://v2.dreamcore.gg/game/g_xxxxxxxxxx
+ID: g_xxxxxxxxxx
 
 dreamcore.json に ID を保存しました。
 次回は同じゲームを上書き更新できます。
@@ -182,13 +236,12 @@ dreamcore.json に ID を保存しました。
 
 ---
 
-## トークン保存場所
+## ファイル保存場所
 
-```
-~/.dreamcore/token
-```
-
-形式: `dc_` + 32文字の英数字
+| ファイル | パス | 説明 |
+|----------|------|------|
+| トークン | `~/.dreamcore/token` | 認証トークン（`dc_` + 32文字） |
+| バージョン | `~/.dreamcore/skill-version` | インストール済みスキルのバージョン |
 
 ---
 
@@ -208,5 +261,5 @@ dreamcore.json に ID を保存しました。
 
 ## 参考
 
-- [CLI Architecture](/docs/CLI-ARCHITECTURE.md)
-- [API Reference](/docs/API-REFERENCE.md)
+- [CLI Architecture](https://v2.dreamcore.gg/docs/CLI-ARCHITECTURE.md)
+- [API Reference](https://v2.dreamcore.gg/docs/API-REFERENCE.md)

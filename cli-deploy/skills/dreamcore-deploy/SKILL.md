@@ -1,161 +1,265 @@
-# DreamCore Deploy
+# DreamCore Deploy スキル
 
-DreamCore にゲームをデプロイするスキル。
+ゲームを DreamCore にデプロイする。
 
-## 使用タイミング
+**バージョン:** 1.1.0
 
-- ユーザーが「DreamCore にデプロイして」「公開して」「アップロードして」と言った時
-- HTML5 ゲームを作成した後、公開 URL が必要な時
-- 既存のゲームを更新したい時
+## トリガー
+
+- 「DreamCoreにデプロイして」
+- 「ゲームを公開して」
+- 「DreamCoreにアップロードして」
 
 ## 前提条件
 
-1. デプロイするゲームが `index.html` を含むこと
-2. DreamCore の認証トークンが設定されていること（初回のみ認証フローが必要）
+- プロジェクトルートに `index.html` が存在すること
 
-## 認証フロー（初回のみ）
+## フロー
+
+### Step 0: スキル更新確認
+
+1. サーバーからバージョン情報を取得:
+```bash
+curl -s https://v2.dreamcore.gg/skills/dreamcore-deploy/version.json
+```
+
+2. ローカルのバージョンファイルを確認:
+```bash
+cat ~/.dreamcore/skill-version 2>/dev/null || echo "0.0.0"
+```
+
+3. サーバーのバージョンがローカルより新しい場合、ユーザーに確認:
+```
+DreamCore Deploy スキルの新バージョン (v{version}) があります。
+
+変更内容: {changelog}
+
+更新しますか？ [Y/n]
+```
+
+4. 更新する場合:
+   - インストール先を判定:
+     - `.claude/skills/dreamcore-deploy/SKILL.md` が存在 → ローカル（プロジェクト内）
+     - 存在しない → グローバル（`~/.claude/skills/dreamcore-deploy/`）
+   - SKILL.md をダウンロード:
+```bash
+# グローバルの場合
+mkdir -p ~/.claude/skills/dreamcore-deploy
+curl -sL https://v2.dreamcore.gg/skills/dreamcore-deploy/SKILL.md \
+  -o ~/.claude/skills/dreamcore-deploy/SKILL.md
+
+# ローカルの場合
+curl -sL https://v2.dreamcore.gg/skills/dreamcore-deploy/SKILL.md \
+  -o .claude/skills/dreamcore-deploy/SKILL.md
+```
+   - バージョンファイルを更新:
+```bash
+mkdir -p ~/.dreamcore
+echo "{version}" > ~/.dreamcore/skill-version
+```
+
+5. 更新完了後:
+```
+スキルを更新しました (v{version})
+引き続きデプロイを実行します...
+```
+
+更新しない場合はそのまま続行。
+
+### Step 1: index.html の確認
+
+プロジェクトルートに `index.html` があるか確認。
+なければエラーを表示して終了。
+
+### Step 2: 既存の dreamcore.json を確認
+
+`dreamcore.json` が存在し、`id` フィールドがある場合:
+
+```
+このゲームは既に DreamCore にアップロードされています。
+ID: {id}
+
+どうしますか？
+1. 上書き更新する
+2. 別ゲームとして新規投稿する
+3. キャンセル
+```
+
+ユーザーが「別ゲームとして投稿」を選んだ場合、`id` フィールドを削除する。
+
+### Step 3: 公開情報を生成
+
+ゲームのコード（index.html 等）を読み取り、以下の情報を生成:
+
+| フィールド | 説明 | 制約 |
+|-----------|------|------|
+| `title` | ゲームの魅力が伝わるタイトル | 50字以内 |
+| `description` | ゲームの概要・世界観・特徴 | 500字以内 |
+| `howToPlay` | 操作方法・ルール・攻略ヒント | 1000字以内、プレーンテキスト |
+| `tags` | 検索用キーワード | 最大5個、各20字以内 |
+
+### Step 4: ユーザーに確認
+
+生成した情報をユーザーに提示し、確認を求める。
+修正があれば反映する。
+
+### Step 5: 公開設定を質問
+
+ユーザーに以下を質問:
+
+**1. 公開範囲**
+- **公開** (`"public"`) - 誰でも発見・プレイできる（推奨）
+- **限定公開** (`"unlisted"`) - URLを知っている人だけ
+
+**2. Remix許可**
+- **許可する** (`true`) - 他ユーザーがこのゲームをベースに新しいゲームを作れる（推奨）
+- **許可しない** (`false`)
+
+### Step 6: dreamcore.json 作成
+
+プロジェクトルートに `dreamcore.json` を作成（既存の `id` があれば保持）:
+
+```json
+{
+  "id": "g_xxxxxxxxxx",
+  "title": "ゲームタイトル",
+  "description": "ゲームの概要説明",
+  "howToPlay": "操作方法とルール",
+  "tags": ["アクション", "パズル"],
+  "visibility": "public",
+  "allowRemix": true
+}
+```
+
+### Step 7: 認証トークンを取得
+
+1. `~/.dreamcore/token` ファイルを確認
+2. なければデバイスフロー認証を開始:
 
 ```bash
-# 1. デバイスコードを発行
+# デバイスコードを取得
 curl -X POST https://v2.dreamcore.gg/api/cli/device/code
+```
 
-# レスポンス例:
-# {
-#   "device_code": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-#   "user_code": "ABCD-1234",
-#   "verification_uri": "https://v2.dreamcore.gg/cli-auth/auth.html",
-#   "verification_uri_complete": "https://v2.dreamcore.gg/cli-auth/auth.html?code=ABCD-1234",
-#   "expires_in": 900,
-#   "interval": 5
-# }
+レスポンス例:
+```json
+{
+  "device_code": "xxx",
+  "user_code": "ABCD-1234",
+  "verification_uri": "https://v2.dreamcore.gg/cli-auth/auth.html",
+  "expires_in": 900,
+  "interval": 5
+}
+```
 
-# 2. ユーザーに verification_uri_complete を開いてもらい認可してもらう
-# 3. トークンをポーリング
+ユーザーに以下を表示:
+```
+認証が必要です。
+
+1. ブラウザで以下のURLを開いてください:
+   https://v2.dreamcore.gg/cli-auth/auth.html
+
+2. 以下のコードを入力してください:
+   ABCD-1234
+
+待機中...
+```
+
+トークン取得をポーリング:
+```bash
 curl -X POST https://v2.dreamcore.gg/api/cli/device/token \
   -H "Content-Type: application/json" \
-  -d '{"grant_type": "urn:ietf:params:oauth:grant-type:device_code", "device_code": "<device_code>"}'
-
-# 成功時のレスポンス:
-# {
-#   "access_token": "dc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-#   "token_type": "Bearer"
-# }
+  -d '{"device_code": "xxx", "grant_type": "urn:ietf:params:oauth:grant-type:device_code"}'
 ```
 
-**トークンの保存場所:** `.dreamcore/token` にトークンを保存
+成功したら `~/.dreamcore/token` に保存。
 
-## デプロイ手順
-
-### 1. dreamcore.json を作成
-
-プロジェクトルートに `dreamcore.json` を作成:
-
-```json
-{
-  "title": "ゲームタイトル",
-  "description": "ゲームの説明（任意）"
-}
-```
-
-既存プロジェクトを更新する場合は `id` を追加:
-
-```json
-{
-  "id": "g_XXXXXXXXXX",
-  "title": "ゲームタイトル"
-}
-```
-
-### 2. ZIP ファイルを作成
+### Step 8: ZIP を作成してデプロイ
 
 ```bash
-# ゲームディレクトリで実行
-zip -r game.zip . -x "*.git*" -x "node_modules/*" -x ".DS_Store"
-```
+# ZIP 作成（node_modules, .git 等を除外）
+zip -r game.zip . -x "node_modules/*" -x ".git/*" -x "*.DS_Store"
 
-### 3. デプロイ
-
-```bash
+# デプロイ
 curl -X POST https://v2.dreamcore.gg/api/cli/deploy \
-  -H "Authorization: Bearer dc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Authorization: Bearer dc_xxxxx" \
   -F "file=@game.zip"
 
-# 成功時のレスポンス:
-# {
-#   "success": true,
-#   "public_id": "g_7F2cK9wP1x",
-#   "url": "https://v2.dreamcore.gg/game/g_7F2cK9wP1x",
-#   "files_uploaded": 15,
-#   "is_update": false
-# }
+# 一時ファイル削除
+rm game.zip
 ```
 
-## プロジェクト管理
+### Step 9: 結果を表示
 
-### 一覧を取得
+成功時:
+```
+デプロイ完了！
 
-```bash
-curl -H "Authorization: Bearer dc_xxxxxxxx" \
-  https://v2.dreamcore.gg/api/cli/projects
+ゲームURL: https://v2.dreamcore.gg/game/g_xxxxxxxxxx
+ID: g_xxxxxxxxxx
+
+dreamcore.json に ID を保存しました。
+次回は同じゲームを上書き更新できます。
 ```
 
-### 削除
+失敗時はエラーメッセージを表示。
 
-```bash
-curl -X DELETE \
-  -H "Authorization: Bearer dc_xxxxxxxx" \
-  https://v2.dreamcore.gg/api/cli/projects/g_XXXXXXXXXX
+---
+
+## サムネイル（オプション）
+
+プロジェクトルートに以下のいずれかを配置すると、サムネイルとしてアップロードされる:
+
+- `thumbnail.webp`（推奨）
+- `thumbnail.png`
+- `thumbnail.jpg`
+
+**制約:**
+- 最大 1MB
+- WebP に自動変換（変換失敗時は元形式を使用）
+
+---
+
+## dreamcore.json 仕様
+
+### フィールド一覧
+
+| フィールド | 必須 | 型 | デフォルト | 説明 |
+|-----------|------|-----|-----------|------|
+| `id` | ❌ | string | 自動生成 | 公開ID（`g_` + 10文字英数字） |
+| `title` | ✅ | string | - | ゲームタイトル（50字以内） |
+| `description` | ❌ | string | `""` | 概要説明（500字以内） |
+| `howToPlay` | ❌ | string | `""` | 操作方法・ルール（1000字以内） |
+| `tags` | ❌ | string[] | `[]` | 検索用タグ（最大5個、各20字以内） |
+| `visibility` | ❌ | string | `"public"` | `"public"` または `"unlisted"` |
+| `allowRemix` | ❌ | boolean | `true` | Remix許可 |
+
+---
+
+## ファイル保存場所
+
+| ファイル | パス | 説明 |
+|----------|------|------|
+| トークン | `~/.dreamcore/token` | 認証トークン（`dc_` + 32文字） |
+| バージョン | `~/.dreamcore/skill-version` | インストール済みスキルのバージョン |
+
+---
+
+## エラー例
+
+```
+✗ index.html が見つかりません
+✗ title is required in dreamcore.json
+✗ title must be 50 characters or less
+✗ tags must have at most 5 items
+✗ visibility must be "public" or "unlisted"
+✗ Thumbnail exceeds 1MB limit
+✗ 認証に失敗しました。再度ログインしてください。
 ```
 
-## 実装例（Node.js スクリプト）
+---
 
-```javascript
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+## 参考
 
-const TOKEN_FILE = '.dreamcore/token';
-const API_BASE = 'https://v2.dreamcore.gg/api/cli';
-
-async function deploy(gameDir) {
-  // トークンを読み込み
-  const tokenPath = path.join(process.env.HOME, TOKEN_FILE);
-  if (!fs.existsSync(tokenPath)) {
-    console.error('認証が必要です。まず認証フローを実行してください。');
-    return;
-  }
-  const token = fs.readFileSync(tokenPath, 'utf-8').trim();
-
-  // ZIP を作成
-  const zipPath = '/tmp/game.zip';
-  execSync(`cd "${gameDir}" && zip -r "${zipPath}" . -x "*.git*" -x "node_modules/*"`);
-
-  // デプロイ
-  const FormData = require('form-data');
-  const form = new FormData();
-  form.append('file', fs.createReadStream(zipPath));
-
-  const res = await fetch(`${API_BASE}/deploy`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      ...form.getHeaders()
-    },
-    body: form
-  });
-
-  const result = await res.json();
-  if (result.success) {
-    console.log(`デプロイ成功: ${result.url}`);
-  } else {
-    console.error('デプロイ失敗:', result.message);
-  }
-}
-```
-
-## 注意事項
-
-- ファイルサイズ上限: 単一ファイル 50MB、合計 100MB
-- 許可される拡張子: .html, .css, .js, .json, .png, .jpg, .gif, .webp, .svg, .mp3, .ogg, .wav, .woff, .woff2, .glb, .gltf
-- `index.html` がルートに必須
-- public_id（例: g_XXXXXXXXXX）は一度発行されると変更不可
+- [CLI Architecture](https://v2.dreamcore.gg/docs/CLI-ARCHITECTURE.md)
+- [API Reference](https://v2.dreamcore.gg/docs/API-REFERENCE.md)
