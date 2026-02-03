@@ -21,11 +21,13 @@ const { createDeviceCode, authorizeUserCode, denyUserCode, pollForToken } = requ
 const {
   validateZip,
   parseDreamcoreJson,
+  extractThumbnail,
   uploadToStorage,
   deleteFromStorage,
   generatePublicId,
   isValidPublicId
 } = require('./upload');
+const sharp = require('sharp');
 
 const router = express.Router();
 
@@ -255,6 +257,12 @@ router.post('/deploy', authenticateCliToken, deployLimiter, upload.single('file'
       return res.status(400).json({ error: 'validation_error', message: metadata.error });
     }
 
+    // サムネイルを抽出
+    const thumbnail = extractThumbnail(validation.files);
+    if (thumbnail && thumbnail.error) {
+      return res.status(400).json({ error: 'validation_error', message: thumbnail.error });
+    }
+
     const supabase = getSupabaseCli();
     let publicId = metadata?.id;
     let isUpdate = false;
@@ -310,6 +318,47 @@ router.post('/deploy', authenticateCliToken, deployLimiter, upload.single('file'
     // cli.dreamcore.gg は内部 CDN ドメイン（iframe src 用）
     const gameUrl = `https://v2.dreamcore.gg/game/${publicId}`;
 
+    // サムネイルをアップロード（あれば）
+    let thumbnailUrl = null;
+    if (thumbnail && thumbnail.content) {
+      try {
+        // WebP に変換（失敗時は元ファイルのまま）
+        let thumbnailBuffer = thumbnail.content;
+        let thumbnailContentType = thumbnail.contentType;
+
+        try {
+          thumbnailBuffer = await sharp(thumbnail.content)
+            .webp({ quality: 85 })
+            .toBuffer();
+          thumbnailContentType = 'image/webp';
+        } catch (conversionError) {
+          console.warn('Thumbnail WebP conversion failed, using original:', conversionError.message);
+          // 元のフォーマットのまま使用
+        }
+
+        const thumbnailPath = `users/${req.userId}/projects/${publicId}/thumbnail.webp`;
+        const { error: thumbnailError } = await supabase.storage
+          .from('games')
+          .upload(thumbnailPath, thumbnailBuffer, {
+            contentType: thumbnailContentType,
+            upsert: true
+          });
+
+        if (thumbnailError) {
+          console.error('Thumbnail upload failed:', thumbnailError);
+        } else {
+          // 公開 URL を生成
+          const { data: urlData } = supabase.storage
+            .from('games')
+            .getPublicUrl(thumbnailPath);
+          thumbnailUrl = urlData?.publicUrl || null;
+        }
+      } catch (thumbnailProcessError) {
+        console.error('Thumbnail processing error:', thumbnailProcessError);
+        // サムネイルエラーはデプロイを止めない
+      }
+    }
+
     // DB を更新
     if (isUpdate) {
       // 既存プロジェクトを更新
@@ -322,18 +371,27 @@ router.post('/deploy', authenticateCliToken, deployLimiter, upload.single('file'
         })
         .eq('id', existingProject.id);
 
-      // cli_published_games を upsert
+      // cli_published_games を upsert（新フィールド含む）
+      const publishedData = {
+        project_id: existingProject.id,
+        user_id: req.userId,
+        public_id: publicId,
+        url: gameUrl,
+        title: metadata?.title || existingProject.name,
+        description: metadata?.description,
+        how_to_play: metadata?.howToPlay || null,
+        tags: metadata?.tags || [],
+        visibility: metadata?.visibility || 'public',
+        allow_remix: metadata?.allowRemix !== undefined ? metadata.allowRemix : true,
+        updated_at: new Date().toISOString()
+      };
+      if (thumbnailUrl) {
+        publishedData.thumbnail_url = thumbnailUrl;
+      }
+
       await supabase
         .from('cli_published_games')
-        .upsert({
-          project_id: existingProject.id,
-          user_id: req.userId,
-          public_id: publicId,
-          url: gameUrl,
-          title: metadata?.title || existingProject.name,
-          description: metadata?.description,
-          published_at: new Date().toISOString()
-        }, { onConflict: 'project_id' });
+        .upsert(publishedData, { onConflict: 'project_id' });
 
     } else {
       // 新規プロジェクトを作成
@@ -352,7 +410,7 @@ router.post('/deploy', authenticateCliToken, deployLimiter, upload.single('file'
         return res.status(500).json({ error: 'database_error', message: 'Failed to create project' });
       }
 
-      // cli_published_games を作成
+      // cli_published_games を作成（新フィールド含む）
       await supabase
         .from('cli_published_games')
         .insert({
@@ -361,7 +419,12 @@ router.post('/deploy', authenticateCliToken, deployLimiter, upload.single('file'
           public_id: publicId,
           url: gameUrl,
           title: metadata?.title || 'New Game',
-          description: metadata?.description
+          description: metadata?.description,
+          how_to_play: metadata?.howToPlay || null,
+          tags: metadata?.tags || [],
+          visibility: metadata?.visibility || 'public',
+          allow_remix: metadata?.allowRemix !== undefined ? metadata.allowRemix : true,
+          thumbnail_url: thumbnailUrl
         });
     }
 

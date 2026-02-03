@@ -234,6 +234,14 @@ function validateZip(zipBuffer) {
 
 /**
  * dreamcore.json を解析
+ *
+ * v2 仕様:
+ * - title: 必須、50字以内
+ * - description: オプション、500字以内
+ * - howToPlay: オプション、1000字以内
+ * - tags: オプション、最大5個、各20字以内
+ * - visibility: オプション、"public" | "unlisted"、デフォルト "public"
+ * - allowRemix: オプション、boolean、デフォルト true
  */
 function parseDreamcoreJson(files) {
   const jsonFile = files.find(f => f.path === 'dreamcore.json');
@@ -245,9 +253,12 @@ function parseDreamcoreJson(files) {
     const content = jsonFile.content.toString('utf-8');
     const json = JSON.parse(content);
 
-    // 必須フィールドの検証
+    // title: 必須、50字以内
     if (!json.title || typeof json.title !== 'string') {
       return { error: 'title is required in dreamcore.json' };
+    }
+    if (json.title.length > 50) {
+      return { error: 'title must be 50 characters or less' };
     }
 
     // id があれば検証
@@ -255,14 +266,115 @@ function parseDreamcoreJson(files) {
       return { error: 'Invalid id format in dreamcore.json (expected: g_XXXXXXXXXX)' };
     }
 
+    // description: オプション、500字以内
+    if (json.description !== undefined) {
+      if (typeof json.description !== 'string') {
+        return { error: 'description must be a string' };
+      }
+      if (json.description.length > 500) {
+        return { error: 'description must be 500 characters or less' };
+      }
+    }
+
+    // howToPlay: オプション、1000字以内
+    if (json.howToPlay !== undefined) {
+      if (typeof json.howToPlay !== 'string') {
+        return { error: 'howToPlay must be a string' };
+      }
+      if (json.howToPlay.length > 1000) {
+        return { error: 'howToPlay must be 1000 characters or less' };
+      }
+    }
+
+    // tags: オプション、最大5個、各20字以内
+    let tags = [];
+    if (json.tags !== undefined) {
+      if (!Array.isArray(json.tags)) {
+        return { error: 'tags must be an array' };
+      }
+      if (json.tags.length > 5) {
+        return { error: 'tags must have at most 5 items' };
+      }
+      for (const tag of json.tags) {
+        if (typeof tag !== 'string') {
+          return { error: 'each tag must be a string' };
+        }
+        if (tag.length > 20) {
+          return { error: 'each tag must be 20 characters or less' };
+        }
+      }
+      tags = json.tags;
+    }
+
+    // visibility: オプション、"public" | "unlisted"
+    let visibility = 'public';
+    if (json.visibility !== undefined) {
+      if (!['public', 'unlisted'].includes(json.visibility)) {
+        return { error: 'visibility must be "public" or "unlisted"' };
+      }
+      visibility = json.visibility;
+    }
+
+    // allowRemix: オプション、boolean
+    let allowRemix = true;
+    if (json.allowRemix !== undefined) {
+      if (typeof json.allowRemix !== 'boolean') {
+        return { error: 'allowRemix must be a boolean (true or false)' };
+      }
+      allowRemix = json.allowRemix;
+    }
+
     return {
       id: json.id || null,
-      title: json.title,
-      description: json.description || null
+      title: json.title.trim(),
+      description: json.description || null,
+      howToPlay: json.howToPlay || null,
+      tags,
+      visibility,
+      allowRemix
     };
   } catch (err) {
     return { error: `Invalid dreamcore.json: ${err.message}` };
   }
+}
+
+/**
+ * サムネイルファイルを抽出
+ *
+ * 優先順位: thumbnail.webp > thumbnail.png > thumbnail.jpg
+ * セキュリティ: パス正規化、サイズ上限（1MB）、拡張子ホワイトリスト
+ */
+const MAX_THUMBNAIL_SIZE = 1 * 1024 * 1024; // 1MB
+const THUMBNAIL_NAMES = ['thumbnail.webp', 'thumbnail.png', 'thumbnail.jpg', 'thumbnail.jpeg'];
+
+function extractThumbnail(files) {
+  for (const name of THUMBNAIL_NAMES) {
+    const file = files.find(f => {
+      // パス正規化（zip slip 対策）
+      const normalized = path.normalize(f.path);
+      if (normalized.includes('..') || path.isAbsolute(normalized)) {
+        return false;
+      }
+      return normalized === name;
+    });
+
+    if (file) {
+      // サイズチェック
+      if (file.size > MAX_THUMBNAIL_SIZE) {
+        return { error: `Thumbnail exceeds 1MB limit (${Math.round(file.size / 1024)}KB)` };
+      }
+
+      const ext = path.extname(file.path).toLowerCase();
+      return {
+        content: file.content,
+        originalExt: ext,
+        contentType: ext === '.webp' ? 'image/webp' :
+                     ext === '.png' ? 'image/png' : 'image/jpeg'
+      };
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -400,6 +512,7 @@ module.exports = {
   isSymbolicLink,
   validateZip,
   parseDreamcoreJson,
+  extractThumbnail,
   uploadToStorage,
   deleteFromStorage,
   ALLOWED_EXTENSIONS,
@@ -407,5 +520,6 @@ module.exports = {
   MAX_FILE_SIZE,
   MAX_TOTAL_SIZE,
   MAX_FILE_COUNT,
+  MAX_THUMBNAIL_SIZE,
   PUBLIC_ID_REGEX
 };
