@@ -28,7 +28,18 @@ const CONTENT_TYPES = {
 
 const TEXT_EXTENSIONS = new Set(['.html', '.css', '.js', '.mjs', '.json']);
 
+/**
+ * Get the base URL for assets in public games.
+ * When R2 is enabled, returns CDN URL for direct asset access.
+ * This eliminates CORS/CORP issues by serving from same origin.
+ */
 const getAssetBaseUrl = () => {
+  // When R2 is enabled, use CDN URL for assets
+  // This allows /user-assets/* to be rewritten to cdn.dreamcore.gg/user-assets/*
+  if (isR2Enabled() && config.R2_PUBLIC_BASE_URL) {
+    return config.R2_PUBLIC_BASE_URL.replace(/\/+$/, '');
+  }
+  // Fallback: explicit ASSET_BASE_URL or V2_DOMAIN
   if (config.ASSET_BASE_URL) {
     return config.ASSET_BASE_URL.replace(/\/+$/, '');
   }

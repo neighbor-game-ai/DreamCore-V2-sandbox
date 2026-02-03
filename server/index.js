@@ -29,6 +29,7 @@ const config = require('./config');
 const { injectGameHtml, injectPublicGameHtml, rewriteUserAssets } = require('./gameHtmlUtils');
 const r2Publisher = require('./r2Publisher');
 const r2Client = require('./r2Client');
+const assetPublisher = require('./assetPublisher');
 const thumbnailGenerator = require('./thumbnailGenerator');
 const waitlist = require('./waitlist');
 const quotaService = require('./quotaService');
@@ -306,6 +307,7 @@ app.use((req, res, next) => {
 // AI系APIは個別にさらに厳しい制限（5 req/min）が適用される
 // 公開API（ゲーム情報取得等）はレート制限から除外
 app.use('/api/', (req, res, next) => {
+  const fullPath = `${req.baseUrl}${req.path}`;
   // 公開APIはレート制限から除外（UX優先）
   // CLI Deploy は独自のレート制限を実装しているため除外
   const publicPaths = [
@@ -313,11 +315,11 @@ app.use('/api/', (req, res, next) => {
     '/api/config',            // フロントエンド設定
     '/api/cli/',              // CLI Deploy（独自レート制限）
   ];
-  if (publicPaths.some(p => req.path.startsWith(p))) {
+  if (publicPaths.some(p => fullPath.startsWith(p))) {
     return next();
   }
   // サムネイル取得は静的ファイル配信に近いため除外
-  if (/^\/api\/projects\/[^/]+\/thumbnail$/.test(req.path)) {
+  if (/^\/api\/projects\/[^/]+\/thumbnail$/.test(fullPath)) {
     return next();
   }
 
@@ -823,6 +825,19 @@ app.post('/api/assets/upload', authenticate, upload.single('file'), async (req, 
       await db.linkAssetToProject(req.supabase, projectId, asset.id, 'image');
     }
 
+    // Fire-and-forget: upload to R2 for CDN (don't block response)
+    if (r2Client.isR2Enabled()) {
+      setImmediate(async () => {
+        try {
+          await assetPublisher.uploadUserAssetToR2(userId, asset.alias, storagePath);
+          console.log(`[assets] Uploaded to R2: ${userId}/${asset.alias}`);
+        } catch (err) {
+          console.error(`[assets] R2 upload failed: ${err.message}`);
+          // Not critical - on-demand upload will handle it later
+        }
+      });
+    }
+
     res.json({
       success: true,
       asset: {
@@ -994,6 +1009,7 @@ app.delete('/api/assets/:id', authenticate, checkAssetOwnership, async (req, res
 
 // Serve user assets by alias
 // GET /user-assets/:userId/:alias
+// With R2 enabled: 302 redirect to CDN (on-demand upload if needed)
 app.get('/user-assets/:userId/:alias', optionalAuth, async (req, res) => {
   const { userId, alias } = req.params;
 
@@ -1027,7 +1043,21 @@ app.get('/user-assets/:userId/:alias', optionalAuth, async (req, res) => {
     return res.status(404).send('Not found');
   }
 
-  // Serve file
+  // R2 redirect path: check/upload to R2, then 302
+  if (r2Client.isR2Enabled()) {
+    try {
+      const cdnUrl = await assetPublisher.ensureUserAssetOnR2(userId, alias, asset.storage_path);
+      if (cdnUrl) {
+        return res.redirect(302, cdnUrl);
+      }
+      // Fall through to local serving if R2 upload failed
+    } catch (err) {
+      console.error(`[user-assets] R2 redirect failed for ${userId}/${alias}:`, err.message);
+      // Fall through to local serving
+    }
+  }
+
+  // Fallback: serve file locally
   const filePath = asset.storage_path;
   if (!fs.existsSync(filePath)) {
     console.error(`[user-assets] File not found: ${filePath}`);
@@ -1039,6 +1069,7 @@ app.get('/user-assets/:userId/:alias', optionalAuth, async (req, res) => {
 
 // Serve global assets by category and alias
 // GET /global-assets/:category/:alias
+// With R2 enabled: 302 redirect to CDN (on-demand upload if needed)
 app.get('/global-assets/:category/:alias', async (req, res) => {
   const { category, alias } = req.params;
 
@@ -1059,7 +1090,21 @@ app.get('/global-assets/:category/:alias', async (req, res) => {
     return res.status(404).send('Not found');
   }
 
-  // Serve file
+  // R2 redirect path: check/upload to R2, then 302
+  if (r2Client.isR2Enabled()) {
+    try {
+      const cdnUrl = await assetPublisher.ensureGlobalAssetOnR2(category, alias, asset.storage_path);
+      if (cdnUrl) {
+        return res.redirect(302, cdnUrl);
+      }
+      // Fall through to local serving if R2 upload failed
+    } catch (err) {
+      console.error(`[global-assets] R2 redirect failed for ${category}/${alias}:`, err.message);
+      // Fall through to local serving
+    }
+  }
+
+  // Fallback: serve file locally
   const filePath = asset.storage_path;
   if (!fs.existsSync(filePath)) {
     console.error(`[global-assets] File not found: ${filePath}`);
