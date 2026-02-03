@@ -8,6 +8,29 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-03: 招待コード機能実装 ✅
+
+**詳細:** `.claude/logs/2026-02-03-invitation-code.md`
+
+招待コードを持つユーザーは手動承認を待たずに即座にアクセス可能に:
+
+| 項目 | 内容 |
+|------|------|
+| DB | `invitation_codes`, `invitation_code_uses` テーブル追加 |
+| API | `POST /api/invitation/redeem` エンドポイント追加 |
+| UI | `waitlist.html` に招待コード入力フォーム追加 |
+| ドキュメント | `docs/WAITLIST.md` に招待コード機能を追記 |
+
+**現在の招待コード:**
+- `BETATESTER` - βテスター用
+- `WFMY7CHS` - コアユーザー向け
+- `K60ZYE2U` - X告知用
+
+**その他:**
+- CodeRabbit 導入・コードレビュー対応（r2Client URL エンコード、gameHtmlUtils try-catch）
+
+---
+
 ### 2026-02-03: CLI Deploy スキーマ統一 & Worker 修正 ✅
 
 **詳細:** `.claude/logs/2026-02-03-cli-schema-alignment.md`
@@ -1244,4 +1267,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-03 (CLI Deploy スキーマ統一 + Worker 修正)
+最終更新: 2026-02-03 (招待コード機能実装)
