@@ -1542,10 +1542,25 @@ app.get('/api/published-games', async (req, res) => {
   res.json({ games });
 });
 
-// GET /api/my-published-games - Get user's own published games
+// GET /api/my-published-games - Get user's own published games (including CLI games)
 app.get('/api/my-published-games', authenticate, async (req, res) => {
-  const games = await db.getPublishedGamesByUserId(req.supabase, req.user.id);
-  res.json({ games });
+  // Play で公開したゲームを取得
+  const playGames = await db.getPublishedGamesByUserId(req.supabase, req.user.id);
+
+  // CLI で公開したゲームを取得（CLI Deploy が有効な場合のみ）
+  let cliGames = [];
+  if (cliDeploy) {
+    cliGames = await cliDeploy.getCliPublishedGamesByUserId(req.user.id);
+  }
+
+  // マージして日付順でソート
+  const allGames = [...playGames, ...cliGames].sort((a, b) => {
+    const dateA = new Date(a.published_at || 0);
+    const dateB = new Date(b.published_at || 0);
+    return dateB - dateA;
+  });
+
+  res.json({ games: allGames });
 });
 
 // ==================== Public ID Routes ====================

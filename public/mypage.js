@@ -57,7 +57,8 @@ class MyPageApp {
     });
 
     this.editBtn?.addEventListener('click', () => {
-      alert('プロフィール編集機能は準備中です');
+      const editor = new ProfileEditor();
+      editor.open();
     });
 
     this.logoutBtn?.addEventListener('click', () => this.logout());
@@ -90,36 +91,136 @@ class MyPageApp {
   }
 
   async loadData() {
-    this.renderProfile();
+    await this.loadProfile();
     await this.loadProjects();
     this.renderGameCount();
     this.renderGamesGrid();
   }
 
-  renderProfile() {
-    if (!this.currentUser) return;
+  async loadProfile() {
+    try {
+      const response = await DreamCoreAuth.authFetch('/api/users/me');
+      if (response.ok) {
+        const profile = await response.json();
+        this.renderProfile(profile);
+        this.renderAvatar(profile);
+      } else {
+        // Fallback to auth user data
+        this.renderProfile(null);
+      }
+    } catch (e) {
+      console.error('Failed to load profile:', e);
+      this.renderProfile(null);
+    }
+  }
 
+  renderProfile(profile) {
     if (this.displayNameEl) {
-      this.displayNameEl.textContent = this.currentUser.user_metadata?.full_name ||
-                                        this.currentUser.email?.split('@')[0] ||
+      this.displayNameEl.textContent = profile?.display_name ||
+                                        this.currentUser?.user_metadata?.full_name ||
+                                        this.currentUser?.email?.split('@')[0] ||
                                         'ユーザー';
     }
 
-    // Bio (placeholder for now)
     if (this.bioEl) {
-      const bio = this.currentUser.user_metadata?.bio || '';
+      const bio = profile?.bio || '';
       this.bioEl.textContent = bio;
       this.bioEl.style.display = bio ? 'block' : 'none';
+    }
+
+    // Render social links
+    this.renderSocialLinks(profile?.social_links);
+  }
+
+  renderSocialLinks(socialLinks) {
+    const container = document.getElementById('socialLinks');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (!socialLinks) {
+      container.style.display = 'none';
+      return;
+    }
+
+    // URL safety check (XSS prevention)
+    const isSafeUrl = (url) => {
+      if (!url || typeof url !== 'string') return false;
+      try {
+        const parsed = new URL(url);
+        return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+      } catch {
+        return false;
+      }
+    };
+
+    const platforms = [
+      { key: 'x', icon: '𝕏' },
+      { key: 'youtube', icon: '▶' },
+      { key: 'github', icon: '⌘' },
+      { key: 'tiktok', icon: '♪' },
+      { key: 'instagram', icon: '📷' }
+    ];
+
+    let hasLinks = false;
+
+    // Platform links
+    for (const { key, icon } of platforms) {
+      if (socialLinks[key] && isSafeUrl(socialLinks[key])) {
+        const a = document.createElement('a');
+        a.href = socialLinks[key];
+        a.className = 'mypage-social-link';
+        a.textContent = icon;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        container.appendChild(a);
+        hasLinks = true;
+      }
+    }
+
+    // Custom links
+    if (socialLinks.custom && Array.isArray(socialLinks.custom)) {
+      for (const item of socialLinks.custom) {
+        if (item.label && isSafeUrl(item.url)) {
+          const a = document.createElement('a');
+          a.href = item.url;
+          a.className = 'mypage-social-link mypage-social-custom';
+          a.textContent = item.label;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          container.appendChild(a);
+          hasLinks = true;
+        }
+      }
+    }
+
+    container.style.display = hasLinks ? 'flex' : 'none';
+  }
+
+  renderAvatar(profile) {
+    const avatarEl = document.querySelector('.mypage-avatar');
+    if (!avatarEl) return;
+
+    if (profile?.avatar_url) {
+      avatarEl.innerHTML = `<img src="${this.escapeHtml(profile.avatar_url)}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
     }
   }
 
   async loadProjects() {
     try {
-      // Only show published games on mypage
-      const response = await DreamCoreAuth.authFetch('/api/projects?published=true');
+      // Get all published games (Play + CLI)
+      const response = await DreamCoreAuth.authFetch('/api/my-published-games');
       if (response.ok) {
         const data = await response.json();
-        this.projects = data.projects || [];
+        // Normalize field names for rendering
+        this.projects = (data.games || []).map(game => ({
+          id: game.project_id || game.id,
+          name: game.title,
+          description: game.description,
+          thumbnailUrl: game.thumbnail_url,
+          publishedGameId: game.public_id,
+          isCliGame: game.is_cli_game || false
+        }));
       }
     } catch (e) {
       console.error('Failed to load projects:', e);
@@ -141,9 +242,14 @@ class MyPageApp {
 
     // Render game cases (physical package style)
     const gameCases = this.projects.map((game, index) => {
-      // Build thumbnail URL from project ID (public endpoint, no auth needed)
-      const thumbnailUrl = game.thumbnailUrl || `/api/projects/${game.id}/thumbnail`;
-      const gameName = this.escapeHtml(game.name);
+      // Build thumbnail URL - CLI games use thumbnail_url directly, Play games can use API
+      let thumbnailUrl = game.thumbnailUrl;
+      if (!thumbnailUrl && !game.isCliGame && game.id) {
+        thumbnailUrl = `/api/projects/${game.id}/thumbnail`;
+      }
+      // Default placeholder if no thumbnail available
+      thumbnailUrl = thumbnailUrl || '/img/default-thumbnail.webp';
+      const gameName = this.escapeHtml(game.name || 'Untitled');
       const gameDesc = this.escapeHtml(game.description || '');
       // Use publishedGameId for public game URL
       const gameId = game.publishedGameId;

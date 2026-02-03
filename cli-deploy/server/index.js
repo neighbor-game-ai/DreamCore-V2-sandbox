@@ -83,6 +83,76 @@ async function getCliPublishedGame(publicId) {
   }
 }
 
+/**
+ * ユーザーのCLI公開ゲーム一覧を取得
+ * @param {string} userId - ユーザーID (UUID)
+ * @returns {array} ゲーム一覧（Play の published_games と同じ形式）
+ */
+async function getCliPublishedGamesByUserId(userId) {
+  if (!isCliDeployEnabled()) return [];
+
+  try {
+    const supabase = getSupabaseCli();
+    const { data, error } = await supabase
+      .from('cli_published_games')
+      .select(`
+        id,
+        public_id,
+        url,
+        title,
+        description,
+        how_to_play,
+        thumbnail_url,
+        tags,
+        visibility,
+        allow_remix,
+        play_count,
+        like_count,
+        published_at,
+        updated_at,
+        cli_projects (
+          id,
+          name,
+          user_id,
+          game_type
+        )
+      `)
+      .eq('user_id', userId)
+      .order('published_at', { ascending: false });
+
+    if (error) {
+      console.error('[CLI] getCliPublishedGamesByUserId error:', error);
+      return [];
+    }
+
+    // Play の published_games と同じ形式で返す
+    return (data || []).map(game => ({
+      id: game.id,
+      public_id: game.public_id,
+      project_id: game.cli_projects?.id,
+      user_id: game.cli_projects?.user_id,
+      title: game.title || game.cli_projects?.name || 'Untitled',
+      description: game.description,
+      how_to_play: game.how_to_play,
+      thumbnail_url: game.thumbnail_url,
+      tags: game.tags || [],
+      visibility: game.visibility || 'public',
+      allow_remix: game.allow_remix,
+      play_count: game.play_count || 0,
+      like_count: game.like_count || 0,
+      published_at: game.published_at,
+      updated_at: game.updated_at,
+      game_type: game.cli_projects?.game_type || '2d',
+      // CLI ゲームを識別するフラグとドメイン
+      is_cli_game: true,
+      play_domain: process.env.CLI_GAMES_DOMAIN || 'cli.dreamcore.gg'
+    }));
+  } catch (err) {
+    console.error('[CLI] getCliPublishedGamesByUserId error:', err);
+    return [];
+  }
+}
+
 module.exports = {
   router,
   isCliDeployEnabled,
@@ -96,5 +166,6 @@ module.exports = {
   pollForToken,
 
   // ゲーム取得
-  getCliPublishedGame
+  getCliPublishedGame,
+  getCliPublishedGamesByUserId
 };
