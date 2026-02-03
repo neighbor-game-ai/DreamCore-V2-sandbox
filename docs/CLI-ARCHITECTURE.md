@@ -91,6 +91,8 @@ The Worker strips Supabase CSP/X-Frame-Options, adds frame-ancestors allowlist, 
 - DELETE /api/cli/projects/:id
 - PATCH /api/cli/projects/:id
 
+**詳細（リクエスト/レスポンス仕様）:** `docs/API-REFERENCE.md` の「CLI Deploy API」セクション参照
+
 ## Data Stores (Supabase B)
 
 Tables:

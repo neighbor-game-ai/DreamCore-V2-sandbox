@@ -271,20 +271,22 @@ dreamcore.json に ID を保存しました。
 4. API を呼び出して更新:
 
 ```bash
+# 例: タイトルと説明のみ変更
 curl -X PATCH https://v2.dreamcore.gg/api/cli/projects/{id} \
   -H "Authorization: Bearer dc_xxxxx" \
   -H "Content-Type: application/json" \
-  -d '{
-    "title": "新しいタイトル",
-    "description": "新しい説明",
-    "howToPlay": "新しい操作説明",
-    "tags": ["タグ1", "タグ2"],
-    "visibility": "public",
-    "allowRemix": true
-  }'
+  -d '{"title": "新しいタイトル", "description": "新しい説明"}'
 ```
 
 **注意:** 変更するフィールドのみを送信する。全フィールドは不要。
+
+**利用可能なフィールド:**
+- `title` - タイトル（50字以内）
+- `description` - 説明（500字以内）
+- `howToPlay` - 操作方法（1000字以内）
+- `tags` - タグ配列（最大5個）
+- `visibility` - `"public"` or `"unlisted"`
+- `allowRemix` - `true` or `false`
 
 ### レスポンス例
 

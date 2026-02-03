@@ -629,10 +629,15 @@ router.patch('/projects/:id', authenticateCliToken, projectsPatchLimiter, async 
     }
     if (Object.keys(projectUpdate).length > 0) {
       projectUpdate.updated_at = now;
-      await supabase
+      const { error: projectUpdateError } = await supabase
         .from('cli_projects')
         .update(projectUpdate)
         .eq('id', project.id);
+
+      if (projectUpdateError) {
+        console.error('Update project error:', projectUpdateError);
+        return res.status(500).json({ error: 'database_error', message: 'Failed to update project' });
+      }
     }
 
     // cli_published_games を更新
@@ -643,14 +648,20 @@ router.patch('/projects/:id', authenticateCliToken, projectsPatchLimiter, async 
       delete publishedUpdate.name; // cli_projects 用の name は削除
     }
 
-    const { error: updateError } = await supabase
+    const { data: updatedRows, error: updateError } = await supabase
       .from('cli_published_games')
       .update(publishedUpdate)
-      .eq('project_id', project.id);
+      .eq('project_id', project.id)
+      .select('id');
 
     if (updateError) {
       console.error('Update published game error:', updateError);
       return res.status(500).json({ error: 'database_error', message: 'Failed to update metadata' });
+    }
+
+    // cli_published_games が存在しない場合（通常はあり得ないが安全のため）
+    if (!updatedRows || updatedRows.length === 0) {
+      return res.status(404).json({ error: 'not_found', message: 'Published game record not found' });
     }
 
     res.json({
