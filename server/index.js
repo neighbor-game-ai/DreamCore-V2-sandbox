@@ -1390,6 +1390,7 @@ app.get('/api/published-games/:id', async (req, res) => {
 
 // POST /api/published-games/:id/play - Increment play count (call when game actually starts)
 // Supports both UUID and public_id (e.g., g_abc123XYZ0)
+// Also supports CLI-deployed games
 app.post('/api/published-games/:id/play', async (req, res) => {
   const { id } = req.params;
 
@@ -1399,16 +1400,26 @@ app.post('/api/published-games/:id/play', async (req, res) => {
     return res.status(400).json({ error: 'Invalid game ID' });
   }
 
-  // Verify game exists and is public/unlisted
-  const game = isUUID
+  // Verify game exists and is public/unlisted (check Play first, then CLI)
+  let game = isUUID
     ? await db.getPublishedGameById(id)
     : await db.getPublishedGameByPublicId(id);
+
+  // Fallback to CLI games if not found in main Supabase
+  if (!game && isPublicId && cliDeploy) {
+    game = await cliDeploy.getCliPublishedGame(id);
+  }
+
   if (!game) {
     return res.status(404).json({ error: 'Game not found' });
   }
 
   // Increment play count (use internal UUID, not public_id)
-  await db.incrementPlayCount(game.id);
+  if (game.is_cli_game && cliDeploy) {
+    await cliDeploy.incrementCliPlayCount(game.id);
+  } else {
+    await db.incrementPlayCount(game.id);
+  }
 
   res.json({ success: true });
 });

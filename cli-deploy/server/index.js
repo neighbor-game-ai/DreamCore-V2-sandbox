@@ -153,6 +153,37 @@ async function getCliPublishedGamesByUserId(userId) {
   }
 }
 
+/**
+ * CLI公開ゲームのプレイカウントをインクリメント
+ * @param {string} gameId - ゲームID (UUID)
+ * @returns {boolean} 成功/失敗
+ */
+async function incrementCliPlayCount(gameId) {
+  if (!isCliDeployEnabled()) return false;
+
+  try {
+    const supabase = getSupabaseCli();
+
+    // Get current play count
+    const { data: game } = await supabase
+      .from('cli_published_games')
+      .select('play_count')
+      .eq('id', gameId)
+      .single();
+
+    if (game) {
+      await supabase
+        .from('cli_published_games')
+        .update({ play_count: (game.play_count || 0) + 1 })
+        .eq('id', gameId);
+    }
+    return true;
+  } catch (err) {
+    console.error('[CLI] incrementCliPlayCount error:', err);
+    return false;
+  }
+}
+
 module.exports = {
   router,
   isCliDeployEnabled,
@@ -167,5 +198,6 @@ module.exports = {
 
   // ゲーム取得
   getCliPublishedGame,
-  getCliPublishedGamesByUserId
+  getCliPublishedGamesByUserId,
+  incrementCliPlayCount
 };
