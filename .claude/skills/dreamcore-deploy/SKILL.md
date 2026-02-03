@@ -7,18 +7,37 @@
 - 「DreamCoreにデプロイして」
 - 「ゲームを公開して」
 - 「DreamCoreにアップロードして」
-- 「dreamcore deploy」
 
 ## 前提条件
 
-- dreamcore CLI がインストール済み
-- `dreamcore login` で認証済み
+- プロジェクトルートに `index.html` が存在すること
 
 ## フロー
 
-### Step 1: 公開情報を生成
+### Step 1: index.html の確認
 
-以下の情報を生成してください:
+プロジェクトルートに `index.html` があるか確認。
+なければエラーを表示して終了。
+
+### Step 2: 既存の dreamcore.json を確認
+
+`dreamcore.json` が存在し、`id` フィールドがある場合:
+
+```
+このゲームは既に DreamCore にアップロードされています。
+ID: {id}
+
+どうしますか？
+1. 上書き更新する
+2. 別ゲームとして新規投稿する
+3. キャンセル
+```
+
+ユーザーが「別ゲームとして投稿」を選んだ場合、`id` フィールドを削除する。
+
+### Step 3: 公開情報を生成
+
+ゲームのコード（index.html 等）を読み取り、以下の情報を生成:
 
 | フィールド | 説明 | 制約 |
 |-----------|------|------|
@@ -27,29 +46,30 @@
 | `howToPlay` | 操作方法・ルール・攻略ヒント | 1000字以内、プレーンテキスト |
 | `tags` | 検索用キーワード | 最大5個、各20字以内 |
 
-### Step 2: ユーザーに確認
+### Step 4: ユーザーに確認
 
 生成した情報をユーザーに提示し、確認を求める。
 修正があれば反映する。
 
-### Step 3: 公開設定を質問
+### Step 5: 公開設定を質問
 
 ユーザーに以下を質問:
 
 **1. 公開範囲**
-- **公開** (`"public"`) - 誰でも発見・プレイできる
+- **公開** (`"public"`) - 誰でも発見・プレイできる（推奨）
 - **限定公開** (`"unlisted"`) - URLを知っている人だけ
 
 **2. Remix許可**
-- **許可する** (`true`) - 他ユーザーがこのゲームをベースに新しいゲームを作れる
+- **許可する** (`true`) - 他ユーザーがこのゲームをベースに新しいゲームを作れる（推奨）
 - **許可しない** (`false`)
 
-### Step 4: dreamcore.json 作成
+### Step 6: dreamcore.json 作成
 
-プロジェクトルートに `dreamcore.json` を作成:
+プロジェクトルートに `dreamcore.json` を作成（既存の `id` があれば保持）:
 
 ```json
 {
+  "id": "g_xxxxxxxxxx",
   "title": "ゲームタイトル",
   "description": "ゲームの概要説明",
   "howToPlay": "操作方法とルール",
@@ -59,11 +79,78 @@
 }
 ```
 
-### Step 5: デプロイ実行
+### Step 7: 認証トークンを取得
+
+1. `~/.dreamcore/token` ファイルを確認
+2. なければデバイスフロー認証を開始:
 
 ```bash
-dreamcore deploy
+# デバイスコードを取得
+curl -X POST https://v2.dreamcore.gg/api/cli/device/code
+
+# レスポンス例:
+# {
+#   "device_code": "xxx",
+#   "user_code": "ABCD-1234",
+#   "verification_uri": "https://v2.dreamcore.gg/cli-auth/auth.html",
+#   "expires_in": 900,
+#   "interval": 5
+# }
 ```
+
+ユーザーに以下を表示:
+```
+認証が必要です。
+
+1. ブラウザで以下のURLを開いてください:
+   https://v2.dreamcore.gg/cli-auth/auth.html
+
+2. 以下のコードを入力してください:
+   ABCD-1234
+
+待機中...
+```
+
+トークン取得をポーリング:
+```bash
+curl -X POST https://v2.dreamcore.gg/api/cli/device/token \
+  -H "Content-Type: application/json" \
+  -d '{"device_code": "xxx", "grant_type": "urn:ietf:params:oauth:grant-type:device_code"}'
+```
+
+成功したら `~/.dreamcore/token` に保存。
+
+### Step 8: ZIP を作成してデプロイ
+
+```bash
+# ZIP 作成（node_modules, .git 等を除外）
+zip -r game.zip . -x "node_modules/*" -x ".git/*" -x "*.DS_Store"
+
+# デプロイ
+curl -X POST https://v2.dreamcore.gg/api/cli/deploy \
+  -H "Authorization: Bearer dc_xxxxx" \
+  -F "file=@game.zip"
+
+# 一時ファイル削除
+rm game.zip
+```
+
+### Step 9: 結果を表示
+
+成功時:
+```
+✅ デプロイ完了！
+
+🎮 ゲームURL: https://v2.dreamcore.gg/game/g_xxxxxxxxxx
+📋 ID: g_xxxxxxxxxx
+
+dreamcore.json に ID を保存しました。
+次回は同じゲームを上書き更新できます。
+```
+
+失敗時はエラーメッセージを表示。
+
+---
 
 ## サムネイル（オプション）
 
@@ -76,6 +163,8 @@ dreamcore deploy
 **制約:**
 - 最大 1MB
 - WebP に自動変換（変換失敗時は元形式を使用）
+
+---
 
 ## dreamcore.json 仕様
 
@@ -91,21 +180,31 @@ dreamcore deploy
 | `visibility` | ❌ | string | `"public"` | `"public"` または `"unlisted"` |
 | `allowRemix` | ❌ | boolean | `true` | Remix許可 |
 
-### 後方互換性
+---
 
-v1 形式（`title` + `description` のみ）もそのまま動作する。
-新フィールドはデフォルト値が適用される。
+## トークン保存場所
+
+```
+~/.dreamcore/token
+```
+
+形式: `dc_` + 32文字の英数字
+
+---
 
 ## エラー例
 
 ```
+✗ index.html が見つかりません
 ✗ title is required in dreamcore.json
 ✗ title must be 50 characters or less
 ✗ tags must have at most 5 items
 ✗ visibility must be "public" or "unlisted"
-✗ allowRemix must be a boolean (true or false)
 ✗ Thumbnail exceeds 1MB limit
+✗ 認証に失敗しました。再度ログインしてください。
 ```
+
+---
 
 ## 参考
 
