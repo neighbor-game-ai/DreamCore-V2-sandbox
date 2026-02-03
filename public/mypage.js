@@ -335,7 +335,7 @@ class MyPageApp {
       card.addEventListener('click', () => {
         const gameId = card.dataset.gameId;
         if (gameId) {
-          window.location.href = `/game/${gameId}`;
+          window.location.href = `/game/${gameId}?from=mypage`;
         }
       });
     });
