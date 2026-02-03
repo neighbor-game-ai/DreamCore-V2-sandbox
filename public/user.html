@@ -113,6 +113,41 @@
             text-decoration: underline;
         }
 
+        .bio {
+            font-size: 15px;
+            color: var(--gray-600);
+            line-height: 1.6;
+            margin-bottom: 16px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .social-links a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--gray-100);
+            color: var(--gray-600);
+            text-decoration: none;
+            font-size: 16px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .social-links a:hover {
+            background: var(--gray-200);
+            color: var(--gray-900);
+        }
+
         /* Skeleton loading */
         .skeleton {
             background: linear-gradient(90deg, var(--gray-100) 25%, var(--gray-50) 50%, var(--gray-100) 75%);
@@ -141,14 +176,29 @@
         (async function() {
             const pathParts = window.location.pathname.split('/');
             const userId = pathParts[2]; // /u/:id
+            const contentEl = document.getElementById('content');
+
+            // エラー表示（DOM API で XSS 対策）
+            function showError(message) {
+                contentEl.innerHTML = '';
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+
+                const p = document.createElement('p');
+                p.textContent = message;
+                errorDiv.appendChild(p);
+
+                const link = document.createElement('a');
+                link.href = '/';
+                link.className = 'back-link';
+                link.textContent = 'ホームに戻る';
+                errorDiv.appendChild(link);
+
+                contentEl.appendChild(errorDiv);
+            }
 
             if (!userId) {
-                document.getElementById('content').innerHTML = `
-                    <div class="error">
-                        <p>ユーザーが見つかりません</p>
-                        <a href="/" class="back-link">ホームに戻る</a>
-                    </div>
-                `;
+                showError('ユーザーが見つかりません');
                 return;
             }
 
@@ -164,29 +214,114 @@
                     month: 'long'
                 });
 
-                document.title = `${user.display_name} - DreamCore`;
+                // タイトル更新（textContent で XSS 対策）
+                document.title = (user.display_name || 'ユーザー') + ' - DreamCore';
 
-                document.getElementById('content').innerHTML = `
-                    <div class="profile-card">
-                        <div class="avatar">
-                            ${user.avatar_url
-                                ? `<img src="${user.avatar_url}" alt="${user.display_name}">`
-                                : `<span class="avatar-placeholder">👤</span>`
+                // DOM API でプロフィールカード構築（XSS 対策）
+                contentEl.innerHTML = '';
+
+                const card = document.createElement('div');
+                card.className = 'profile-card';
+
+                // アバター
+                const avatarDiv = document.createElement('div');
+                avatarDiv.className = 'avatar';
+                if (user.avatar_url) {
+                    const img = document.createElement('img');
+                    img.src = user.avatar_url;
+                    img.alt = user.display_name || 'ユーザー';
+                    avatarDiv.appendChild(img);
+                } else {
+                    const placeholder = document.createElement('span');
+                    placeholder.className = 'avatar-placeholder';
+                    placeholder.textContent = '👤';
+                    avatarDiv.appendChild(placeholder);
+                }
+                card.appendChild(avatarDiv);
+
+                // 表示名（textContent で XSS 対策）
+                const nameEl = document.createElement('h1');
+                nameEl.className = 'display-name';
+                nameEl.textContent = user.display_name || 'ユーザー';
+                card.appendChild(nameEl);
+
+                // bio（将来用のプレースホルダー）
+                if (user.bio) {
+                    const bioEl = document.createElement('p');
+                    bioEl.className = 'bio';
+                    bioEl.textContent = user.bio;
+                    card.appendChild(bioEl);
+                }
+
+                // SNSリンク（将来用のプレースホルダー）
+                if (user.social_links) {
+                    const linksDiv = document.createElement('div');
+                    linksDiv.className = 'social-links';
+                    linksDiv.id = 'socialLinks';
+
+                    // URL スキーム検証（XSS防止）
+                    const isSafeUrl = (url) => {
+                        if (!url || typeof url !== 'string') return false;
+                        try {
+                            const parsed = new URL(url);
+                            return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+                        } catch {
+                            return false;
+                        }
+                    };
+
+                    const platforms = { x: '𝕏', youtube: '▶', github: '⌘', tiktok: '♪', instagram: '📷' };
+                    for (const [key, icon] of Object.entries(platforms)) {
+                        if (user.social_links[key] && isSafeUrl(user.social_links[key])) {
+                            const a = document.createElement('a');
+                            a.href = user.social_links[key];
+                            a.textContent = icon;
+                            a.target = '_blank';
+                            a.rel = 'noopener noreferrer';
+                            linksDiv.appendChild(a);
+                        }
+                    }
+                    // カスタムリンク
+                    if (user.social_links.custom && Array.isArray(user.social_links.custom)) {
+                        for (const item of user.social_links.custom) {
+                            if (isSafeUrl(item.url)) {
+                                const a = document.createElement('a');
+                                a.href = item.url;
+                                a.textContent = item.label;
+                                a.target = '_blank';
+                                a.rel = 'noopener noreferrer';
+                                linksDiv.appendChild(a);
                             }
-                        </div>
-                        <h1 class="display-name">${user.display_name || 'ユーザー'}</h1>
-                        <p class="public-id">${user.public_id}</p>
-                        <p class="joined-date">${joinedDate} から参加</p>
-                        <a href="/" class="back-link">← ホームに戻る</a>
-                    </div>
-                `;
+                        }
+                    }
+                    if (linksDiv.children.length > 0) {
+                        card.appendChild(linksDiv);
+                    }
+                }
+
+                // Public ID
+                const publicIdEl = document.createElement('p');
+                publicIdEl.className = 'public-id';
+                publicIdEl.textContent = user.public_id || '';
+                card.appendChild(publicIdEl);
+
+                // 参加日
+                const joinedEl = document.createElement('p');
+                joinedEl.className = 'joined-date';
+                joinedEl.textContent = joinedDate + ' から参加';
+                card.appendChild(joinedEl);
+
+                // 戻るリンク
+                const backLink = document.createElement('a');
+                backLink.href = '/';
+                backLink.className = 'back-link';
+                backLink.textContent = '← ホームに戻る';
+                card.appendChild(backLink);
+
+                contentEl.appendChild(card);
+
             } catch (error) {
-                document.getElementById('content').innerHTML = `
-                    <div class="error">
-                        <p>ユーザーが見つかりません</p>
-                        <a href="/" class="back-link">ホームに戻る</a>
-                    </div>
-                `;
+                showError('ユーザーが見つかりません');
             }
         })();
     </script>

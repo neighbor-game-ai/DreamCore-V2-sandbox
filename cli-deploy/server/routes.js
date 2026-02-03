@@ -325,18 +325,21 @@ router.post('/deploy', authenticateCliToken, deployLimiter, upload.single('file'
         // WebP に変換（失敗時は元ファイルのまま）
         let thumbnailBuffer = thumbnail.content;
         let thumbnailContentType = thumbnail.contentType;
+        let thumbnailExt = 'webp';
 
         try {
           thumbnailBuffer = await sharp(thumbnail.content)
             .webp({ quality: 85 })
             .toBuffer();
           thumbnailContentType = 'image/webp';
+          thumbnailExt = 'webp';
         } catch (conversionError) {
           console.warn('Thumbnail WebP conversion failed, using original:', conversionError.message);
-          // 元のフォーマットのまま使用
+          // 元のフォーマットのまま使用（拡張子も元に合わせる）
+          thumbnailExt = thumbnail.originalExt?.replace('.', '') || 'png';
         }
 
-        const thumbnailPath = `users/${req.userId}/projects/${publicId}/thumbnail.webp`;
+        const thumbnailPath = `users/${req.userId}/projects/${publicId}/thumbnail.${thumbnailExt}`;
         const { error: thumbnailError } = await supabase.storage
           .from('games')
           .upload(thumbnailPath, thumbnailBuffer, {

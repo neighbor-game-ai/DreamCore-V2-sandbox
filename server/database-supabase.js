@@ -18,6 +18,87 @@ const { supabaseAdmin, createUserClient } = require('./supabaseClient');
 
 // ==================== Profile Operations ====================
 
+// Field definitions for explicit selection (avoid leaking sensitive fields)
+const USER_PUBLIC_FIELDS = 'id, display_name, avatar_url, bio, social_links, public_id, created_at';
+const USER_PRIVATE_FIELDS = USER_PUBLIC_FIELDS + ', email, updated_at';
+
+/**
+ * Get current user's full profile (for /api/users/me)
+ * @param {Object} client - Supabase client with user JWT
+ * @param {string} userId - User ID
+ * @returns {Promise<Object|null>} User profile or null
+ */
+const getCurrentUser = async (client, userId) => {
+  const { data, error } = await client
+    .from('users')
+    .select(USER_PRIVATE_FIELDS)
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    console.error('[DB] getCurrentUser error:', error.message);
+    return null;
+  }
+  return data;
+};
+
+/**
+ * Get user's public profile (for /api/users/:id/public)
+ * @param {string} userId - User ID
+ * @returns {Promise<Object|null>} Public profile or null
+ */
+const getUserPublicProfile = async (userId) => {
+  const { data, error } = await supabaseAdmin
+    .from('users')
+    .select(USER_PUBLIC_FIELDS)
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    console.error('[DB] getUserPublicProfile error:', error.message);
+    return null;
+  }
+  return data;
+};
+
+/**
+ * Update user profile
+ * @param {Object} client - Supabase client with user JWT
+ * @param {string} userId - User ID
+ * @param {Object} updates - Fields to update (display_name, bio, social_links, avatar_url)
+ * @returns {Promise<Object|null>} Updated user or null
+ */
+const updateUserProfile = async (client, userId, updates) => {
+  const allowed = ['display_name', 'bio', 'social_links', 'avatar_url'];
+  const data = {};
+  for (const key of allowed) {
+    if (updates[key] !== undefined) {
+      data[key] = updates[key];
+    }
+  }
+
+  // Early return if no fields to update
+  if (Object.keys(data).length === 0) {
+    console.log('[DB] updateUserProfile: no fields to update');
+    return null;
+  }
+
+  const { data: result, error } = await client
+    .from('users')
+    .update(data)
+    .eq('id', userId)
+    .select(USER_PRIVATE_FIELDS)
+    .single();
+
+  if (error) {
+    console.error('[DB] updateUserProfile error:', error.message);
+    return null;
+  }
+  return result;
+};
+
 /**
  * Get user by ID
  */
@@ -62,7 +143,7 @@ const getUserByEmail = async (client, email) => {
 const getUserByPublicId = async (publicId) => {
   const { data, error } = await supabaseAdmin
     .from('users')
-    .select('id, display_name, avatar_url, public_id, created_at')
+    .select(USER_PUBLIC_FIELDS)
     .eq('public_id', publicId)
     .single();
 
@@ -1617,6 +1698,9 @@ module.exports = {
   // User/Profile operations
   getOrCreateUserFromAuth,
   getOrCreateUser,
+  getCurrentUser,
+  getUserPublicProfile,
+  updateUserProfile,
   getUserById,
   getUserByEmail,
   getUserByPublicId,

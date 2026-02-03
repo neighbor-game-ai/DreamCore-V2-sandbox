@@ -6,70 +6,18 @@ AI-powered browser game creation platform with Modal Sandbox integration.
 
 ---
 
-## ⚠️ プロジェクトの根幹（最重要・必読）
+## プロジェクト概要
 
-### このプロジェクトは「完全な製品版」です
+AI でブラウザゲームを作成するプラットフォーム。Claude CLI の実行環境として Modal Sandbox を使用。
 
-**これは MVP（Minimum Viable Product）ではありません。**
+**本番URL**: https://v2.dreamcore.gg
 
-DreamCore-V2-sandbox は、本番稼働中の DreamCore-V2 の**完全なクローン**に Modal Sandbox を統合するプロジェクトです。機能削減、簡略化、「とりあえず動く版」は一切許容されません。
-
-### 絶対に守るべき原則
+### 品質基準
 
 | 原則 | 説明 |
 |------|------|
-| **機能の完全継承** | DreamCore-V2 の全機能をそのまま引き継ぐ。機能を削る・省略する・後回しにすることは禁止 |
-| **UX の完全維持** | ユーザー体験は 1mm も変えない。フロントエンドのコードは原則変更しない |
-| **API 契約の維持** | WebSocket メッセージ形式、REST API のリクエスト/レスポンス形式は一切変更しない |
-| **品質基準の維持** | エラーハンドリング、ログ出力、セキュリティ対策は DreamCore-V2 と同等以上 |
-
-### 変更してよいのは「実行基盤」のみ
-
-```
-【変更OK】
-- Claude CLI の実行場所: ローカル → Modal Sandbox
-- ファイルの保存場所: ローカル → Modal Volume
-
-【変更NG】
-- フロントエンドのコード
-- WebSocket のメッセージ形式
-- REST API のエンドポイント・形式
-- ユーザーが目にする UI/UX
-- 認証フロー
-- アセット管理の仕組み
-```
-
-### MVP思考への警告
-
-エンジニアは効率を求めるあまり、以下のような「MVP的な判断」をしがちです。**これらはすべて禁止です：**
-
-| ❌ 禁止される判断 | 理由 |
-|------------------|------|
-| 「この機能は後で実装する」 | 後回しは許容されない。DreamCore-V2 にある機能はすべて初日から動く必要がある |
-| 「簡易版を先に作る」 | 簡易版は存在しない。最初から製品版を作る |
-| 「エラーハンドリングは後で」 | DreamCore-V2 と同等のエラーハンドリングを最初から実装する |
-| 「テストは後で書く」 | DreamCore-V2 のテストがすべてパスする状態を維持する |
-| 「とりあえず動けばOK」 | 「とりあえず」は許容されない。本番品質が必須 |
-| 「この機能は使われてないから省略」 | 使用頻度に関係なく、すべての機能を実装する |
-
-### 判断に迷ったら
-
-「DreamCore-V2 ではどうなっているか？」を確認し、**それと完全に同じ動作**を実装してください。
-
-DreamCore-V2 のコード:
-```
-/Users/admin/DreamCore-V2/
-```
-
-迷った場合は「機能を削る」方向ではなく「DreamCore-V2 と同じにする」方向で判断してください。
-
-### このプロジェクトのゴール
-
-```
-DreamCore-V2 のユーザーが、何の違和感もなく使える状態
-```
-
-ユーザーは「バックエンドが Modal になった」ことに気づく必要すらありません。それが成功の基準です。
+| **本番品質** | エラーハンドリング、ログ出力、セキュリティ対策を適切に実装 |
+| **API 契約の維持** | 既存の WebSocket / REST API 形式は破壊的変更を避ける |
 
 ---
 
@@ -139,6 +87,10 @@ modal serve app.py
 
 iframe sandbox 設定: `docs/IFRAME-SECURITY.md`（sandbox 属性、Permissions Policy の詳細）
 
+## CLI Deploy
+
+CLI のアーキテクチャとアップデート方針: `docs/CLI-ARCHITECTURE.md`
+
 ## ウェイトリスト/アクセス管理
 
 V2 初期リリース用。詳細: `docs/WAITLIST.md`
@@ -169,25 +121,15 @@ npx supabase secrets set BREVO_API_KEY=xkeysib-xxx --project-ref tcynrijrovktirs
 
 ---
 
-## Supabase 設定（DreamCore-V2 と共有）
-
-**DreamCore-V2 と同じ Supabase プロジェクトを使用する。新規作成は禁止。**
+## Supabase 設定
 
 | 項目 | 値 |
 |------|-----|
 | プロジェクトID | `tcynrijrovktirsvwiqb` |
 | リージョン | Northeast Asia (Tokyo) |
-| 環境変数のコピー元 | `/Users/admin/DreamCore-V2/.env` |
-| スキーマ定義 | `/Users/admin/DreamCore-V2/.claude/docs/database-schema.md` |
+| スキーマ定義 | `.claude/docs/database-schema.md` |
 
-### 禁止事項（Supabase関連）
-
-- 新しい Supabase プロジェクトを作成しない
-- テーブル構造を変更しない
-- RLS ポリシーを変更しない
-- 認証設定を変更しない
-
-Supabase に関する変更が必要な場合は、**まず DreamCore-V2 側で行い**、その後 DreamCore-V2-sandbox に反映する。
+スキーマ変更は `mcp__supabase__apply_migration` で適用する。
 
 ## 必須環境変数
 
@@ -197,7 +139,7 @@ Supabase に関する変更が必要な場合は、**まず DreamCore-V2 側で�
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-**コピー元**: `/Users/admin/DreamCore-V2/.env`
+設定例は `.env.example` を参照。
 
 ### Modal統合（`USE_MODAL=true` 時に必要）
 
@@ -207,7 +149,7 @@ Supabase に関する変更が必要な場合は、**まず DreamCore-V2 側で�
 
 ## 禁止事項
 
-- `/api/auth/*` の扱いは DreamCore-V2 の現状に従う（勝手に削除・変更しない）
+- `/api/auth/*` は Supabase Auth 用（変更時は影響を確認）
 - `visitorId` の新規利用禁止 - すべて `userId` (Supabase Auth) を使用
 - `db.getProject()` は使用禁止 - `db.getProjectById()` を使用
 - Cookie認証は使用しない - localStorage + Authorization ヘッダー方式を採用
@@ -348,11 +290,7 @@ Claude CLI の実行は以下の制限あり（`server/config.js` の `RATE_LIMI
 
 ## 機能スコープ
 
-**DreamCore-V2 の現状の仕様に完全に従う。**
-
-機能の有効/無効、エンドポイントの挙動、ページの表示内容は、すべて DreamCore-V2 の実装をそのまま引き継ぐ。独自の判断で機能を削減・変更しないこと。
-
-参照: `/Users/admin/DreamCore-V2/`
+API リファレンス: `docs/API-REFERENCE.md`
 
 ## RLS設計方針
 
@@ -414,9 +352,7 @@ node test-prompt-injection.js -v                        # 詳細ログ
 
 17パターンの攻撃（タグ脱出、指示上書き、APIキー漏洩、コマンド実行等）をテスト。
 
-## DreamCore-V2 完了ステータス（引き継ぎ対象）
-
-以下は DreamCore-V2 で完了済みの項目です。これらはすべて DreamCore-V2-sandbox でも同様に動作する必要があります。
+## 実装済み機能
 
 **最終検証日: 2026-01-22**
 
