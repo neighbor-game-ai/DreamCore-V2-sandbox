@@ -175,6 +175,7 @@ const cspDirectives = {
     "https://*.supabase.co",  // Supabase Storage
     "https://lh3.googleusercontent.com",  // Google アバター
     "https://api.qrserver.com",  // QR コード生成
+    "https://cdn.dreamcore.gg",  // R2 CDN (サムネイル、アセット)
   ],
   mediaSrc: [
     "'self'",
