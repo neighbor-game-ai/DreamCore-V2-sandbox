@@ -127,3 +127,28 @@ rm -rf cli-deploy/
 
 - **CLI トークン:** `dc_` + 32文字の英数字（例: `dc_7KmNx2pQ9wR4tYuIoP1aS5dFgH8jKlZ`）
 - **public_id:** `g_` + 10文字の英数字（例: `g_7F2cK9wP1x`）
+
+## Skills インストール
+
+```bash
+curl -sLo ~/.claude/skills/dreamcore-deploy/SKILL.md --create-dirs v2.dreamcore.gg/skills/dreamcore-deploy/SKILL.md
+```
+
+## 今後の構想
+
+### ゲーム開発 Skills の推奨
+
+DreamCore Web UI 版で使用しているゲーム開発 Skills を CLI ユーザーにも推奨する:
+
+- **p5.js** - 2D ゲーム開発
+- **Three.js** - 3D ゲーム開発
+- **tsParticles** - パーティクルエフェクト
+- **Howler.js** - ゲームオーディオ
+- **GSAP** - アニメーション
+
+CLI デプロイ時やスキル内で「こんな Skills もあります」と案内し、必要に応じてダウンロードしてもらう形式を検討。
+
+```bash
+# 例: Three.js スキルのインストール
+curl -sLo ~/.claude/skills/threejs/SKILL.md --create-dirs v2.dreamcore.gg/skills/threejs/SKILL.md
+```

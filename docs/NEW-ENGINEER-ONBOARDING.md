@@ -216,6 +216,7 @@ USE_MODAL=false
 | ドキュメント | パス |
 |-------------|------|
 | V2アーキテクチャ | `/Users/admin/DreamCore-V2-sandbox/docs/ARCHITECTURE-V2.md` |
+| CLI Deploy アーキテクチャ | `/Users/admin/DreamCore-V2-sandbox/docs/CLI-ARCHITECTURE.md` |
 | Modal アーキテクチャ | `/Users/admin/DreamCore-V2-sandbox/docs/modal-architecture/MODAL-SANDBOX-ARCHITECTURE.md` |
 | Modal クイックリファレンス | `/Users/admin/DreamCore-V2-sandbox/docs/modal-architecture/QUICK-REFERENCE.md` |
 | アセット管理 | `/Users/admin/DreamCore-V2-sandbox/docs/ASSET_MANAGEMENT.md` |

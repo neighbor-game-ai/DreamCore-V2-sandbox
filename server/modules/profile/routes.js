@@ -58,9 +58,9 @@ router.patch('/me', authenticate, jsonLimit, async (req, res) => {
       return res.status(400).json({ error: 'display_name max 50 chars' });
     }
 
-    // Validate bio length
-    if (bio && bio.length > 500) {
-      return res.status(400).json({ error: 'bio max 500 chars' });
+    // Validate bio length (TikTok/X style: 160 chars max)
+    if (bio && bio.length > 160) {
+      return res.status(400).json({ error: 'bio max 160 chars' });
     }
 
     // Normalize then validate social_links

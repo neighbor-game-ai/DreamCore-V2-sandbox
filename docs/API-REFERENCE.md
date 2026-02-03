@@ -227,12 +227,12 @@ JWT 検証は `jose` ライブラリ + JWKS を使用し、Supabase API 呼び�
 
 **バリデーション:**
 - `display_name`: 最大 50 文字、空文字は null
-- `bio`: 最大 500 文字、空文字は null
+- `bio`: 最大 160 文字、空文字は null（TikTok/X 参考）
 - `social_links`: HTTPS URL のみ、custom は最大 5 件（各 label 最大 30 文字）
 
 **エラー:**
 - 400: `{ "error": "display_name max 50 chars" }`
-- 400: `{ "error": "bio max 500 chars" }`
+- 400: `{ "error": "bio max 160 chars" }`
 - 400: `{ "error": "x must start with https://" }`
 
 **レスポンス:** 更新後のユーザーオブジェクト（`GET /api/users/me` と同形式）

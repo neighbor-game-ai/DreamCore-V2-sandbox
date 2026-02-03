@@ -1385,7 +1385,7 @@ const migrateFromJsonFiles = async () => {
 const getPublishedGameById = async (gameId) => {
   const { data, error } = await supabaseAdmin
     .from('published_games')
-    .select('*, projects(id, name)')
+    .select('*, projects(id, name), users(display_name, avatar_url)')
     .eq('id', gameId)
     .in('visibility', ['public', 'unlisted'])
     .single();
@@ -1406,7 +1406,7 @@ const getPublishedGameById = async (gameId) => {
 const getPublishedGameByPublicId = async (publicId) => {
   const { data, error } = await supabaseAdmin
     .from('published_games')
-    .select('*, projects(id, name)')
+    .select('*, projects(id, name), users(display_name, avatar_url)')
     .eq('public_id', publicId)
     .in('visibility', ['public', 'unlisted'])
     .single();

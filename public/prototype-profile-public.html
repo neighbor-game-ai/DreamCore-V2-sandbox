@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>他人のプロフィール - プロトタイプ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --white: #FFFFFF;
+      --gray-50: #FAFAFA;
+      --gray-100: #F5F5F5;
+      --gray-200: #E5E5E5;
+      --gray-300: #D4D4D4;
+      --gray-400: #A3A3A3;
+      --gray-500: #737373;
+      --gray-600: #525252;
+      --gray-900: #171717;
+      --red: #FF3B30;
+      --s-4: 4px;
+      --s-8: 8px;
+      --s-12: 12px;
+      --s-16: 16px;
+      --s-24: 24px;
+      --r-16: 16px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--gray-50);
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-100);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--gray-900);
+    }
+
+    .header-btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: transparent;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gray-600);
+      cursor: pointer;
+    }
+
+    .header-btn:hover {
+      background: var(--gray-100);
+    }
+
+    /* Profile Section */
+    .profile-section {
+      background: var(--white);
+      padding: 24px 16px;
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .avatar-wrapper {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      padding: 3px;
+    }
+
+    .avatar-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: var(--gray-200);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .profile-stats {
+      flex: 1;
+      display: flex;
+      justify-content: space-around;
+      text-align: center;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-number {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--gray-900);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--gray-500);
+    }
+
+    /* Profile Info */
+    .profile-info {
+      margin-bottom: 16px;
+    }
+
+    .profile-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 4px;
+    }
+
+    .profile-bio {
+      font-size: 0.875rem;
+      color: var(--gray-600);
+      line-height: 1.4;
+    }
+
+    .profile-bio .more-btn {
+      color: var(--gray-400);
+      background: none;
+      border: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+
+    /* Social Links */
+    .social-links {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .social-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1.5px solid var(--gray-200);
+      color: var(--gray-600);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .social-link:hover {
+      border-color: var(--gray-400);
+      color: var(--gray-900);
+    }
+
+    .social-link.custom {
+      width: auto;
+      padding: 0 12px;
+      border-radius: 16px;
+      font-size: 11px;
+    }
+
+    /* Action Buttons - Other's Profile */
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-follow {
+      flex: 1;
+      padding: 10px 16px;
+      background: var(--red);
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--white);
+      cursor: pointer;
+    }
+
+    .btn-follow:hover {
+      opacity: 0.9;
+    }
+
+    .btn-follow.following {
+      background: var(--gray-100);
+      color: var(--gray-900);
+    }
+
+    .btn-share {
+      padding: 10px 16px;
+      background: var(--gray-100);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-share:hover {
+      background: var(--gray-200);
+    }
+
+    /* ========================================
+       Game Showcase - Production Style
+       ======================================== */
+    .mypage-showcase {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 0;
+    }
+
+    .mypage-showcase-scroll {
+      display: flex;
+      align-items: flex-start;
+      gap: 24px;
+      padding: 16px calc(50% - 100px);
+      overflow-x: auto;
+      overflow-y: visible;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .mypage-showcase-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .mypage-game-case {
+      flex-shrink: 0;
+      width: 200px;
+      scroll-snap-align: center;
+      cursor: pointer;
+    }
+
+    .mypage-case-visual {
+      width: 100%;
+      aspect-ratio: 9 / 14;
+      border-radius: var(--r-16);
+      overflow: hidden;
+      background: var(--gray-100);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+      position: relative;
+    }
+
+    .mypage-case-visual img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Play overlay on hover */
+    .mypage-case-visual .play-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.3);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .mypage-game-case:hover .play-overlay {
+      opacity: 1;
+    }
+
+    .mypage-case-info {
+      padding: 12px 4px;
+    }
+
+    .mypage-case-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--gray-900);
+      letter-spacing: -0.02em;
+      line-height: 1.3;
+    }
+
+    .mypage-case-desc {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--gray-400);
+      margin-top: 4px;
+    }
+
+    /* Bottom Nav */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--white);
+      border-top: 1px solid var(--gray-100);
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 0 24px;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: none;
+      border: none;
+      color: var(--gray-400);
+      font-size: 10px;
+      cursor: pointer;
+    }
+
+    .nav-item.active {
+      color: var(--gray-900);
+    }
+
+    /* Label */
+    .prototype-label {
+      position: fixed;
+      top: 60px;
+      right: 8px;
+      background: #4facfe;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div class="prototype-label">他人のプロフィール</div>
+
+  <!-- Header -->
+  <header class="header">
+    <button class="header-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="19" y1="12" x2="5" y2="12"></line>
+        <polyline points="12 19 5 12 12 5"></polyline>
+      </svg>
+    </button>
+    <div class="header-title">GameMaster_Taro</div>
+    <button class="header-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="1"></circle>
+        <circle cx="19" cy="12" r="1"></circle>
+        <circle cx="5" cy="12" r="1"></circle>
+      </svg>
+    </button>
+  </header>
+
+  <!-- Profile Section -->
+  <section class="profile-section">
+    <div class="profile-header">
+      <div class="avatar-wrapper">
+        <div class="avatar">
+          <div class="avatar-inner">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#737373" stroke-width="1.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="profile-stats">
+        <div class="stat-item">
+          <span class="stat-number">12</span>
+          <span class="stat-label">games</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">2.4K</span>
+          <span class="stat-label">plays</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">891</span>
+          <span class="stat-label">likes</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="profile-info">
+      <div class="profile-name">GameMaster_Taro</div>
+      <div class="profile-bio">
+        インディーゲーム開発者。レトロ風アクションゲームが得意。毎週新作を公開中！<button class="more-btn">more</button>
+      </div>
+    </div>
+
+    <div class="social-links">
+      <a href="#" class="social-link">X</a>
+      <a href="#" class="social-link">YT</a>
+      <a href="#" class="social-link">GH</a>
+      <a href="#" class="social-link custom">itch.io</a>
+    </div>
+
+    <div class="action-buttons">
+      <button class="btn-follow">フォローする</button>
+      <button class="btn-share">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+          <polyline points="16 6 12 2 8 6"></polyline>
+          <line x1="12" y1="2" x2="12" y2="15"></line>
+        </svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- Game Showcase - Production Style -->
+  <div class="mypage-showcase">
+    <div class="mypage-showcase-scroll">
+      <div class="mypage-game-case">
+        <div class="mypage-case-visual" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+          <div class="play-overlay">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+          </div>
+        </div>
+        <div class="mypage-case-info">
+          <div class="mypage-case-title">レトロアクション</div>
+          <div class="mypage-case-desc">8bit風アクション</div>
+        </div>
+      </div>
+      <div class="mypage-game-case">
+        <div class="mypage-case-visual" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+          <div class="play-overlay">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+          </div>
+        </div>
+        <div class="mypage-case-info">
+          <div class="mypage-case-title">ピクセルダンジョン</div>
+          <div class="mypage-case-desc">ローグライク</div>
+        </div>
+      </div>
+      <div class="mypage-game-case">
+        <div class="mypage-case-visual" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+          <div class="play-overlay">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+          </div>
+        </div>
+        <div class="mypage-case-info">
+          <div class="mypage-case-title">スカイランナー</div>
+          <div class="mypage-case-desc">無限ランゲーム</div>
+        </div>
+      </div>
+      <div class="mypage-game-case">
+        <div class="mypage-case-visual" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
+          <div class="play-overlay">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+          </div>
+        </div>
+        <div class="mypage-case-info">
+          <div class="mypage-case-title">パズルマスター</div>
+          <div class="mypage-case-desc">脳トレパズル</div>
+        </div>
+      </div>
+      <div class="mypage-game-case">
+        <div class="mypage-case-visual" style="background: linear-gradient(135deg, #fa709a, #fee140);">
+          <div class="play-overlay">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+          </div>
+        </div>
+        <div class="mypage-case-info">
+          <div class="mypage-case-title">タワーディフェンス</div>
+          <div class="mypage-case-desc">戦略シミュレーション</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <button class="nav-item">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.35-4.35"></path>
+      </svg>
+      <span>発見</span>
+    </button>
+    <button class="nav-item">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      <span>作る</span>
+    </button>
+    <button class="nav-item">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>マイ</span>
+    </button>
+  </nav>
+</body>
+</html>

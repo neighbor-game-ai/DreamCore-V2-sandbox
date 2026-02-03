@@ -576,36 +576,89 @@
             margin-bottom: var(--s-16);
         }
 
-        /* Info Panel */
-        .info-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--gray-900);
-            margin-bottom: var(--s-8);
+        /* Info Panel - Nintendo Switch Style */
+        .info-title-area {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 20px;
         }
 
-        .info-meta {
+        .info-accent-bar {
+            width: 4px;
+            min-height: 100%;
+            background: var(--red);
+            border-radius: 2px;
+            flex-shrink: 0;
+            align-self: stretch;
+        }
+
+        .info-title-content {
+            flex: 1;
+        }
+
+        .info-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--gray-900);
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            margin-bottom: 12px;
+        }
+
+        .info-creator {
             display: flex;
-            gap: var(--s-16);
-            color: var(--gray-400);
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-creator-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
             font-size: 14px;
-            margin-bottom: var(--s-16);
+            font-weight: 700;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .info-creator-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .info-creator-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-700);
         }
 
         .info-description {
             color: var(--gray-600);
             font-size: 15px;
-            line-height: 1.6;
-            margin-bottom: var(--s-24);
+            line-height: 1.7;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .info-row {
+            margin-bottom: 20px;
         }
 
         .info-section-title {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
-            color: var(--gray-400);
+            color: var(--red);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: var(--s-8);
+            letter-spacing: 0.12em;
+            margin-bottom: 10px;
         }
 
         .info-how-to-play {
@@ -627,11 +680,88 @@
 
         .info-tag {
             background: var(--gray-100);
-            color: var(--gray-600);
-            padding: 6px var(--s-12);
-            border-radius: var(--r-full);
-            font-size: 13px;
-            font-weight: 500;
+            color: var(--gray-700);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .info-how-to-play {
+            font-size: 14px;
+            color: var(--gray-700);
+            line-height: 1.7;
+        }
+
+        /* Owner Section */
+        .info-owner-section {
+            background: var(--gray-50);
+            margin: 24px calc(var(--s-24) * -1) 0;
+            padding: 20px var(--s-24) 28px;
+            display: none;
+        }
+
+        .info-owner-section.visible {
+            display: block;
+        }
+
+        .info-owner-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 12px;
+        }
+
+        .info-owner-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .info-owner-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            text-decoration: none;
+        }
+
+        .info-owner-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .info-btn-edit {
+            background: var(--red);
+            color: var(--white);
+        }
+
+        .info-btn-edit:hover {
+            background: #E53529;
+        }
+
+        .info-btn-lineage {
+            background: var(--white);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-200);
+        }
+
+        .info-btn-lineage:hover {
+            background: var(--gray-100);
+        }
+
+        /* Visitor Actions (non-owner) */
+        .info-visitor-section {
+            margin-top: 24px;
         }
 
         /* Share Panel - Simple Circular Buttons */
@@ -1924,30 +2054,66 @@
         <div class="panel">
             <div class="panel-handle"></div>
             <div class="panel-content">
-                <h1 class="info-title" id="infoTitle"></h1>
-                <div class="info-meta">
-                    <span id="infoPlayCount"></span>
+                <!-- Title Area with Accent Bar -->
+                <div class="info-title-area">
+                    <div class="info-accent-bar"></div>
+                    <div class="info-title-content">
+                        <h1 class="info-title" id="infoTitle"></h1>
+                        <div class="info-creator">
+                            <div class="info-creator-avatar" id="infoCreatorAvatar"></div>
+                            <div class="info-creator-name" id="infoCreatorName"></div>
+                        </div>
+                    </div>
                 </div>
+
                 <p class="info-description" id="infoDescription"></p>
-                <div id="infoHowToPlaySection" style="display: none;">
+
+                <div class="info-row" id="infoHowToPlaySection" style="display: none;">
                     <div class="info-section-title">遊び方</div>
                     <div class="info-how-to-play" id="infoHowToPlay"></div>
                 </div>
-                <div id="infoTagsSection" style="display: none;">
+
+                <div class="info-row" id="infoTagsSection" style="display: none;">
                     <div class="info-section-title">タグ</div>
                     <div class="info-tags" id="infoTags"></div>
                 </div>
-                <a href="?view=lineage" class="info-lineage-link" id="lineageLink">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="5" r="3"/>
-                        <line x1="12" y1="8" x2="12" y2="14"/>
-                        <circle cx="6" cy="19" r="3"/>
-                        <circle cx="18" cy="19" r="3"/>
-                        <line x1="12" y1="14" x2="6" y2="16"/>
-                        <line x1="12" y1="14" x2="18" y2="16"/>
-                    </svg>
-                    <span>系譜を見る (<span id="lineageCountBadge">0</span> リミックス)</span>
-                </a>
+
+                <!-- Owner Section (shown only to game owner) -->
+                <div class="info-owner-section" id="infoOwnerSection">
+                    <div class="info-owner-label">あなたのゲーム</div>
+                    <div class="info-owner-actions">
+                        <button class="info-owner-btn info-btn-edit" id="infoEditBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                            編集
+                        </button>
+                        <a href="?view=lineage" class="info-owner-btn info-btn-lineage" id="infoLineageBtnOwner">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                                <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                                <line x1="12" y1="14" x2="6" y2="16"/><line x1="12" y1="14" x2="18" y2="16"/>
+                            </svg>
+                            系譜
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Visitor Section (shown to non-owners) -->
+                <div class="info-visitor-section" id="infoVisitorSection">
+                    <a href="?view=lineage" class="info-lineage-link" id="lineageLink">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="5" r="3"/>
+                            <line x1="12" y1="8" x2="12" y2="14"/>
+                            <circle cx="6" cy="19" r="3"/>
+                            <circle cx="18" cy="19" r="3"/>
+                            <line x1="12" y1="14" x2="6" y2="16"/>
+                            <line x1="12" y1="14" x2="18" y2="16"/>
+                        </svg>
+                        <span>系譜を見る (<span id="lineageCountBadge">0</span> リミックス)</span>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -2675,8 +2841,19 @@
             }
 
             document.getElementById('infoTitle').textContent = game.title;
-            document.getElementById('infoPlayCount').textContent = `${game.play_count || 0} plays`;
             document.getElementById('infoDescription').textContent = game.description || '';
+
+            // Creator info
+            const creatorName = game.users?.display_name || 'Unknown';
+            const creatorAvatar = game.users?.avatar_url;
+            const avatarEl = document.getElementById('infoCreatorAvatar');
+
+            if (creatorAvatar) {
+                avatarEl.innerHTML = `<img src="${escapeHtml(creatorAvatar)}" alt="" onerror="this.style.display='none'; this.parentElement.textContent='${creatorName.charAt(0).toUpperCase()}';">`;
+            } else {
+                avatarEl.textContent = creatorName.charAt(0).toUpperCase();
+            }
+            document.getElementById('infoCreatorName').textContent = creatorName;
 
             if (game.how_to_play) {
                 document.getElementById('infoHowToPlaySection').style.display = 'block';
@@ -2688,6 +2865,36 @@
                 document.getElementById('infoTags').innerHTML = game.tags
                     .map(tag => `<span class="info-tag">${escapeHtml(tag)}</span>`)
                     .join('');
+            }
+
+            // Check if current user is the owner
+            checkOwnerAndShowEditButton(game);
+        }
+
+        async function checkOwnerAndShowEditButton(game) {
+            const ownerSection = document.getElementById('infoOwnerSection');
+            const visitorSection = document.getElementById('infoVisitorSection');
+
+            try {
+                const session = await DreamCoreAuth.getSession();
+                if (session && session.user && session.user.id === game.user_id) {
+                    // User is the owner
+                    ownerSection.classList.add('visible');
+                    visitorSection.style.display = 'none';
+
+                    // Set up edit button
+                    document.getElementById('infoEditBtn').addEventListener('click', () => {
+                        window.location.href = `/create.html?project=${game.project_id}`;
+                    });
+                } else {
+                    // User is not the owner or not logged in
+                    ownerSection.classList.remove('visible');
+                    visitorSection.style.display = 'block';
+                }
+            } catch (e) {
+                // Not logged in or error
+                ownerSection.classList.remove('visible');
+                visitorSection.style.display = 'block';
             }
         }
 

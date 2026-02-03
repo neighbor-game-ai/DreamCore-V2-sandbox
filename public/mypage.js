@@ -13,10 +13,13 @@ class MyPageApp {
     // DOM elements
     this.displayNameEl = document.getElementById('displayName');
     this.gameCountEl = document.getElementById('gameCount');
+    this.playCountEl = document.getElementById('playCount');
+    this.likeCountEl = document.getElementById('likeCount');
     this.bioEl = document.getElementById('bio');
     this.gamesGridEl = document.getElementById('gamesGrid');
     this.backBtn = document.getElementById('backBtn');
     this.editBtn = document.getElementById('editBtn');
+    this.shareBtn = document.getElementById('shareBtn');
     this.logoutBtn = document.getElementById('logoutBtn');
   }
 
@@ -60,6 +63,8 @@ class MyPageApp {
       const editor = new ProfileEditor();
       editor.open();
     });
+
+    this.shareBtn?.addEventListener('click', () => this.shareProfile());
 
     this.logoutBtn?.addEventListener('click', () => this.logout());
 
@@ -125,11 +130,41 @@ class MyPageApp {
     if (this.bioEl) {
       const bio = profile?.bio || '';
       this.bioEl.textContent = bio;
-      this.bioEl.style.display = bio ? 'block' : 'none';
+
+      // Show/hide container based on bio presence
+      const bioContainer = document.getElementById('bioContainer');
+      if (bioContainer) {
+        bioContainer.style.display = bio ? '' : 'none';
+      }
+
+      // Setup "more" button for long bios
+      this.setupBioExpand(bio);
     }
 
     // Render social links
     this.renderSocialLinks(profile?.social_links);
+  }
+
+  setupBioExpand(bio) {
+    const container = document.getElementById('bioContainer');
+    if (!container) return;
+
+    // Remove existing more button
+    const existingBtn = container.querySelector('.bio-more-btn');
+    if (existingBtn) existingBtn.remove();
+
+    // Only show "more" for longer bios (roughly > 2 lines worth)
+    if (!bio || bio.length < 40) return;
+
+    const moreBtn = document.createElement('button');
+    moreBtn.className = 'bio-more-btn';
+    moreBtn.textContent = 'more';
+    moreBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isExpanded = this.bioEl.classList.toggle('expanded');
+      moreBtn.textContent = isExpanded ? 'less' : 'more';
+    });
+    container.appendChild(moreBtn);
   }
 
   renderSocialLinks(socialLinks) {
@@ -198,11 +233,11 @@ class MyPageApp {
   }
 
   renderAvatar(profile) {
-    const avatarEl = document.querySelector('.mypage-avatar');
+    const avatarEl = document.getElementById('avatarContainer');
     if (!avatarEl) return;
 
     if (profile?.avatar_url) {
-      avatarEl.innerHTML = `<img src="${this.escapeHtml(profile.avatar_url)}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+      avatarEl.innerHTML = `<img src="${this.escapeHtml(profile.avatar_url)}" alt="Avatar">`;
     }
   }
 
@@ -230,6 +265,13 @@ class MyPageApp {
   renderGameCount() {
     if (this.gameCountEl) {
       this.gameCountEl.textContent = this.projects.length;
+    }
+    // TODO: Fetch actual plays/likes from API when available
+    if (this.playCountEl) {
+      this.playCountEl.textContent = '0';
+    }
+    if (this.likeCountEl) {
+      this.likeCountEl.textContent = '0';
     }
   }
 
@@ -363,6 +405,39 @@ class MyPageApp {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  async shareProfile() {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${this.displayNameEl?.textContent || 'ユーザー'}のプロフィール`,
+          url: url
+        });
+      } catch (e) {
+        // User cancelled or error
+        if (e.name !== 'AbortError') {
+          this.copyToClipboard(url);
+        }
+      }
+    } else {
+      this.copyToClipboard(url);
+    }
+  }
+
+  copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+      // Show brief feedback
+      const btn = this.shareBtn;
+      if (btn) {
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        setTimeout(() => {
+          btn.innerHTML = originalHTML;
+        }, 1500);
+      }
+    });
   }
 
   async logout() {

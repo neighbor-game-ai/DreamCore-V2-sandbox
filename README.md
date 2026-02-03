@@ -300,6 +300,7 @@ Each project has its own Git repository for version history.
 | [Architecture Design](./.claude/plans/sandbox-architecture.md) | V2 Architecture (detailed) |
 | [Database Schema](./.claude/docs/database-schema.md) | Database design |
 | [Auth Migration](./.claude/plans/auth-migration.md) | Authentication documentation |
+| [CLI Deploy Architecture](./docs/CLI-ARCHITECTURE.md) | CLI deploy/update architecture |
 
 ## Troubleshooting
 

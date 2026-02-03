@@ -8,6 +8,40 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-04: ゲームページ Info Panel 刷新 + 編集ボタン追加 ✅
+
+**詳細:** `.claude/logs/2026-02-04-info-panel-edit-button.md`
+
+ゲームページの Information パネルを Nintendo Switch 風デザインに刷新し、オーナー向け編集機能を追加:
+
+| 項目 | 内容 |
+|------|------|
+| **デザイン** | 赤アクセントバー + タイトル + 作成者（アバター + 名前） |
+| **オーナー判定** | Supabase Auth セッションと `game.user_id` を比較 |
+| **編集ボタン** | オーナーのみ表示、クリックで `/create.html?project={id}` に遷移 |
+| **API修正** | `getPublishedGameById()` に `users` join 追加 |
+
+**変更ファイル:** `game.html`（CSS/HTML/JS）, `database-supabase.js`
+
+---
+
+### 2026-02-04: マイページ プロフィールレイアウト刷新 ✅
+
+**詳細:** `.claude/logs/2026-02-04-mypage-profile-layout.md`
+
+マイページを Instagram スタイルのプロフィールレイアウトに刷新:
+
+| 項目 | 内容 |
+|------|------|
+| **プロトタイプ** | 自分用・他人用の2種類作成 |
+| **レイアウト** | アバター + 統計（横）、名前 + Bio + SNS（縦） |
+| **シェア機能** | Web Share API + Clipboard フォールバック |
+| **修正** | SNS アイコン中央揃え → 左寄せ |
+
+**変更ファイル:** `mypage.html`, `mypage.js`, `style.css`, `profile.css`, プロトタイプ2件
+
+---
+
 ### 2026-02-03: CLI Deploy 機能拡張 ✅
 
 **詳細:** `.claude/logs/2026-02-03-cli-deploy-enhancements.md`
@@ -1304,4 +1338,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-03 (CLI Deploy 機能拡張 - Skills 自動更新、メタデータ編集 API)
+最終更新: 2026-02-04 (ゲームページ Info Panel 刷新 + 編集ボタン追加)

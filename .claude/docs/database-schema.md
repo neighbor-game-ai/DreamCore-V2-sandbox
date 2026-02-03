@@ -51,16 +51,35 @@ auth.users (Supabase管理)
 | カラム | 型 | 説明 |
 |--------|-----|------|
 | id | UUID (PK) | `auth.users.id` と同一 |
+| public_id | TEXT NOT NULL | 公開ページ用短縮ID (`u_xxxxxxxxxx`) |
 | email | TEXT NOT NULL | Google OAuth から取得 |
 | display_name | TEXT | 表示名（OAuth の `full_name` or `name`） |
-| avatar_url | TEXT | プロフィール画像URL |
+| avatar_url | TEXT | プロフィール画像URL (R2 CDN) |
+| bio | TEXT | 自己紹介（最大160文字、TikTok/X参考） |
+| social_links | JSONB | SNSリンク（x, youtube, github, tiktok, instagram, custom） |
 | created_at | TIMESTAMPTZ NOT NULL | |
 | updated_at | TIMESTAMPTZ NOT NULL | 自動更新（トリガー） |
+
+**social_links 構造:**
+```json
+{
+  "x": "https://x.com/username",
+  "youtube": "https://youtube.com/@channel",
+  "github": "https://github.com/username",
+  "tiktok": "https://tiktok.com/@username",
+  "instagram": "https://instagram.com/username",
+  "custom": [
+    { "label": "Blog", "url": "https://example.com" }
+  ]
+}
+```
 
 **設計理由:**
 - `auth.users` は Supabase 管理下で直接クエリしづらい
 - `handle_new_user()` トリガーで自動作成されるため、アプリコードで INSERT 不要
 - `email NOT NULL` は Google OAuth 必須のため保証される
+- `bio` は 160 文字以内（TikTok/X 参考、モバイル2行に収まる）
+- `social_links` は JSONB で object 型のみ許可（CHECK制約）
 
 **RLS:** 自分のデータのみ SELECT/UPDATE 可能
 
@@ -415,6 +434,7 @@ CREATE TRIGGER on_auth_user_created
 |------|----------|
 | 2026-01-23 | 初版作成（Phase 1完了時点のスキーマを文書化） |
 | 2026-01-23 | 004_schema_improvements.sql追加（PostgreSQLベストプラクティス対応） |
+| 2026-02-03 | users テーブルに bio, social_links, public_id 追加（プロフィール機能） |
 
 <!--
 更新時の記載ルール:
