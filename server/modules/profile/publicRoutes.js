@@ -18,11 +18,10 @@ const isValidUUID = (str) => UUID_REGEX.test(str);
 const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 
 /**
- * GET /@/:username - Profile page by username
+ * GET /@:username - Profile page by username (e.g., /@notef)
  * Redirects to /u/{public_id} for canonical URL
  */
-router.get('/@/:username', async (req, res) => {
-  console.log('[PublicProfile] /@/:username hit:', req.params.username);
+router.get('/@:username', async (req, res) => {
   const { username } = req.params;
 
   // Only serve on v2 domain (not play.dreamcore.gg)
