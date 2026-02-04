@@ -224,6 +224,7 @@ router.get('/:id/games', async (req, res) => {
 
     // Get CLI games (filter visibility='public')
     let cliGames = [];
+    let cliGamesError = false;
     if (cliDeploy) {
       try {
         const allCliGames = await cliDeploy.getCliPublishedGamesByUserId(userId);
@@ -231,6 +232,7 @@ router.get('/:id/games', async (req, res) => {
         cliGames = (allCliGames || []).filter(g => g.visibility === 'public');
       } catch (e) {
         console.error('[Profile] CLI games fetch error:', e.message);
+        cliGamesError = true;
         // Continue with Play games only
       }
     }
@@ -263,7 +265,13 @@ router.get('/:id/games', async (req, res) => {
       })),
     ].sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
 
-    res.json({ games });
+    // Include meta info if CLI games fetch failed
+    const response = { games };
+    if (cliGamesError) {
+      response.meta = { cli_games: 'error' };
+    }
+
+    res.json(response);
   } catch (err) {
     console.error('GET /api/users/:id/games error:', err);
     res.status(500).json({ error: 'Internal server error' });

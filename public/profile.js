@@ -31,10 +31,20 @@ class ProfileApp {
     let profileLookup = null;
     let isUsernameUrl = false;
 
+    // Username format validation (matches server-side usernameValidator.js)
+    const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
+
     if (pathname.startsWith('/@')) {
-      // /@username format
-      const username = pathname.slice(2); // Remove "/@"
-      if (!username) {
+      // /@username format - normalize and validate
+      let username = pathname.slice(2); // Remove "/@"
+      // Remove trailing slash if present
+      if (username.endsWith('/')) {
+        username = username.slice(0, -1);
+      }
+      // Normalize to lowercase
+      username = username.toLowerCase();
+
+      if (!username || !USERNAME_REGEX.test(username)) {
         return this.showError('ユーザーが見つかりません');
       }
       profileLookup = { type: 'username', value: username };
