@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Analytics Dashboard - DreamCore Admin</title>
+  <title>分析ダッシュボード - DreamCore 管理画面</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
@@ -227,6 +227,9 @@
       letter-spacing: 0.05em;
       color: var(--gray-400);
       margin-bottom: var(--s-8);
+      display: flex;
+      align-items: center;
+      gap: var(--s-4);
     }
 
     .kpi-value {
@@ -239,6 +242,66 @@
       font-size: 0.75rem;
       color: var(--gray-400);
       margin-top: var(--s-4);
+    }
+
+    .kpi-description {
+      font-size: 0.75rem;
+      color: var(--gray-500);
+      margin-top: var(--s-8);
+      line-height: 1.5;
+      border-top: 1px solid var(--gray-100);
+      padding-top: var(--s-8);
+    }
+
+    /* Tooltip */
+    .info-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--gray-200);
+      color: var(--gray-500);
+      font-size: 0.625rem;
+      font-weight: 700;
+      cursor: help;
+      position: relative;
+    }
+
+    .info-icon:hover .tooltip {
+      display: block;
+    }
+
+    .tooltip {
+      display: none;
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--gray-900);
+      color: white;
+      padding: var(--s-8) var(--s-12);
+      border-radius: var(--r-8);
+      font-size: 0.75rem;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: normal;
+      width: 220px;
+      line-height: 1.5;
+      z-index: 100;
+      margin-bottom: var(--s-4);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: var(--gray-900);
     }
 
     /* Section */
@@ -256,6 +319,32 @@
       padding: var(--s-16) var(--s-24);
       font-size: 0.875rem;
       font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: var(--s-8);
+    }
+
+    .section-header .info-icon {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+
+    .section-header .tooltip {
+      background: white;
+      color: var(--gray-900);
+    }
+
+    .section-header .tooltip::after {
+      border-top-color: white;
+    }
+
+    .section-description {
+      font-size: 0.75rem;
+      color: var(--gray-500);
+      padding: var(--s-12) var(--s-24);
+      background: var(--gray-50);
+      border-bottom: 1px solid var(--gray-100);
+      line-height: 1.5;
     }
 
     .section-body {
@@ -365,6 +454,14 @@
       font-size: 1.5rem;
       font-weight: 800;
       color: var(--gray-900);
+    }
+
+    .event-description {
+      font-size: 0.625rem;
+      color: var(--gray-500);
+      margin-top: var(--s-8);
+      line-height: 1.4;
+      text-align: left;
     }
 
     /* Funnel */
@@ -678,15 +775,15 @@
     <header class="admin-header">
       <div class="header-left">
         <h1 class="admin-title">
-          Analytics Dashboard
-          <span class="admin-badge">Admin Only</span>
+          分析ダッシュボード
+          <span class="admin-badge">管理者専用</span>
         </h1>
-        <p class="last-updated" id="lastUpdated">Loading...</p>
+        <p class="last-updated" id="lastUpdated">読み込み中...</p>
       </div>
       <div class="header-controls">
         <div class="period-selector">
-          <button class="period-btn active" data-period="7d">7日</button>
-          <button class="period-btn" data-period="30d">30日</button>
+          <button class="period-btn active" data-period="7d">7日間</button>
+          <button class="period-btn" data-period="30d">30日間</button>
           <button class="period-btn" data-period="custom">カスタム</button>
         </div>
         <div class="custom-date-range" id="customDateRange">
@@ -699,7 +796,7 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
-          Back to App
+          アプリに戻る
         </a>
       </div>
     </header>
@@ -714,45 +811,75 @@
       <!-- KPI Cards -->
       <div class="kpi-grid">
         <div class="kpi-card">
-          <div class="kpi-label">DAU (Today)</div>
+          <div class="kpi-label">
+            DAU（本日）
+            <span class="info-icon">i
+              <span class="tooltip">その日に1回以上イベントを発生させたユニークユーザー数。プロダクトの日常的な利用状況を示す最も基本的な指標。</span>
+            </span>
+          </div>
           <div class="kpi-value" id="kpiDau">-</div>
-          <div class="kpi-subtitle">Daily Active Users</div>
+          <div class="kpi-subtitle">日次アクティブユーザー</div>
+          <div class="kpi-description">その日に1回以上イベントを発生させたユニークユーザー数。プロダクトの日常的な利用状況を示す最も基本的な指標。</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">WAU (This Week)</div>
+          <div class="kpi-label">
+            WAU（今週）
+            <span class="info-icon">i
+              <span class="tooltip">直近7日間でアクティブだったユニークユーザー数。DAUより変動が少なく、週単位のトレンド把握に適している。</span>
+            </span>
+          </div>
           <div class="kpi-value" id="kpiWau">-</div>
-          <div class="kpi-subtitle">Weekly Active Users</div>
+          <div class="kpi-subtitle">週次アクティブユーザー</div>
+          <div class="kpi-description">直近7日間でアクティブだったユニークユーザー数。DAUより変動が少なく、週単位のトレンド把握に適している。</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">MAU (This Month)</div>
+          <div class="kpi-label">
+            MAU（今月）
+            <span class="info-icon">i
+              <span class="tooltip">直近30日間でアクティブだったユニークユーザー数。サービス全体の規模感を示す。DAU/MAU比率でスティッキネス（定着度）を測定可能。</span>
+            </span>
+          </div>
           <div class="kpi-value" id="kpiMau">-</div>
-          <div class="kpi-subtitle">Monthly Active Users</div>
+          <div class="kpi-subtitle">月次アクティブユーザー</div>
+          <div class="kpi-description">直近30日間でアクティブだったユニークユーザー数。サービス全体の規模感を示す。DAU/MAU比率でスティッキネス（定着度）を測定可能。</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Sessions</div>
+          <div class="kpi-label">
+            セッション数
+            <span class="info-icon">i
+              <span class="tooltip">期間中に開始されたセッションの総数。1ユーザーが複数回訪問すれば複数カウント。</span>
+            </span>
+          </div>
           <div class="kpi-value" id="kpiSessions">-</div>
-          <div class="kpi-subtitle" id="kpiSessionsPeriod">Period Total</div>
+          <div class="kpi-subtitle" id="kpiSessionsPeriod">期間合計</div>
+          <div class="kpi-description">期間中に開始されたセッションの総数。1ユーザーが複数回訪問すれば複数カウント。</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Avg Duration</div>
+          <div class="kpi-label">
+            平均滞在時間
+            <span class="info-icon">i
+              <span class="tooltip">セッション開始から終了までの平均時間。長いほどエンゲージメントが高い傾向。ただし放置も含まれる可能性あり。</span>
+            </span>
+          </div>
           <div class="kpi-value" id="kpiDuration">-</div>
-          <div class="kpi-subtitle">Per Session</div>
+          <div class="kpi-subtitle">セッションあたり</div>
+          <div class="kpi-description">セッション開始から終了までの平均時間。長いほどエンゲージメントが高い傾向。ただし放置も含まれる可能性あり。</div>
         </div>
       </div>
 
       <!-- DAU Chart -->
       <section class="section">
-        <div class="section-header">Daily Active Users</div>
+        <div class="section-header">日次アクティブユーザー推移</div>
         <div class="section-body">
           <div class="dau-chart" id="dauChart">
-            <div class="loading-state">Loading chart...</div>
+            <div class="loading-state">グラフを読み込み中...</div>
           </div>
         </div>
       </section>
 
       <!-- Event Counts -->
       <section class="section">
-        <div class="section-header">Event Counts</div>
+        <div class="section-header">イベント数</div>
         <div class="section-body">
           <div class="event-grid" id="eventGrid">
             <div class="event-card">
@@ -764,6 +891,7 @@
               </div>
               <div class="event-name">page_view</div>
               <div class="event-count" id="eventPageView">-</div>
+              <div class="event-description">ページ表示回数。どのページがよく見られているかの基礎データ。</div>
             </div>
             <div class="event-card">
               <div class="event-icon game_play">
@@ -773,6 +901,7 @@
               </div>
               <div class="event-name">game_play</div>
               <div class="event-count" id="eventGamePlay">-</div>
+              <div class="event-description">ゲームがプレイされた回数。コンテンツ消費の指標。</div>
             </div>
             <div class="event-card">
               <div class="event-icon game_create">
@@ -783,6 +912,7 @@
               </div>
               <div class="event-name">game_create</div>
               <div class="event-count" id="eventGameCreate">-</div>
+              <div class="event-description">新規ゲームが作成された回数。コンテンツ生成の指標。</div>
             </div>
             <div class="event-card">
               <div class="event-icon game_publish">
@@ -794,6 +924,7 @@
               </div>
               <div class="event-name">game_publish</div>
               <div class="event-count" id="eventGamePublish">-</div>
+              <div class="event-description">ゲームが公開された回数。作成から公開への転換を示す。</div>
             </div>
             <div class="event-card" id="errorCard">
               <div class="event-icon error">
@@ -805,6 +936,7 @@
               </div>
               <div class="event-name">error</div>
               <div class="event-count" id="eventError">-</div>
+              <div class="event-description">JavaScriptエラーの発生回数。0が理想。増加傾向なら調査が必要。</div>
             </div>
           </div>
         </div>
@@ -812,7 +944,13 @@
 
       <!-- Funnel -->
       <section class="section">
-        <div class="section-header">Conversion Funnel</div>
+        <div class="section-header">
+          コンバージョンファネル
+          <span class="info-icon">i
+            <span class="tooltip">ユーザーがどの段階で離脱しているかを特定し、改善ポイントを見つけるための分析手法。</span>
+          </span>
+        </div>
+        <div class="section-description">ファネル分析：訪問から作成、公開、プレイまでの各ステップ間の転換率を表示。どの段階でユーザーが離脱しているかを特定し、改善ポイントを見つけるために使用。</div>
         <div class="section-body">
           <div class="funnel-container" id="funnelChart">
             <div class="funnel-step">
@@ -858,20 +996,32 @@
       <div class="two-col">
         <!-- Country -->
         <section class="section">
-          <div class="section-header">Top Countries</div>
+          <div class="section-header">
+            国別ユーザー
+            <span class="info-icon">i
+              <span class="tooltip">ユーザーの地理的分布。マーケティング施策の効果測定や、ローカライズ優先度の判断に使用。</span>
+            </span>
+          </div>
+          <div class="section-description">ユーザーの地理的分布。マーケティング施策の効果測定や、ローカライズ優先度の判断に使用。</div>
           <div class="section-body">
             <div class="hbar-chart" id="countryChart">
-              <div class="loading-state">No data</div>
+              <div class="loading-state">データなし</div>
             </div>
           </div>
         </section>
 
         <!-- Device/OS -->
         <section class="section">
-          <div class="section-header">Device / OS</div>
+          <div class="section-header">
+            デバイス / OS
+            <span class="info-icon">i
+              <span class="tooltip">利用環境の分布。特定環境での不具合調査や、開発優先度の判断に活用。</span>
+            </span>
+          </div>
+          <div class="section-description">利用環境の分布。特定環境での不具合調査や、開発優先度の判断に活用。</div>
           <div class="section-body">
             <div id="deviceChart">
-              <div class="loading-state">No data</div>
+              <div class="loading-state">データなし</div>
             </div>
           </div>
         </section>
@@ -880,18 +1030,24 @@
       <div class="two-col">
         <!-- New vs Returning -->
         <section class="section">
-          <div class="section-header">New vs Returning</div>
+          <div class="section-header">
+            新規 / 既存ユーザー
+            <span class="info-icon">i
+              <span class="tooltip">新規ユーザー（期間中に初セッション）vs リピーター。獲得と定着のバランスを確認。</span>
+            </span>
+          </div>
+          <div class="section-description">新規ユーザー（期間中に初セッション）vs リピーター。獲得と定着のバランスを確認。</div>
           <div class="section-body">
             <div id="newReturningChart">
               <div class="segment-row">
                 <div class="segment-dot" style="background: #3B82F6;"></div>
-                <div class="segment-name">New Users</div>
+                <div class="segment-name">新規ユーザー</div>
                 <div class="segment-value" id="newUsersCount">-</div>
                 <div class="segment-percent" id="newUsersPercent">-</div>
               </div>
               <div class="segment-row">
                 <div class="segment-dot" style="background: #10B981;"></div>
-                <div class="segment-name">Returning Users</div>
+                <div class="segment-name">既存ユーザー</div>
                 <div class="segment-value" id="returningUsersCount">-</div>
                 <div class="segment-percent" id="returningUsersPercent">-</div>
               </div>
@@ -899,12 +1055,12 @@
           </div>
         </section>
 
-        <!-- Placeholder for balance -->
+        <!-- Session Distribution -->
         <section class="section">
-          <div class="section-header">Session Distribution</div>
+          <div class="section-header">セッション分布</div>
           <div class="section-body">
             <div id="sessionDistChart">
-              <div class="loading-state">No data</div>
+              <div class="loading-state">データなし</div>
             </div>
           </div>
         </section>
@@ -914,18 +1070,24 @@
       <div class="two-col">
         <!-- Top Pages -->
         <section class="section">
-          <div class="section-header">Top Pages</div>
+          <div class="section-header">
+            人気ページ
+            <span class="info-icon">i
+              <span class="tooltip">閲覧数が多いページ。ユーザーの関心を把握し、導線設計の参考に。</span>
+            </span>
+          </div>
+          <div class="section-description">閲覧数が多いページ。ユーザーの関心を把握し、導線設計の参考に。</div>
           <div class="section-body">
             <table class="data-table" id="topPagesTable">
               <thead>
                 <tr>
-                  <th style="width: 50px;">Rank</th>
-                  <th>Path</th>
-                  <th style="width: 80px; text-align: right;">Views</th>
+                  <th style="width: 50px;">順位</th>
+                  <th>パス</th>
+                  <th style="width: 80px; text-align: right;">閲覧数</th>
                 </tr>
               </thead>
               <tbody id="topPagesBody">
-                <tr><td colspan="3" class="loading-state">Loading...</td></tr>
+                <tr><td colspan="3" class="loading-state">読み込み中...</td></tr>
               </tbody>
             </table>
           </div>
@@ -933,18 +1095,24 @@
 
         <!-- Top Games -->
         <section class="section">
-          <div class="section-header">Top Games</div>
+          <div class="section-header">
+            人気ゲーム
+            <span class="info-icon">i
+              <span class="tooltip">プレイ回数が多いゲーム。バイラルコンテンツの発見や、おすすめ表示に活用。</span>
+            </span>
+          </div>
+          <div class="section-description">プレイ回数が多いゲーム。バイラルコンテンツの発見や、おすすめ表示に活用。</div>
           <div class="section-body">
             <table class="data-table" id="topGamesTable">
               <thead>
                 <tr>
-                  <th style="width: 50px;">Rank</th>
-                  <th>Game</th>
-                  <th style="width: 80px; text-align: right;">Plays</th>
+                  <th style="width: 50px;">順位</th>
+                  <th>ゲーム</th>
+                  <th style="width: 80px; text-align: right;">プレイ数</th>
                 </tr>
               </thead>
               <tbody id="topGamesBody">
-                <tr><td colspan="3" class="loading-state">Loading...</td></tr>
+                <tr><td colspan="3" class="loading-state">読み込み中...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1025,12 +1193,12 @@
                 <line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
               <h2 style="font-size: 1.25rem; color: var(--gray-900);">アクセス権限がありません</h2>
-              <p style="color: var(--gray-600);">This page is restricted to administrators only.</p>
+              <p style="color: var(--gray-600);">このページは管理者のみアクセスできます。</p>
               <a href="/create.html" class="back-link" style="margin-top: var(--s-16);">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
-                Back to App
+                アプリに戻る
               </a>
             </div>
           `;
@@ -1038,7 +1206,7 @@
         }
 
         if (!response.ok) {
-          throw new Error('Failed to load analytics');
+          throw new Error('分析データの読み込みに失敗しました');
         }
 
         analyticsData = await response.json();
@@ -1049,15 +1217,15 @@
 
         const periodLabel = currentPeriod.startsWith('custom:')
           ? currentPeriod.replace('custom:', '').replace(':', ' ~ ')
-          : currentPeriod;
+          : currentPeriod === '7d' ? '7日間' : currentPeriod === '30d' ? '30日間' : currentPeriod;
         document.getElementById('lastUpdated').textContent =
-          `Last updated: ${new Date().toLocaleTimeString('ja-JP')} | Period: ${periodLabel}`;
+          `最終更新: ${new Date().toLocaleTimeString('ja-JP')} | 期間: ${periodLabel}`;
       } catch (err) {
-        console.error('Failed to load analytics:', err);
+        console.error('分析データの読み込みに失敗:', err);
         loadingState.innerHTML = `
           <div style="text-align: center; color: var(--gray-600);">
-            <p>Failed to load analytics data</p>
-            <button class="apply-btn" onclick="loadAnalytics()" style="margin-top: var(--s-16);">Retry</button>
+            <p>分析データの読み込みに失敗しました</p>
+            <button class="apply-btn" onclick="loadAnalytics()" style="margin-top: var(--s-16);">再試行</button>
           </div>
         `;
       }
@@ -1095,7 +1263,7 @@
       const container = document.getElementById('dauChart');
 
       if (!history || history.length === 0) {
-        container.innerHTML = '<div class="loading-state">No data available</div>';
+        container.innerHTML = '<div class="loading-state">データがありません</div>';
         return;
       }
 
@@ -1156,7 +1324,7 @@
       const container = document.getElementById('countryChart');
 
       if (!countries || countries.length === 0) {
-        container.innerHTML = '<div class="loading-state">No data</div>';
+        container.innerHTML = '<div class="loading-state">データなし</div>';
         return;
       }
 
@@ -1167,7 +1335,7 @@
         const barWidth = Math.max((country.count / maxCount) * 100, 15);
         return `
           <div class="hbar-item">
-            <div class="hbar-label">${escapeHtml(country.name || country.code || 'Unknown')}</div>
+            <div class="hbar-label">${escapeHtml(country.name || country.code || '不明')}</div>
             <div class="hbar-track">
               <div class="hbar-fill" style="width: ${barWidth}%; background: ${colors[i % colors.length]};">
                 ${barWidth > 30 ? `<span class="hbar-value">${formatNumber(country.count)}</span>` : ''}
@@ -1183,7 +1351,7 @@
       const container = document.getElementById('deviceChart');
 
       if (!devices || devices.length === 0) {
-        container.innerHTML = '<div class="loading-state">No data</div>';
+        container.innerHTML = '<div class="loading-state">データなし</div>';
         return;
       }
 
@@ -1195,7 +1363,7 @@
         return `
           <div class="segment-row">
             <div class="segment-dot" style="background: ${colors[i % colors.length]};"></div>
-            <div class="segment-name">${escapeHtml(device.name || 'Unknown')}</div>
+            <div class="segment-name">${escapeHtml(device.name || '不明')}</div>
             <div class="segment-value">${formatNumber(device.count)}</div>
             <div class="segment-percent">${percent}%</div>
           </div>
@@ -1218,7 +1386,7 @@
       const container = document.getElementById('sessionDistChart');
 
       if (!distribution || distribution.length === 0) {
-        container.innerHTML = '<div class="loading-state">No data</div>';
+        container.innerHTML = '<div class="loading-state">データなし</div>';
         return;
       }
 
@@ -1244,7 +1412,7 @@
       const tbody = document.getElementById('topPagesBody');
 
       if (!pages || pages.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="loading-state">No data</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" class="loading-state">データなし</td></tr>';
         return;
       }
 
@@ -1261,14 +1429,14 @@
       const tbody = document.getElementById('topGamesBody');
 
       if (!games || games.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="loading-state">No data</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" class="loading-state">データなし</td></tr>';
         return;
       }
 
       tbody.innerHTML = games.slice(0, 10).map((game, i) => `
         <tr>
           <td><div class="rank">${i + 1}</div></td>
-          <td class="path">${escapeHtml(game.title || game.id || 'Untitled')}</td>
+          <td class="path">${escapeHtml(game.title || game.id || '無題')}</td>
           <td class="count">${formatNumber(game.plays)}</td>
         </tr>
       `).join('');
@@ -1281,10 +1449,10 @@
     }
 
     function formatDuration(seconds) {
-      if (!seconds || seconds <= 0) return '0m 0s';
+      if (!seconds || seconds <= 0) return '0分 0秒';
       const mins = Math.floor(seconds / 60);
       const secs = Math.floor(seconds % 60);
-      return `${mins}m ${secs}s`;
+      return `${mins}分 ${secs}秒`;
     }
 
     function escapeHtml(str) {
@@ -1305,7 +1473,7 @@
         }
         loadAnalytics();
       } catch (err) {
-        console.error('Auth init failed:', err);
+        console.error('認証の初期化に失敗:', err);
         window.location.href = '/';
       }
     }
