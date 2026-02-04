@@ -8,6 +8,86 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-04: 公開ゲームAPI修正 & カスタム404ページ ✅
+
+| 作業 | 内容 |
+|------|------|
+| **FK修正** | `published_games.user_id` の参照先を `auth.users` → `public.users` に変更 |
+| **カスタム404** | Expressデフォルトの「Cannot GET」をブランドデザインの404ページに置き換え |
+
+**問題:** `/api/published-games/:id` が `{"error":"Game not found"}` を返す
+
+**原因:** PostgREST が `auth.users` への FK を `public.users` との JOIN に使えなかった
+
+**対応:**
+1. 既存FK削除 → `public.users` への新規FK追加（`ON DELETE SET NULL`）
+2. スキーマドキュメントにユーザー削除時の注意事項を追記
+
+**残課題:** `user_id` が NOT NULL のため、将来ユーザー削除機能実装時に対応が必要
+
+---
+
+### 2026-02-04: ログイン画面タイトル変更 & R2 CORS設定 ✅
+
+**詳細:** `.claude/logs/2026-02-04-login-title-cors-fix.md`
+
+| 作業 | 内容 |
+|------|------|
+| **タイトル変更** | ログイン画面を「ゲームクリエイター」→「DreamCore」に変更 |
+| **R2 CORS設定** | CDN からのアセット配信で CORS エラーが発生 → wrangler で設定追加 |
+
+**問題:** プレビュー画面で画像・音声が読み込めない（`ERR_BLOCKED_BY_ORB`）
+
+**原因:** Cloudflare R2 CDN に `Access-Control-Allow-Origin` ヘッダーがなかった
+
+**対応:** wrangler CLI で `dreamcore-public` バケットに CORS ルール追加
+```json
+{
+  "allowed": {
+    "origins": ["https://v2.dreamcore.gg", "https://play.dreamcore.gg", "http://localhost:3000"],
+    "methods": ["GET", "HEAD"],
+    "headers": ["*"]
+  }
+}
+```
+
+**変更ファイル:** `public/index.html`, R2 バケット設定
+
+---
+
+### 2026-02-04: ゲーム画面の戻るボタン改善 ✅
+
+**詳細:** `.claude/logs/2026-02-04-game-back-button-navigation.md`
+
+マイページからゲーム画面を開いた後、戻るボタンでマイページに戻れるよう改善:
+
+| 項目 | 内容 |
+|------|------|
+| **方式** | クエリパラメータ（`?from=mypage`）+ referrer フォールバック |
+| **セキュリティ** | `from` は列挙型、`user` は u_ 形式/UUID のみ、referrer は同一ホスト限定 |
+| **フォールバック** | from → referrer → `/create.html` の優先順位 |
+
+**変更ファイル:** `mypage.js`, `game.html`
+
+---
+
+### 2026-02-04: プロフィール編集モーダル フルスクリーン化 ✅
+
+**詳細:** `.claude/logs/2026-02-04-profile-editor-fullscreen.md`
+
+プロフィール編集モーダルとナビバーの重なり問題を解決:
+
+| 項目 | 内容 |
+|------|------|
+| **問題** | モーダル下部とボトムナビが重なり操作不能 |
+| **解決** | モバイル時フルスクリーンモーダルに変更 |
+| **ナビ制御** | モーダル表示時にナビバーを非表示 |
+| **iOS対応** | `safe-area-inset-bottom` でホームインジケーター考慮 |
+
+**変更ファイル:** `profile.css`, `profile.js`
+
+---
+
 ### 2026-02-04: ゲームページ Info Panel 刷新 + 編集ボタン追加 ✅
 
 **詳細:** `.claude/logs/2026-02-04-info-panel-edit-button.md`
@@ -557,6 +637,13 @@ Content-Security-Policy-Report-Only ヘッダーを導入:
   - **計画書:** `/Users/admin/.claude/plans/quiet-imagining-rossum.md`
   - 翻訳対象: HTML静的テキスト200+、JS動的テキスト120+
   - 主要ファイル: app.js, editor.html, create.html, publish.js
+- [ ] **CLI Remix 機能** - CLI からゲーム URL を指定して Remix
+  - CLI でゲーム URL を貼り付け → 元ゲームをダウンロード → 新プロジェクトとして展開
+  - `dreamcore.json` に `remixedFrom` フィールド追加（系譜追跡用）
+- [ ] **CLI ゲームの Web UI Remix 対応** - CLI アップロードゲームも Web UI から Remix 可能に
+  - 現在: Play で作成したゲームのみ Remix 可能
+  - 将来: CLI ゲームも `/game/:id` の Remix ボタンで Remix 可能
+  - CLI と Play のゲームが相互に Remix できるエコシステム
 - [ ] **系譜表示の深さ制限緩和** - 現在10世代、50〜無制限に拡張可能（`remixService.js:198`）
 - [ ] **play_count レート制限** - IP+gameId で短時間重複を抑制（悪用対策）
 - [ ] **Bottom Navigation 共通化** - 各HTMLに直接記述 → JS動的挿入 or Web Components
@@ -1338,4 +1425,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-04 (ゲームページ Info Panel 刷新 + 編集ボタン追加)
+最終更新: 2026-02-04 (ログイン画面タイトル変更 & R2 CORS設定)
