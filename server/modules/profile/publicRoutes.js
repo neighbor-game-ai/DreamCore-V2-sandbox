@@ -22,6 +22,7 @@ const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
  * Redirects to /u/{public_id} for canonical URL
  */
 router.get('/@/:username', async (req, res) => {
+  console.log('[PublicProfile] /@/:username hit:', req.params.username);
   const { username } = req.params;
 
   // Only serve on v2 domain (not play.dreamcore.gg)
