@@ -14,6 +14,8 @@ class ProfileEditor {
     this.userData = null;
     this.customLinks = [];
     this.isLoading = false;
+    this.usernameCheckTimeout = null;
+    this.usernameAvailable = null;
 
     // Social platform definitions
     this.platforms = [
@@ -96,6 +98,29 @@ class ProfileEditor {
             <button class="profile-avatar-upload-btn" id="avatarUploadBtn">画像を変更</button>
           </div>
 
+          <!-- Username -->
+          <div class="profile-form-group">
+            <label class="profile-form-label" for="editUsername">ユーザー名</label>
+            <div class="profile-username-input-wrapper">
+              <span class="profile-username-prefix">@</span>
+              <input type="text" id="editUsername" class="profile-form-input profile-username-input"
+                     placeholder="username" maxlength="20" pattern="[a-z0-9_]{3,20}">
+              <span class="profile-username-status" id="usernameStatus"></span>
+            </div>
+            <div class="profile-form-hint">
+              3〜20文字、英小文字・数字・アンダースコアのみ
+              <span id="usernameUrl" class="profile-username-url" style="display: none;">
+                <span id="usernameUrlText"></span>
+                <button type="button" class="profile-username-copy" id="usernameUrlCopy" title="URLをコピー">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
+              </span>
+            </div>
+          </div>
+
           <!-- Display Name -->
           <div class="profile-form-group">
             <label class="profile-form-label" for="editDisplayName">表示名</label>
@@ -162,6 +187,17 @@ class ProfileEditor {
       this.modal.querySelector('#bioCharCount').textContent = bioInput.value.length;
     });
 
+    // Username input with debounced availability check
+    const usernameInput = this.modal.querySelector('#editUsername');
+    usernameInput.addEventListener('input', () => {
+      this.handleUsernameInput(usernameInput.value);
+    });
+
+    // Username URL copy button
+    this.modal.querySelector('#usernameUrlCopy')?.addEventListener('click', () => {
+      this.copyUsernameUrl();
+    });
+
     // Backdrop click to close
     this.modal.addEventListener('click', (e) => {
       if (e.target === this.modal) this.close();
@@ -185,6 +221,14 @@ class ProfileEditor {
     const avatarPreview = this.modal.querySelector('#avatarPreview');
     if (this.userData.avatar_url) {
       avatarPreview.innerHTML = `<img src="${this.escapeAttr(this.userData.avatar_url)}" alt="Avatar">`;
+    }
+
+    // Username
+    const usernameInput = this.modal.querySelector('#editUsername');
+    if (this.userData.username) {
+      usernameInput.value = this.userData.username;
+      this.updateUsernameUrl(this.userData.username);
+      this.setUsernameStatus('current', '現在使用中');
     }
 
     // Display name
@@ -331,6 +375,7 @@ class ProfileEditor {
     errorDiv.style.display = 'none';
 
     // Gather form data
+    const usernameValue = this.modal.querySelector('#editUsername').value.trim().toLowerCase();
     const data = {
       display_name: this.modal.querySelector('#editDisplayName').value.trim() || null,
       bio: this.modal.querySelector('#editBio').value.trim() || null,
@@ -343,6 +388,11 @@ class ProfileEditor {
         custom: this.getCustomLinks()
       }
     };
+
+    // Include username only if changed
+    if (usernameValue !== (this.userData.username || '')) {
+      data.username = usernameValue || null;
+    }
 
     // Client-side validation
     if (data.display_name && data.display_name.length > 50) {
@@ -458,6 +508,133 @@ class ProfileEditor {
       uploadBtn.textContent = originalText;
       uploadBtn.disabled = false;
     }
+  }
+
+  /**
+   * Handle username input with debounced availability check
+   */
+  handleUsernameInput(value) {
+    // Clear previous timeout
+    if (this.usernameCheckTimeout) {
+      clearTimeout(this.usernameCheckTimeout);
+    }
+
+    const normalized = value.toLowerCase().trim();
+
+    // If empty, clear status
+    if (!normalized) {
+      this.setUsernameStatus('', '');
+      this.updateUsernameUrl('');
+      return;
+    }
+
+    // If same as current username, show "current" status
+    if (normalized === this.userData.username) {
+      this.setUsernameStatus('current', '現在使用中');
+      this.updateUsernameUrl(normalized);
+      return;
+    }
+
+    // Validate format first
+    const formatValid = /^[a-z0-9_]{3,20}$/.test(normalized);
+    if (!formatValid) {
+      if (normalized.length < 3) {
+        this.setUsernameStatus('error', '3文字以上必要です');
+      } else if (normalized.length > 20) {
+        this.setUsernameStatus('error', '20文字以下にしてください');
+      } else {
+        this.setUsernameStatus('error', '使用できない文字があります');
+      }
+      this.updateUsernameUrl('');
+      return;
+    }
+
+    // Show checking status
+    this.setUsernameStatus('checking', '確認中...');
+
+    // Debounced API check
+    this.usernameCheckTimeout = setTimeout(() => {
+      this.checkUsernameAvailability(normalized);
+    }, 500);
+  }
+
+  /**
+   * Check username availability via API
+   */
+  async checkUsernameAvailability(username) {
+    try {
+      const res = await fetch(`/api/users/username-available?u=${encodeURIComponent(username)}`);
+      const data = await res.json();
+
+      // Check if input changed while waiting
+      const currentValue = this.modal.querySelector('#editUsername').value.toLowerCase().trim();
+      if (currentValue !== username) return;
+
+      if (data.available) {
+        this.setUsernameStatus('available', '利用可能');
+        this.updateUsernameUrl(username);
+        this.usernameAvailable = true;
+      } else {
+        this.setUsernameStatus('error', data.error || '使用できません');
+        this.updateUsernameUrl('');
+        this.usernameAvailable = false;
+      }
+    } catch (err) {
+      console.error('[ProfileEditor] Username check error:', err);
+      this.setUsernameStatus('error', 'エラー');
+      this.usernameAvailable = false;
+    }
+  }
+
+  /**
+   * Set username status indicator
+   */
+  setUsernameStatus(type, message) {
+    const statusEl = this.modal.querySelector('#usernameStatus');
+    if (!statusEl) return;
+
+    statusEl.className = 'profile-username-status';
+    if (type) {
+      statusEl.classList.add(`status-${type}`);
+    }
+    statusEl.textContent = message;
+  }
+
+  /**
+   * Update username URL display
+   */
+  updateUsernameUrl(username) {
+    const urlContainer = this.modal.querySelector('#usernameUrl');
+    const urlText = this.modal.querySelector('#usernameUrlText');
+
+    if (!urlContainer || !urlText) return;
+
+    if (username) {
+      urlText.textContent = `v2.dreamcore.gg/@${username}`;
+      urlContainer.style.display = 'inline-flex';
+    } else {
+      urlContainer.style.display = 'none';
+    }
+  }
+
+  /**
+   * Copy username URL to clipboard
+   */
+  copyUsernameUrl() {
+    const username = this.modal.querySelector('#editUsername').value.toLowerCase().trim();
+    if (!username) return;
+
+    const url = `https://v2.dreamcore.gg/@${username}`;
+    navigator.clipboard.writeText(url).then(() => {
+      const copyBtn = this.modal.querySelector('#usernameUrlCopy');
+      if (copyBtn) {
+        const originalHtml = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        setTimeout(() => { copyBtn.innerHTML = originalHtml; }, 1500);
+      }
+    }).catch(err => {
+      console.error('[ProfileEditor] Copy failed:', err);
+    });
   }
 
   /**

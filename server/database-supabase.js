@@ -19,7 +19,7 @@ const { supabaseAdmin, createUserClient } = require('./supabaseClient');
 // ==================== Profile Operations ====================
 
 // Field definitions for explicit selection (avoid leaking sensitive fields)
-const USER_PUBLIC_FIELDS = 'id, display_name, avatar_url, bio, social_links, public_id, created_at';
+const USER_PUBLIC_FIELDS = 'id, username, display_name, avatar_url, bio, social_links, public_id, created_at';
 const USER_PRIVATE_FIELDS = USER_PUBLIC_FIELDS + ', email, updated_at';
 
 /**
@@ -67,11 +67,11 @@ const getUserPublicProfile = async (userId) => {
  * Update user profile
  * @param {Object} client - Supabase client with user JWT
  * @param {string} userId - User ID
- * @param {Object} updates - Fields to update (display_name, bio, social_links, avatar_url)
+ * @param {Object} updates - Fields to update (display_name, bio, social_links, avatar_url, username)
  * @returns {Promise<Object|null>} Updated user or null
  */
 const updateUserProfile = async (client, userId, updates) => {
-  const allowed = ['display_name', 'bio', 'social_links', 'avatar_url'];
+  const allowed = ['display_name', 'bio', 'social_links', 'avatar_url', 'username'];
   const data = {};
   for (const key of allowed) {
     if (updates[key] !== undefined) {
@@ -153,6 +153,56 @@ const getUserByPublicId = async (publicId) => {
     return null;
   }
   return data;
+};
+
+/**
+ * Get user by username (case-insensitive)
+ * @param {string} username - Username to search for
+ * @returns {Promise<Object|null>} User profile or null
+ */
+const getUserByUsername = async (username) => {
+  if (!username || typeof username !== 'string') return null;
+
+  // Normalize to lowercase for case-insensitive search
+  const normalizedUsername = username.toLowerCase();
+
+  const { data, error } = await supabaseAdmin
+    .from('users')
+    .select(USER_PUBLIC_FIELDS)
+    .ilike('username', normalizedUsername)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null; // Not found
+    console.error('[DB] getUserByUsername error:', error.message);
+    return null;
+  }
+  return data;
+};
+
+/**
+ * Check if username is available
+ * @param {string} username - Username to check
+ * @returns {Promise<boolean>} true if available, false if taken
+ */
+const checkUsernameAvailable = async (username) => {
+  if (!username || typeof username !== 'string') return false;
+
+  const normalizedUsername = username.toLowerCase();
+
+  const { data, error } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .ilike('username', normalizedUsername)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[DB] checkUsernameAvailable error:', error.message);
+    return false; // Treat errors as unavailable for safety
+  }
+
+  // Available if no user found
+  return data === null;
 };
 
 /**
@@ -1725,6 +1775,8 @@ module.exports = {
   getUserById,
   getUserByEmail,
   getUserByPublicId,
+  getUserByUsername,
+  checkUsernameAvailable,
   getUserByVisitorId,
   getProfileById,
   getProfileByEmail,

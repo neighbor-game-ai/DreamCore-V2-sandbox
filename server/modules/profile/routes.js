@@ -24,6 +24,73 @@ const upload = multer({
 // JSON body size limit (64KB)
 const jsonLimit = express.json({ limit: '64kb' });
 
+// Username validation
+const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
+const RESERVED_USERNAMES = new Set([
+  // System routes
+  'api', 'admin', 'game', 'create', 'discover', 'notifications',
+  'play', 'project', 'u', 'g', 'p', 'assets', 'login', 'signup',
+  'settings', 'auth', 'callback', 'waitlist', 'mypage', 'profile',
+  // Common reserved
+  'help', 'support', 'about', 'terms', 'privacy', 'contact',
+  'blog', 'news', 'status', 'docs', 'developer', 'developers',
+  'app', 'apps', 'games', 'user', 'users', 'home', 'index',
+  // Brand protection
+  'dreamcore', 'official', 'system', 'mod', 'moderator', 'staff',
+  'null', 'undefined', 'anonymous', 'guest', 'test', 'demo'
+]);
+
+/**
+ * Validate username format and availability
+ * @param {string} username - Raw username input
+ * @returns {{ valid: boolean, error?: string, normalized?: string }}
+ */
+const validateUsername = (username) => {
+  if (!username || typeof username !== 'string') {
+    return { valid: false, error: 'Username is required' };
+  }
+
+  // Normalize to lowercase
+  const normalized = username.toLowerCase().trim();
+
+  // Check format
+  if (!USERNAME_REGEX.test(normalized)) {
+    return { valid: false, error: 'Username must be 3-20 characters, lowercase letters, numbers, and underscores only' };
+  }
+
+  // Check reserved words
+  if (RESERVED_USERNAMES.has(normalized)) {
+    return { valid: false, error: 'This username is reserved' };
+  }
+
+  return { valid: true, normalized };
+};
+
+/**
+ * GET /api/users/username-available
+ * Check if a username is available
+ * Query: ?u=desired_username
+ */
+router.get('/username-available', async (req, res) => {
+  try {
+    const { u: username } = req.query;
+
+    // Validate format first
+    const validation = validateUsername(username);
+    if (!validation.valid) {
+      return res.json({ available: false, error: validation.error });
+    }
+
+    // Check database availability
+    const available = await db.checkUsernameAvailable(validation.normalized);
+
+    res.json({ available });
+  } catch (err) {
+    console.error('GET /api/users/username-available error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 /**
  * GET /api/users/me
  * Get current user's full profile (private fields included)
@@ -47,7 +114,7 @@ router.get('/me', authenticate, async (req, res) => {
  */
 router.patch('/me', authenticate, jsonLimit, async (req, res) => {
   try {
-    let { display_name, bio, social_links } = req.body;
+    let { display_name, bio, social_links, username } = req.body;
 
     // Normalize empty strings to null
     display_name = display_name?.trim() || null;
@@ -73,11 +140,40 @@ router.patch('/me', authenticate, jsonLimit, async (req, res) => {
       }
     }
 
-    const updated = await db.updateUserProfile(req.supabase, req.user.id, {
+    // Validate and normalize username if provided
+    let normalizedUsername = undefined; // undefined = don't update
+    if (username !== undefined) {
+      if (username === null || username === '') {
+        // Allow clearing username
+        normalizedUsername = null;
+      } else {
+        const usernameValidation = validateUsername(username);
+        if (!usernameValidation.valid) {
+          return res.status(400).json({ error: usernameValidation.error });
+        }
+
+        // Check availability (excluding current user)
+        const existingUser = await db.getUserByUsername(usernameValidation.normalized);
+        if (existingUser && existingUser.id !== req.user.id) {
+          return res.status(409).json({ error: 'Username is already taken' });
+        }
+
+        normalizedUsername = usernameValidation.normalized;
+      }
+    }
+
+    const updateData = {
       display_name,
       bio,
       social_links: normalizedLinks
-    });
+    };
+
+    // Only include username if explicitly provided
+    if (normalizedUsername !== undefined) {
+      updateData.username = normalizedUsername;
+    }
+
+    const updated = await db.updateUserProfile(req.supabase, req.user.id, updateData);
 
     if (!updated) {
       return res.status(500).json({ error: 'Update failed' });
@@ -86,6 +182,10 @@ router.patch('/me', authenticate, jsonLimit, async (req, res) => {
     res.json(updated);
   } catch (err) {
     console.error('PATCH /api/users/me error:', err);
+    // Handle unique constraint violation from DB
+    if (err.code === '23505' || (err.message && err.message.includes('unique'))) {
+      return res.status(409).json({ error: 'Username is already taken' });
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -513,3 +513,87 @@
   font-size: 11px;
   font-weight: 500;
 }
+
+/* ========================================
+   Username Input - @username field
+   ======================================== */
+
+.profile-username-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.profile-username-prefix {
+  position: absolute;
+  left: 16px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #525252;
+  pointer-events: none;
+}
+
+.profile-username-input {
+  padding-left: 32px !important;
+  padding-right: 100px !important;
+}
+
+.profile-username-status {
+  position: absolute;
+  right: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.profile-username-status.status-checking {
+  color: #A3A3A3;
+}
+
+.profile-username-status.status-available {
+  color: #16A34A;
+}
+
+.profile-username-status.status-current {
+  color: #3B82F6;
+}
+
+.profile-username-status.status-error {
+  color: #DC2626;
+}
+
+/* Username URL display */
+.profile-username-url {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding: 4px 8px;
+  background: #F5F5F5;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: #525252;
+}
+
+.profile-username-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  background: transparent;
+  color: #525252;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.profile-username-copy:hover {
+  background: #E5E5E5;
+  color: #171717;
+}
+
+.profile-username-copy svg {
+  display: block;
+}
