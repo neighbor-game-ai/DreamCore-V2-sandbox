@@ -1042,12 +1042,17 @@ class GameCreatorApp {
   startEditingProjectTitle() {
     if (!this.currentProjectId || !this.currentProjectName) return;
 
+    // Already editing - don't select all again (allows cursor positioning on mobile)
+    if (this.projectTitle.contentEditable === 'true') {
+      return;
+    }
+
     const currentName = this.currentProjectName;
     this.projectTitle.contentEditable = true;
     this.projectTitle.classList.add('editing');
     this.projectTitle.focus();
 
-    // Select all text
+    // Select all text (only on first click)
     const range = document.createRange();
     range.selectNodeContents(this.projectTitle);
     const sel = window.getSelection();
