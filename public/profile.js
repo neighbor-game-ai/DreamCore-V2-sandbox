@@ -315,11 +315,17 @@ class ProfileApp {
    * - Review needed when: public_id migration is complete
    */
   shareProfile() {
-    // Fallback to UUID if public_id is not available (temporary spec for legacy users)
-    const profileId = this.profilePublicId || this.profileUserId;
-    if (!profileId) return;
-
-    const shareUrl = `${window.location.origin}/u/${profileId}`;
+    // Prefer /@username, fallback to /u/{public_id}, then UUID
+    let shareUrl;
+    if (this.profileData?.username) {
+      shareUrl = `${window.location.origin}/@${this.profileData.username}`;
+    } else if (this.profilePublicId) {
+      shareUrl = `${window.location.origin}/u/${this.profilePublicId}`;
+    } else if (this.profileUserId) {
+      shareUrl = `${window.location.origin}/u/${this.profileUserId}`;
+    } else {
+      return;
+    }
     const shareData = {
       title: `${this.profileData.display_name || 'ユーザー'} - DreamCore`,
       url: shareUrl,

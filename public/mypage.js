@@ -9,6 +9,7 @@ class MyPageApp {
     this.userId = null;
     this.accessToken = null;
     this.projects = [];
+    this.profile = null;
 
     // DOM elements
     this.displayNameEl = document.getElementById('displayName');
@@ -42,13 +43,13 @@ class MyPageApp {
       return;
     }
 
-    // Redirect to unified profile page (/u/:public_id) if available
+    // Redirect to /@username if username is set
     try {
       const res = await DreamCoreAuth.authFetch('/api/users/me');
       if (res.ok) {
         const profile = await res.json();
-        if (profile.public_id) {
-          window.location.replace(`/u/${profile.public_id}`);
+        if (profile.username) {
+          window.location.replace(`/@${profile.username}`);
           return;
         }
       }
@@ -56,8 +57,8 @@ class MyPageApp {
       console.error('[MyPage] Failed to fetch profile for redirect:', e);
     }
 
-    // Fallback: Continue with legacy mypage if no public_id
-    console.log('[MyPage] No public_id, using legacy view');
+    // Fallback: Continue with mypage if no username set
+    console.log('[MyPage] No username set, using mypage view');
     this.currentUser = session.user;
     this.userId = session.user.id;
     this.accessToken = session.access_token;
@@ -122,9 +123,9 @@ class MyPageApp {
     try {
       const response = await DreamCoreAuth.authFetch('/api/users/me');
       if (response.ok) {
-        const profile = await response.json();
-        this.renderProfile(profile);
-        this.renderAvatar(profile);
+        this.profile = await response.json();
+        this.renderProfile(this.profile);
+        this.renderAvatar(this.profile);
       } else {
         // Fallback to auth user data
         this.renderProfile(null);
@@ -424,21 +425,30 @@ class MyPageApp {
   }
 
   async shareProfile() {
-    const url = window.location.href;
+    // Construct share URL: prefer /@username, fallback to /u/{public_id}
+    let shareUrl;
+    if (this.profile?.username) {
+      shareUrl = `${window.location.origin}/@${this.profile.username}`;
+    } else if (this.profile?.public_id) {
+      shareUrl = `${window.location.origin}/u/${this.profile.public_id}`;
+    } else {
+      shareUrl = window.location.href;
+    }
+
     if (navigator.share) {
       try {
         await navigator.share({
           title: `${this.displayNameEl?.textContent || 'ユーザー'}のプロフィール`,
-          url: url
+          url: shareUrl
         });
       } catch (e) {
         // User cancelled or error
         if (e.name !== 'AbortError') {
-          this.copyToClipboard(url);
+          this.copyToClipboard(shareUrl);
         }
       }
     } else {
-      this.copyToClipboard(url);
+      this.copyToClipboard(shareUrl);
     }
   }
 
