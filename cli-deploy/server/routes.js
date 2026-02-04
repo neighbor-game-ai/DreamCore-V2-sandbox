@@ -46,14 +46,16 @@ const deviceCodeLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
   message: { error: 'rate_limit', message: 'Too many requests' },
-  keyGenerator: (req) => req.ip
+  keyGenerator: (req) => req.ip,
+  validate: false
 });
 
 const deviceTokenLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 60,
   message: { error: 'slow_down', message: 'Polling too fast' },
-  keyGenerator: (req) => req.ip
+  keyGenerator: (req) => req.ip,
+  validate: false
 });
 
 const deployLimiter = rateLimit({
