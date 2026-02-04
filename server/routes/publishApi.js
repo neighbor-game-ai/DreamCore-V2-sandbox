@@ -340,7 +340,7 @@ ${limitedAssetPaths.length > 0 ? `- 参照画像が${limitedAssetPaths.length}�
         }
 
         // Commit thumbnail to Git (non-blocking, safe)
-        gitCommitAsync(projectDir, 'Update thumbnail');
+        gitCommitAsync(projectDir, 'Update thumbnail', ['thumbnail.webp', 'thumbnail.png']);
 
         // Return URL to the generated thumbnail
         let thumbnailUrl = `/api/projects/${projectId}/thumbnail?t=${Date.now()}`;
@@ -409,7 +409,7 @@ router.post('/:projectId/upload-thumbnail', authenticate, checkProjectOwnership,
     fs.unlinkSync(req.file.path); // Remove temp file
 
     // Commit to git (non-blocking, safe)
-    gitCommitAsync(projectDir, 'Upload thumbnail');
+    gitCommitAsync(projectDir, 'Upload thumbnail', ['thumbnail.webp', 'thumbnail.png']);
 
     let thumbnailUrl = `/api/projects/${projectId}/thumbnail?t=${Date.now()}`;
 

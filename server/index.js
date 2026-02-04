@@ -2159,7 +2159,7 @@ export const RemotionRoot = () => {
           console.log('[Movie] Render successful!');
 
           // Git commit (non-blocking, safe)
-          gitCommitAsync(projectDir, 'Generate demo movie');
+          gitCommitAsync(projectDir, 'Generate demo movie', ['movie.mp4']);
 
           const movieUrl = `/api/projects/${projectId}/movie?t=${Date.now()}`;
           res.json({ success: true, movieUrl, duration: 7 });
