@@ -1741,60 +1741,140 @@ DreamCoreAnalytics.linkUser(userId);
 
 ### GET /api/admin/analytics/summary
 
-Analytics ダッシュボード用のサマリーデータを取得。
+Analytics ダッシュボード用の包括的なサマリーデータを取得。
 
 **認証**: 必須（Bearer token）
+
+**アクセス制限**: 管理者のみ（`@neighbor.gg` メールまたは許可リスト）
+
+**クエリパラメータ:**
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| period | string | No | 期間指定: `7d`（デフォルト）, `30d`, `custom` |
+| start | string | No | カスタム期間の開始日（ISO 8601、`period=custom` 時に必須） |
+| end | string | No | カスタム期間の終了日（ISO 8601、`period=custom` 時に必須） |
 
 **Response:**
 
 ```json
 {
-  "activeSessions": 25,
-  "dauToday": 150,
-  "pageViewsToday": 1250,
-  "errorsToday": 3,
-  "dauHistory": [
-    { "date": "2026-01-29", "count": 120 },
-    { "date": "2026-01-30", "count": 145 },
-    { "date": "2026-01-31", "count": 138 },
-    { "date": "2026-02-01", "count": 152 },
-    { "date": "2026-02-02", "count": 148 },
-    { "date": "2026-02-03", "count": 155 },
-    { "date": "2026-02-04", "count": 150 }
-  ],
-  "topPages": [
-    { "path": "/", "count": 450 },
-    { "path": "/create.html", "count": 320 },
-    { "path": "/mypage.html", "count": 180 }
-  ],
-  "recentEvents": [
-    {
-      "event_type": "page_view",
-      "event_ts": "2026-02-04T10:30:00.000Z",
-      "path": "/create.html"
+  "metadata": {
+    "generated_at": "2026-02-04T12:00:00.000Z",
+    "period_start": "2026-01-29T00:00:00.000Z",
+    "period_end": "2026-02-04T23:59:59.999Z",
+    "period": "7d"
+  },
+  "kpis": {
+    "dau": [
+      { "date": "2026-01-29", "count": 120 },
+      { "date": "2026-01-30", "count": 145 },
+      { "date": "2026-01-31", "count": 138 },
+      { "date": "2026-02-01", "count": 152 },
+      { "date": "2026-02-02", "count": 148 },
+      { "date": "2026-02-03", "count": 155 },
+      { "date": "2026-02-04", "count": 150 }
+    ],
+    "wau": 450,
+    "mau": 1200,
+    "totalSessions": 850,
+    "avgSessionDuration": 342
+  },
+  "eventCounts": {
+    "page_view": 12500,
+    "game_play": 350,
+    "game_create": 120,
+    "game_publish": 45,
+    "error": 23
+  },
+  "funnel": {
+    "visited": 500,
+    "created": 120,
+    "published": 45,
+    "played": 200
+  },
+  "segments": {
+    "byCountry": [
+      { "country": "JP", "userCount": 250 },
+      { "country": "US", "userCount": 120 },
+      { "country": "KR", "userCount": 80 }
+    ],
+    "byDevice": [
+      { "os": "Windows 11", "userCount": 200 },
+      { "os": "macOS 14", "userCount": 150 },
+      { "os": "iOS 17", "userCount": 100 },
+      { "os": "Android 14", "userCount": 50 }
+    ],
+    "newVsReturning": {
+      "newUsers": 180,
+      "returningUsers": 320
     }
-  ],
-  "errorEvents": [
-    {
-      "event_type": "error",
-      "event_ts": "2026-02-04T09:15:00.000Z",
-      "path": "/game/xxx",
-      "properties": { "message": "Script error" }
-    }
-  ]
+  },
+  "popularContent": {
+    "topPages": [
+      { "path": "/", "count": 4500 },
+      { "path": "/create.html", "count": 3200 },
+      { "path": "/mypage.html", "count": 1800 }
+    ],
+    "topGames": [
+      { "gameId": "g_abc123", "playCount": 85 },
+      { "gameId": "g_def456", "playCount": 62 },
+      { "gameId": "g_ghi789", "playCount": 45 }
+    ]
+  }
 }
 ```
 
-| フィールド | 型 | 説明 |
-|-----------|-----|------|
-| activeSessions | number | 本日のアクティブセッション数（未終了） |
-| dauToday | number | 本日の DAU（日次アクティブユーザー） |
-| pageViewsToday | number | 本日の page_view イベント数 |
-| errorsToday | number | 本日の error イベント数 |
-| dauHistory | array | 過去7日間の DAU 履歴 |
-| topPages | array | 本日のページビュー Top 10 |
-| recentEvents | array | 直近50件のイベント |
-| errorEvents | array | 直近20件のエラーイベント |
+**レスポンス構造:**
+
+| セクション | フィールド | 型 | 説明 |
+|-----------|-----------|-----|------|
+| **metadata** | generated_at | string | データ生成時刻 |
+| | period_start | string | 集計期間の開始時刻 |
+| | period_end | string | 集計期間の終了時刻 |
+| | period | string | 使用した期間パラメータ |
+| **kpis** | dau | array | 日別ユニークユーザー数（DAU） |
+| | wau | number | 今週のユニークユーザー数（WAU） |
+| | mau | number | 今月のユニークユーザー数（MAU） |
+| | totalSessions | number | 期間内の総セッション数 |
+| | avgSessionDuration | number | 平均セッション時間（秒） |
+| **eventCounts** | page_view | number | ページビュー数 |
+| | game_play | number | ゲームプレイ数 |
+| | game_create | number | ゲーム作成数 |
+| | game_publish | number | ゲーム公開数 |
+| | error | number | エラー数 |
+| **funnel** | visited | number | 訪問ユニークユーザー数 |
+| | created | number | ゲーム作成ユニークユーザー数 |
+| | published | number | ゲーム公開ユニークユーザー数 |
+| | played | number | ゲームプレイユニークユーザー数 |
+| **segments.byCountry** | | array | 国別ユーザー数（Top 10） |
+| **segments.byDevice** | | array | OS別ユーザー数 |
+| **segments.newVsReturning** | newUsers | number | 期間内に初めて訪問したユーザー数 |
+| | returningUsers | number | 以前訪問したことがあるユーザー数 |
+| **popularContent.topPages** | | array | ページビュー数 Top 10 |
+| **popularContent.topGames** | | array | プレイ数 Top 10（game_id 付き） |
+
+**エラー:**
+
+- 401: `{ "error": "Not authenticated" }` - 認証なし
+- 403: `{ "error": "Admin access required" }` - 管理者権限なし
+- 500: `{ "error": "Failed to fetch analytics summary" }` - サーバーエラー
+
+**使用例:**
+
+```bash
+# デフォルト（7日間）
+curl -H "Authorization: Bearer $TOKEN" \
+  "https://v2.dreamcore.gg/api/admin/analytics/summary"
+
+# 30日間
+curl -H "Authorization: Bearer $TOKEN" \
+  "https://v2.dreamcore.gg/api/admin/analytics/summary?period=30d"
+
+# カスタム期間
+curl -H "Authorization: Bearer $TOKEN" \
+  "https://v2.dreamcore.gg/api/admin/analytics/summary?period=custom&start=2026-01-01&end=2026-01-31"
+```
 
 **ダッシュボード:**
 

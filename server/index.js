@@ -315,93 +315,397 @@ app.use('/api/analytics', analyticsRoutes);
 
 // ==================== Admin Analytics Dashboard ====================
 // Admin endpoint for analytics summary - requires authentication
-// For simplicity, all authenticated users can view (add admin check if needed)
+// Admin check: email must end with @neighbor.gg or be in admin list
+const ADMIN_EMAILS = [
+  // Add specific admin emails here if needed
+];
+
+function isAdmin(email) {
+  if (!email) return false;
+  return email.endsWith('@neighbor.gg') || ADMIN_EMAILS.includes(email);
+}
+
 app.get('/api/admin/analytics/summary', authenticate, async (req, res) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString();
+    // Admin check
+    const userEmail = req.user?.email;
+    if (!isAdmin(userEmail)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
 
-    // Get 7 days ago for DAU history
-    const sevenDaysAgo = new Date(today);
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-    const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+    // Parse period parameters
+    const { period = '7d', start, end } = req.query;
+    const now = new Date();
+    let periodStart, periodEnd;
+
+    if (period === 'custom' && start && end) {
+      periodStart = new Date(start);
+      periodEnd = new Date(end);
+      // Ensure end is end of day
+      periodEnd.setHours(23, 59, 59, 999);
+    } else if (period === '30d') {
+      periodEnd = new Date(now);
+      periodStart = new Date(now);
+      periodStart.setDate(periodStart.getDate() - 29);
+      periodStart.setHours(0, 0, 0, 0);
+    } else {
+      // Default: 7d
+      periodEnd = new Date(now);
+      periodStart = new Date(now);
+      periodStart.setDate(periodStart.getDate() - 6);
+      periodStart.setHours(0, 0, 0, 0);
+    }
+
+    const periodStartISO = periodStart.toISOString();
+    const periodEndISO = periodEnd.toISOString();
+
+    // Calculate week/month boundaries for WAU/MAU
+    const weekStart = new Date(now);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Start of week (Sunday)
+    weekStart.setHours(0, 0, 0, 0);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
     // Run all queries in parallel
     const [
-      activeSessionsResult,
-      dauTodayResult,
-      pageViewsTodayResult,
-      errorsTodayResult,
-      dauHistoryResult,
+      // Session queries
+      totalSessionsResult,
+      avgDurationResult,
+
+      // Event counts
+      pageViewsResult,
+      gamePlayResult,
+      gameCreateResult,
+      gamePublishResult,
+      errorsResult,
+
+      // DAU data (for period)
+      dauEventsResult,
+
+      // WAU data (current week)
+      wauEventsResult,
+
+      // MAU data (current month)
+      mauEventsResult,
+
+      // Funnel data
+      visitedUsersResult,
+      createdUsersResult,
+      publishedUsersResult,
+      playedUsersResult,
+
+      // Country data
+      countryResult,
+
+      // Device (OS) data
+      deviceOsResult,
+
+      // New vs returning users
+      firstSessionUsersResult,
+
+      // Top pages
       topPagesResult,
-      recentEventsResult,
-      errorEventsResult,
+
+      // Top games
+      topGamesResult,
     ] = await Promise.all([
-      // Active sessions today (sessions started today that haven't ended)
+      // Total sessions in period
       supabaseAdmin
         .from('user_sessions')
         .select('id', { count: 'exact', head: true })
-        .gte('started_at', todayISO)
-        .is('ended_at', null),
+        .gte('started_at', periodStartISO)
+        .lte('started_at', periodEndISO),
 
-      // DAU today (unique users with events today)
+      // Average session duration in period (only completed sessions)
       supabaseAdmin
-        .from('user_events')
-        .select('user_id')
-        .gte('event_ts', todayISO)
-        .not('user_id', 'is', null),
+        .from('user_sessions')
+        .select('duration_sec')
+        .gte('started_at', periodStartISO)
+        .lte('started_at', periodEndISO)
+        .not('duration_sec', 'is', null)
+        .gt('duration_sec', 0),
 
-      // Page views today
+      // Page view count
       supabaseAdmin
         .from('user_events')
         .select('id', { count: 'exact', head: true })
         .eq('event_type', 'page_view')
-        .gte('event_ts', todayISO),
+        .gte('event_ts', periodStartISO)
+        .lte('event_ts', periodEndISO),
 
-      // Errors today
+      // Game play count
+      supabaseAdmin
+        .from('user_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_type', 'game_play')
+        .gte('event_ts', periodStartISO)
+        .lte('event_ts', periodEndISO),
+
+      // Game create count
+      supabaseAdmin
+        .from('user_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_type', 'game_create')
+        .gte('event_ts', periodStartISO)
+        .lte('event_ts', periodEndISO),
+
+      // Game publish count
+      supabaseAdmin
+        .from('user_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_type', 'game_publish')
+        .gte('event_ts', periodStartISO)
+        .lte('event_ts', periodEndISO),
+
+      // Error count
       supabaseAdmin
         .from('user_events')
         .select('id', { count: 'exact', head: true })
         .eq('event_type', 'error')
-        .gte('event_ts', todayISO),
+        .gte('event_ts', periodStartISO)
+        .lte('event_ts', periodEndISO),
 
-      // DAU history (last 7 days) - get daily unique user counts
-      supabaseAdmin.rpc('get_dau_history', {
-        p_start_date: sevenDaysAgoISO,
-        p_end_date: new Date().toISOString(),
-      }),
+      // DAU events (for calculating daily unique users)
+      supabaseAdmin
+        .from('user_events')
+        .select('user_id, event_ts')
+        .gte('event_ts', periodStartISO)
+        .lte('event_ts', periodEndISO)
+        .not('user_id', 'is', null),
 
-      // Top pages today
+      // WAU events (current week)
+      supabaseAdmin
+        .from('user_events')
+        .select('user_id')
+        .gte('event_ts', weekStart.toISOString())
+        .not('user_id', 'is', null),
+
+      // MAU events (current month)
+      supabaseAdmin
+        .from('user_events')
+        .select('user_id')
+        .gte('event_ts', monthStart.toISOString())
+        .not('user_id', 'is', null),
+
+      // Funnel: Users who visited (had any session)
+      supabaseAdmin
+        .from('user_sessions')
+        .select('user_id')
+        .gte('started_at', periodStartISO)
+        .lte('started_at', periodEndISO)
+        .not('user_id', 'is', null),
+
+      // Funnel: Users who created a game
+      supabaseAdmin
+        .from('user_events')
+        .select('user_id')
+        .eq('event_type', 'game_create')
+        .gte('event_ts', periodStartISO)
+        .lte('event_ts', periodEndISO)
+        .not('user_id', 'is', null),
+
+      // Funnel: Users who published
+      supabaseAdmin
+        .from('user_events')
+        .select('user_id')
+        .eq('event_type', 'game_publish')
+        .gte('event_ts', periodStartISO)
+        .lte('event_ts', periodEndISO)
+        .not('user_id', 'is', null),
+
+      // Funnel: Users who played
+      supabaseAdmin
+        .from('user_events')
+        .select('user_id')
+        .eq('event_type', 'game_play')
+        .gte('event_ts', periodStartISO)
+        .lte('event_ts', periodEndISO)
+        .not('user_id', 'is', null),
+
+      // Country breakdown from sessions
+      supabaseAdmin
+        .from('user_sessions')
+        .select('country, user_id')
+        .gte('started_at', periodStartISO)
+        .lte('started_at', periodEndISO)
+        .not('country', 'is', null),
+
+      // Device OS breakdown
+      supabaseAdmin
+        .from('user_devices')
+        .select('os, user_id')
+        .gte('last_seen_at', periodStartISO),
+
+      // First session users (new users) - users whose first session is in period
+      supabaseAdmin
+        .from('user_sessions')
+        .select('user_id, started_at')
+        .gte('started_at', periodStartISO)
+        .lte('started_at', periodEndISO)
+        .not('user_id', 'is', null)
+        .order('started_at', { ascending: true }),
+
+      // Top pages by page_view count
       supabaseAdmin
         .from('user_events')
         .select('path')
         .eq('event_type', 'page_view')
-        .gte('event_ts', todayISO)
+        .gte('event_ts', periodStartISO)
+        .lte('event_ts', periodEndISO)
         .not('path', 'is', null),
 
-      // Recent events (last 50)
+      // Top games by game_play count (with properties)
       supabaseAdmin
         .from('user_events')
-        .select('event_type, event_ts, path')
-        .order('event_ts', { ascending: false })
-        .limit(50),
-
-      // Error events (last 20)
-      supabaseAdmin
-        .from('user_events')
-        .select('event_type, event_ts, path, properties')
-        .eq('event_type', 'error')
-        .order('event_ts', { ascending: false })
-        .limit(20),
+        .select('properties')
+        .eq('event_type', 'game_play')
+        .gte('event_ts', periodStartISO)
+        .lte('event_ts', periodEndISO),
     ]);
 
-    // Process DAU today (unique users)
-    const uniqueUsersToday = new Set(
-      (dauTodayResult.data || []).map(row => row.user_id)
-    );
+    // ========== Process KPIs ==========
 
-    // Process top pages (count occurrences)
+    // Calculate DAU array by date
+    const dauByDate = new Map();
+    const numDays = Math.ceil((periodEnd - periodStart) / (1000 * 60 * 60 * 24)) + 1;
+    for (let i = 0; i < numDays; i++) {
+      const d = new Date(periodStart);
+      d.setDate(d.getDate() + i);
+      dauByDate.set(d.toISOString().split('T')[0], new Set());
+    }
+
+    (dauEventsResult.data || []).forEach(row => {
+      const dateKey = row.event_ts.split('T')[0];
+      if (dauByDate.has(dateKey)) {
+        dauByDate.get(dateKey).add(row.user_id);
+      }
+    });
+
+    const dauArray = Array.from(dauByDate.entries()).map(([date, users]) => ({
+      date,
+      count: users.size,
+    }));
+
+    // WAU
+    const wauUsers = new Set((wauEventsResult.data || []).map(r => r.user_id));
+    const wau = wauUsers.size;
+
+    // MAU
+    const mauUsers = new Set((mauEventsResult.data || []).map(r => r.user_id));
+    const mau = mauUsers.size;
+
+    // Total sessions
+    const totalSessions = totalSessionsResult.count || 0;
+
+    // Average session duration
+    const durations = (avgDurationResult.data || []).map(r => r.duration_sec);
+    const avgSessionDuration = durations.length > 0
+      ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+      : 0;
+
+    // ========== Process Event Counts ==========
+    const eventCounts = {
+      page_view: pageViewsResult.count || 0,
+      game_play: gamePlayResult.count || 0,
+      game_create: gameCreateResult.count || 0,
+      game_publish: gamePublishResult.count || 0,
+      error: errorsResult.count || 0,
+    };
+
+    // ========== Process Funnel Data ==========
+    const funnelVisited = new Set((visitedUsersResult.data || []).map(r => r.user_id)).size;
+    const funnelCreated = new Set((createdUsersResult.data || []).map(r => r.user_id)).size;
+    const funnelPublished = new Set((publishedUsersResult.data || []).map(r => r.user_id)).size;
+    const funnelPlayed = new Set((playedUsersResult.data || []).map(r => r.user_id)).size;
+
+    const funnel = {
+      visited: funnelVisited,
+      created: funnelCreated,
+      published: funnelPublished,
+      played: funnelPlayed,
+    };
+
+    // ========== Process Segments ==========
+
+    // By country (top 10)
+    const countryMap = new Map();
+    (countryResult.data || []).forEach(row => {
+      const country = row.country || 'Unknown';
+      if (!countryMap.has(country)) {
+        countryMap.set(country, new Set());
+      }
+      if (row.user_id) {
+        countryMap.get(country).add(row.user_id);
+      }
+    });
+    const byCountry = Array.from(countryMap.entries())
+      .map(([country, users]) => ({ country, userCount: users.size }))
+      .sort((a, b) => b.userCount - a.userCount)
+      .slice(0, 10);
+
+    // By device OS
+    const osMap = new Map();
+    (deviceOsResult.data || []).forEach(row => {
+      const os = row.os || 'Unknown';
+      if (!osMap.has(os)) {
+        osMap.set(os, new Set());
+      }
+      if (row.user_id) {
+        osMap.get(os).add(row.user_id);
+      }
+    });
+    const byDevice = Array.from(osMap.entries())
+      .map(([os, users]) => ({ os, userCount: users.size }))
+      .sort((a, b) => b.userCount - a.userCount);
+
+    // New vs returning users
+    // Find first session per user, then check if it's in period
+    const userFirstSession = new Map();
+    (firstSessionUsersResult.data || []).forEach(row => {
+      if (row.user_id && !userFirstSession.has(row.user_id)) {
+        userFirstSession.set(row.user_id, row.started_at);
+      }
+    });
+
+    // We need to check globally for first sessions, so let's query all users who have sessions in period
+    // and check if their very first session is also in period
+    // For efficiency, we'll do a separate query for users' first sessions ever
+    const usersInPeriod = Array.from(userFirstSession.keys());
+    let newUsers = 0;
+    let returningUsers = 0;
+
+    if (usersInPeriod.length > 0) {
+      // Get the actual first session for these users
+      const { data: firstSessionsEver } = await supabaseAdmin
+        .from('user_sessions')
+        .select('user_id, started_at')
+        .in('user_id', usersInPeriod.slice(0, 1000)) // Limit to avoid too large query
+        .order('started_at', { ascending: true });
+
+      const actualFirstSession = new Map();
+      (firstSessionsEver || []).forEach(row => {
+        if (row.user_id && !actualFirstSession.has(row.user_id)) {
+          actualFirstSession.set(row.user_id, new Date(row.started_at));
+        }
+      });
+
+      usersInPeriod.forEach(userId => {
+        const firstEver = actualFirstSession.get(userId);
+        if (firstEver && firstEver >= periodStart && firstEver <= periodEnd) {
+          newUsers++;
+        } else {
+          returningUsers++;
+        }
+      });
+    }
+
+    const newVsReturning = {
+      newUsers,
+      returningUsers,
+    };
+
+    // ========== Process Popular Content ==========
+
+    // Top pages
     const pageCountMap = new Map();
     (topPagesResult.data || []).forEach(row => {
       const count = pageCountMap.get(row.path) || 0;
@@ -412,46 +716,46 @@ app.get('/api/admin/analytics/summary', authenticate, async (req, res) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
-    // Process DAU history - if RPC doesn't exist, generate from events
-    let dauHistory = [];
-    if (dauHistoryResult.error) {
-      // Fallback: calculate from events (less efficient but works)
-      console.log('[Admin Analytics] DAU RPC not available, using fallback');
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-        const nextDate = new Date(date);
-        nextDate.setDate(nextDate.getDate() + 1);
-
-        const { data } = await supabaseAdmin
-          .from('user_events')
-          .select('user_id')
-          .gte('event_ts', date.toISOString())
-          .lt('event_ts', nextDate.toISOString())
-          .not('user_id', 'is', null);
-
-        const uniqueUsers = new Set((data || []).map(row => row.user_id));
-        dauHistory.push({
-          date: date.toISOString().split('T')[0],
-          count: uniqueUsers.size,
-        });
+    // Top games
+    const gameCountMap = new Map();
+    (topGamesResult.data || []).forEach(row => {
+      const gameId = row.properties?.game_id || row.properties?.gameId;
+      if (gameId) {
+        const count = gameCountMap.get(gameId) || 0;
+        gameCountMap.set(gameId, count + 1);
       }
-    } else {
-      dauHistory = (dauHistoryResult.data || []).map(row => ({
-        date: row.date,
-        count: row.unique_users || 0,
-      }));
-    }
+    });
+    const topGames = Array.from(gameCountMap.entries())
+      .map(([gameId, playCount]) => ({ gameId, playCount }))
+      .sort((a, b) => b.playCount - a.playCount)
+      .slice(0, 10);
 
+    // ========== Build Response ==========
     res.json({
-      activeSessions: activeSessionsResult.count || 0,
-      dauToday: uniqueUsersToday.size,
-      pageViewsToday: pageViewsTodayResult.count || 0,
-      errorsToday: errorsTodayResult.count || 0,
-      dauHistory,
-      topPages,
-      recentEvents: recentEventsResult.data || [],
-      errorEvents: errorEventsResult.data || [],
+      metadata: {
+        generated_at: new Date().toISOString(),
+        period_start: periodStartISO,
+        period_end: periodEndISO,
+        period,
+      },
+      kpis: {
+        dau: dauArray,
+        wau,
+        mau,
+        totalSessions,
+        avgSessionDuration,
+      },
+      eventCounts,
+      funnel,
+      segments: {
+        byCountry,
+        byDevice,
+        newVsReturning,
+      },
+      popularContent: {
+        topPages,
+        topGames,
+      },
     });
   } catch (err) {
     console.error('[Admin Analytics] Summary error:', err);
