@@ -3431,6 +3431,12 @@ app.get('/zap/:id', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'discover.html'));
 });
 
+// ==================== 404 Catch-all ====================
+// Must be last route - catches all unmatched requests
+app.use((req, res) => {
+  res.status(404).sendFile(path.join(__dirname, '..', 'public', '404.html'));
+});
+
 // ==================== Server Start ====================
 
 server.listen(PORT, () => {
