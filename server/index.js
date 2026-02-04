@@ -41,6 +41,8 @@ const assetsApiRouter = require('./routes/assetsApi');
 const assetsPublicRouter = require('./routes/assetsPublic');
 // Publish routes (modularized)
 const publishApiRouter = require('./routes/publishApi');
+// Auth routes (custom magic link emails)
+const authApiRouter = require('./routes/authApi');
 // Shared middleware/utils (extracted for modularization)
 const { checkProjectOwnership } = require('./middleware/projectChecks');
 const { gitCommitAsync } = require('./utils/git');
@@ -1113,6 +1115,10 @@ app.use('/', assetsPublicRouter);
 // ==================== Publish Routes ====================
 // /api/projects/:projectId/publish-draft, generate-publish-info, generate-thumbnail, upload-thumbnail, thumbnail
 app.use('/api/projects', publishApiRouter);
+
+// ==================== Auth Routes ====================
+// /api/auth/magic-link - Custom branded magic link emails
+app.use('/api/auth', authApiRouter);
 
 // ==================== Skills 配信 ====================
 // Claude Code Skills の配信（自動更新用）

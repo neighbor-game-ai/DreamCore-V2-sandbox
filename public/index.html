@@ -346,7 +346,8 @@
         successEl.classList.add('hidden');
 
         try {
-          await DreamCoreAuth.signInWithMagicLink(email);
+          const lang = DreamCoreI18n ? DreamCoreI18n.getLanguage() : navigator.language;
+          await DreamCoreAuth.signInWithMagicLink(email, lang);
           successEl.classList.remove('hidden');
           emailSignInBtn.disabled = false;
         } catch (err) {

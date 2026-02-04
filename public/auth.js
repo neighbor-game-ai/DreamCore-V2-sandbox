@@ -223,21 +223,28 @@ async function signInWithApple() {
 
 /**
  * Sign in with Magic Link (Email)
+ * Uses custom API for branded, multi-language emails
  * @param {string} email - User's email address
+ * @param {string} language - User's preferred language (optional)
  */
-async function signInWithMagicLink(email) {
-  if (!supabaseClient) await initAuth();
-
-  const { data, error } = await supabaseClient.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: window.location.origin + '/create.html'
-    }
+async function signInWithMagicLink(email, language) {
+  // Use custom API for branded emails
+  const response = await fetch('/api/auth/magic-link', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      email,
+      language: language || navigator.language || 'en'
+    })
   });
 
-  if (error) {
-    console.error('[Auth] Magic link error:', error);
-    throw error;
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error('[Auth] Magic link error:', data.error);
+    throw new Error(data.error || 'Failed to send magic link');
   }
 
   return data;
