@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics Dashboard - DreamCore Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="/style.css">
+  <!-- Early auth check + Supabase lazy loader -->
+  <script>
+    (function() {
+      var cached = sessionStorage.getItem('dreamcore_session_cache');
+      var supabaseSession = null;
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+          supabaseSession = localStorage.getItem(key);
+          break;
+        }
+      }
+      if (!cached && !supabaseSession) { window.location.href = '/'; return; }
+      if (!cached && supabaseSession) { return; }
+      try {
+        var data = JSON.parse(cached);
+        if (Date.now() - data.timestamp > 300000) {
+          sessionStorage.removeItem('dreamcore_session_cache');
+          window.location.href = '/';
+          return;
+        }
+        var session = data.session;
+        if (session && session.expires_at && Date.now() / 1000 > session.expires_at - 60) {
+          sessionStorage.removeItem('dreamcore_session_cache');
+          window.location.href = '/';
+          return;
+        }
+      } catch(e) {
+        sessionStorage.removeItem('dreamcore_session_cache');
+        window.location.href = '/';
+      }
+    })();
+    window.__SUPABASE__ = {
+      url: 'https://tcynrijrovktirsvwiqb.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjeW5yaWpyb3ZrdGlyc3Z3aXFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjY5OTAsImV4cCI6MjA4NDYwMjk5MH0.y-_E-vuQg84t8BGISdPL18oaYcayS8ip1OLJsZwM3hI'
+    };
+    window.__loadSupabase = function() {
+      if (window.supabase) return Promise.resolve();
+      return new Promise(function(resolve) {
+        var s = document.createElement('script');
+        s.src = '/lib/supabase.min.js';
+        s.onload = resolve;
+        document.head.appendChild(s);
+      });
+    };
+  </script>
+  <style>
+    /* Admin Dashboard Styles */
+    .admin-container {
+      min-height: 100vh;
+      padding: var(--s-24);
+      max-width: 1200px;
+      margin: 0 auto;
+      overflow-y: auto;
+    }
+
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--s-32);
+      padding-bottom: var(--s-16);
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .admin-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--gray-900);
+    }
+
+    .admin-subtitle {
+      font-size: 0.875rem;
+      color: var(--gray-600);
+      margin-top: var(--s-4);
+    }
+
+    .admin-back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s-8);
+      color: var(--gray-600);
+      text-decoration: none;
+      font-size: 0.875rem;
+      padding: var(--s-8) var(--s-16);
+      border-radius: var(--r-8);
+      transition: all 0.2s ease;
+    }
+
+    .admin-back-link:hover {
+      background: var(--gray-100);
+      color: var(--gray-900);
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--s-16);
+      margin-bottom: var(--s-32);
+    }
+
+    .metric-card {
+      background: var(--white);
+      border-radius: var(--r-16);
+      padding: var(--s-24);
+      border: 1px solid var(--gray-200);
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--gray-400);
+      margin-bottom: var(--s-8);
+    }
+
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--gray-900);
+    }
+
+    .metric-change {
+      font-size: 0.75rem;
+      color: var(--gray-600);
+      margin-top: var(--s-4);
+    }
+
+    .metric-change.positive {
+      color: #10B981;
+    }
+
+    .metric-change.negative {
+      color: #EF4444;
+    }
+
+    .section {
+      background: var(--white);
+      border-radius: var(--r-16);
+      padding: var(--s-24);
+      margin-bottom: var(--s-24);
+      border: 1px solid var(--gray-200);
+    }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: var(--s-16);
+    }
+
+    /* DAU Chart - Simple CSS Bars */
+    .dau-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--s-8);
+      height: 150px;
+      padding-top: var(--s-16);
+    }
+
+    .dau-bar-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+    }
+
+    .dau-bar {
+      width: 100%;
+      background: var(--red);
+      border-radius: var(--r-8) var(--r-8) 0 0;
+      min-height: 4px;
+      transition: height 0.3s ease;
+    }
+
+    .dau-label {
+      font-size: 0.625rem;
+      color: var(--gray-400);
+      margin-top: var(--s-8);
+      text-align: center;
+    }
+
+    .dau-value {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--gray-900);
+      margin-top: var(--s-4);
+    }
+
+    /* Top Pages */
+    .top-pages-list {
+      list-style: none;
+    }
+
+    .top-page-item {
+      display: flex;
+      align-items: center;
+      gap: var(--s-12);
+      padding: var(--s-12) 0;
+      border-bottom: 1px solid var(--gray-100);
+    }
+
+    .top-page-item:last-child {
+      border-bottom: none;
+    }
+
+    .top-page-rank {
+      width: 24px;
+      height: 24px;
+      background: var(--gray-100);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--gray-600);
+    }
+
+    .top-page-path {
+      flex: 1;
+      font-size: 0.875rem;
+      color: var(--gray-900);
+      font-family: monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .top-page-count {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--gray-600);
+    }
+
+    .top-page-bar {
+      width: 100px;
+      height: 6px;
+      background: var(--gray-100);
+      border-radius: var(--r-full);
+      overflow: hidden;
+    }
+
+    .top-page-bar-fill {
+      height: 100%;
+      background: var(--red);
+      border-radius: var(--r-full);
+      transition: width 0.3s ease;
+    }
+
+    /* Events Stream */
+    .events-stream {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .event-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--s-12);
+      padding: var(--s-12);
+      border-radius: var(--r-8);
+      margin-bottom: var(--s-8);
+      background: var(--gray-50);
+    }
+
+    .event-item.error {
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .event-type {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: var(--s-4) var(--s-8);
+      border-radius: var(--r-full);
+      background: var(--gray-200);
+      color: var(--gray-700);
+    }
+
+    .event-type.page_view {
+      background: rgba(59, 130, 246, 0.1);
+      color: #3B82F6;
+    }
+
+    .event-type.login {
+      background: rgba(16, 185, 129, 0.1);
+      color: #10B981;
+    }
+
+    .event-type.game_play {
+      background: rgba(139, 92, 246, 0.1);
+      color: #8B5CF6;
+    }
+
+    .event-type.error {
+      background: rgba(239, 68, 68, 0.1);
+      color: #EF4444;
+    }
+
+    .event-details {
+      flex: 1;
+    }
+
+    .event-path {
+      font-size: 0.875rem;
+      color: var(--gray-900);
+      font-family: monospace;
+    }
+
+    .event-time {
+      font-size: 0.75rem;
+      color: var(--gray-400);
+      margin-top: var(--s-4);
+    }
+
+    /* Loading / Error States */
+    .loading-state,
+    .error-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+      color: var(--gray-400);
+    }
+
+    .error-state {
+      color: #EF4444;
+    }
+
+    .refresh-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s-8);
+      padding: var(--s-8) var(--s-16);
+      background: var(--gray-100);
+      border: none;
+      border-radius: var(--r-8);
+      font-size: 0.875rem;
+      color: var(--gray-700);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .refresh-btn:hover {
+      background: var(--gray-200);
+    }
+
+    .refresh-btn.loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .admin-container {
+        padding: var(--s-16);
+      }
+
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .metric-value {
+        font-size: 1.5rem;
+      }
+
+      .top-page-bar {
+        display: none;
+      }
+
+      .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--s-16);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <header class="admin-header">
+      <div>
+        <h1 class="admin-title">Analytics Dashboard</h1>
+        <p class="admin-subtitle" id="lastUpdated">Loading...</p>
+      </div>
+      <div style="display: flex; gap: var(--s-8);">
+        <button class="refresh-btn" id="refreshBtn" onclick="loadAnalytics()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+            <path d="M21 3v5h-5"/>
+          </svg>
+          Refresh
+        </button>
+        <a href="/create.html" class="admin-back-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          Back to App
+        </a>
+      </div>
+    </header>
+
+    <!-- Key Metrics -->
+    <div class="metrics-grid" id="metricsGrid">
+      <div class="metric-card">
+        <div class="metric-label">Active Sessions (Today)</div>
+        <div class="metric-value" id="activeSessions">-</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">DAU (Today)</div>
+        <div class="metric-value" id="dauToday">-</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Page Views (Today)</div>
+        <div class="metric-value" id="pageViewsToday">-</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Errors (Today)</div>
+        <div class="metric-value" id="errorsToday">-</div>
+      </div>
+    </div>
+
+    <!-- DAU Chart -->
+    <section class="section">
+      <h2 class="section-title">Daily Active Users (Last 7 Days)</h2>
+      <div class="dau-chart" id="dauChart">
+        <div class="loading-state">Loading chart...</div>
+      </div>
+    </section>
+
+    <!-- Top Pages -->
+    <section class="section">
+      <h2 class="section-title">Top Pages (Today)</h2>
+      <ul class="top-pages-list" id="topPagesList">
+        <li class="loading-state">Loading...</li>
+      </ul>
+    </section>
+
+    <!-- Recent Events -->
+    <section class="section">
+      <h2 class="section-title">Recent Events</h2>
+      <div class="events-stream" id="eventsStream">
+        <div class="loading-state">Loading events...</div>
+      </div>
+    </section>
+
+    <!-- Error Events -->
+    <section class="section" id="errorsSection" style="display: none;">
+      <h2 class="section-title">Recent Errors</h2>
+      <div class="events-stream" id="errorsStream">
+        <div class="loading-state">Loading errors...</div>
+      </div>
+    </section>
+  </div>
+
+  <script src="/auth.js"></script>
+  <script>
+    // Analytics Dashboard Logic
+    let analyticsData = null;
+
+    async function loadAnalytics() {
+      const refreshBtn = document.getElementById('refreshBtn');
+      refreshBtn.classList.add('loading');
+
+      try {
+        const response = await DreamCoreAuth.authFetch('/api/admin/analytics/summary');
+
+        if (response.status === 403) {
+          document.querySelector('.admin-container').innerHTML = `
+            <div class="error-state" style="min-height: 50vh; flex-direction: column; gap: var(--s-16);">
+              <h2>Access Denied</h2>
+              <p>You do not have permission to view this page.</p>
+              <a href="/create.html" class="admin-back-link">Back to App</a>
+            </div>
+          `;
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error('Failed to load analytics');
+        }
+
+        analyticsData = await response.json();
+        renderDashboard(analyticsData);
+        document.getElementById('lastUpdated').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+      } catch (err) {
+        console.error('Failed to load analytics:', err);
+        document.getElementById('lastUpdated').textContent = 'Failed to load data';
+      } finally {
+        refreshBtn.classList.remove('loading');
+      }
+    }
+
+    function renderDashboard(data) {
+      // Key metrics
+      document.getElementById('activeSessions').textContent = formatNumber(data.activeSessions || 0);
+      document.getElementById('dauToday').textContent = formatNumber(data.dauToday || 0);
+      document.getElementById('pageViewsToday').textContent = formatNumber(data.pageViewsToday || 0);
+      document.getElementById('errorsToday').textContent = formatNumber(data.errorsToday || 0);
+
+      // DAU Chart
+      renderDauChart(data.dauHistory || []);
+
+      // Top Pages
+      renderTopPages(data.topPages || []);
+
+      // Recent Events
+      renderEvents(data.recentEvents || [], 'eventsStream');
+
+      // Error Events
+      if (data.errorEvents && data.errorEvents.length > 0) {
+        document.getElementById('errorsSection').style.display = 'block';
+        renderEvents(data.errorEvents, 'errorsStream');
+      } else {
+        document.getElementById('errorsSection').style.display = 'none';
+      }
+    }
+
+    function renderDauChart(history) {
+      const container = document.getElementById('dauChart');
+
+      if (history.length === 0) {
+        container.innerHTML = '<div class="loading-state">No data available</div>';
+        return;
+      }
+
+      const maxValue = Math.max(...history.map(d => d.count), 1);
+
+      container.innerHTML = history.map(day => {
+        const heightPercent = (day.count / maxValue) * 100;
+        const date = new Date(day.date);
+        const dayLabel = date.toLocaleDateString('ja-JP', { weekday: 'short' });
+        const dateLabel = date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
+
+        return `
+          <div class="dau-bar-container">
+            <div class="dau-bar" style="height: ${heightPercent}%;"></div>
+            <div class="dau-value">${formatNumber(day.count)}</div>
+            <div class="dau-label">${dayLabel}<br>${dateLabel}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderTopPages(pages) {
+      const container = document.getElementById('topPagesList');
+
+      if (pages.length === 0) {
+        container.innerHTML = '<li class="loading-state">No page views today</li>';
+        return;
+      }
+
+      const maxCount = Math.max(...pages.map(p => p.count), 1);
+
+      container.innerHTML = pages.map((page, index) => {
+        const barWidth = (page.count / maxCount) * 100;
+        return `
+          <li class="top-page-item">
+            <span class="top-page-rank">${index + 1}</span>
+            <span class="top-page-path">${escapeHtml(page.path)}</span>
+            <span class="top-page-count">${formatNumber(page.count)}</span>
+            <div class="top-page-bar">
+              <div class="top-page-bar-fill" style="width: ${barWidth}%;"></div>
+            </div>
+          </li>
+        `;
+      }).join('');
+    }
+
+    function renderEvents(events, containerId) {
+      const container = document.getElementById(containerId);
+
+      if (events.length === 0) {
+        container.innerHTML = '<div class="loading-state">No recent events</div>';
+        return;
+      }
+
+      container.innerHTML = events.map(event => {
+        const isError = event.event_type === 'error';
+        const time = new Date(event.event_ts).toLocaleString('ja-JP');
+
+        return `
+          <div class="event-item ${isError ? 'error' : ''}">
+            <span class="event-type ${event.event_type}">${event.event_type}</span>
+            <div class="event-details">
+              <div class="event-path">${escapeHtml(event.path || '-')}</div>
+              <div class="event-time">${time}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function formatNumber(num) {
+      if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+      }
+      if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
+      }
+      return num.toString();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // Initialize
+    async function init() {
+      try {
+        await DreamCoreAuth.initAuth();
+        const isAuthed = await DreamCoreAuth.isAuthenticated();
+        if (!isAuthed) {
+          window.location.href = '/';
+          return;
+        }
+        loadAnalytics();
+      } catch (err) {
+        console.error('Auth init failed:', err);
+        window.location.href = '/';
+      }
+    }
+
+    init();
+
+    // Auto-refresh every 60 seconds
+    setInterval(loadAnalytics, 60000);
+  </script>
+</body>
+</html>

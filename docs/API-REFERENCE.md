@@ -1739,6 +1739,67 @@ DreamCoreAnalytics.track('game_play', { game_id: 'xxx' });
 DreamCoreAnalytics.linkUser(userId);
 ```
 
+### GET /api/admin/analytics/summary
+
+Analytics ダッシュボード用のサマリーデータを取得。
+
+**認証**: 必須（Bearer token）
+
+**Response:**
+
+```json
+{
+  "activeSessions": 25,
+  "dauToday": 150,
+  "pageViewsToday": 1250,
+  "errorsToday": 3,
+  "dauHistory": [
+    { "date": "2026-01-29", "count": 120 },
+    { "date": "2026-01-30", "count": 145 },
+    { "date": "2026-01-31", "count": 138 },
+    { "date": "2026-02-01", "count": 152 },
+    { "date": "2026-02-02", "count": 148 },
+    { "date": "2026-02-03", "count": 155 },
+    { "date": "2026-02-04", "count": 150 }
+  ],
+  "topPages": [
+    { "path": "/", "count": 450 },
+    { "path": "/create.html", "count": 320 },
+    { "path": "/mypage.html", "count": 180 }
+  ],
+  "recentEvents": [
+    {
+      "event_type": "page_view",
+      "event_ts": "2026-02-04T10:30:00.000Z",
+      "path": "/create.html"
+    }
+  ],
+  "errorEvents": [
+    {
+      "event_type": "error",
+      "event_ts": "2026-02-04T09:15:00.000Z",
+      "path": "/game/xxx",
+      "properties": { "message": "Script error" }
+    }
+  ]
+}
+```
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| activeSessions | number | 本日のアクティブセッション数（未終了） |
+| dauToday | number | 本日の DAU（日次アクティブユーザー） |
+| pageViewsToday | number | 本日の page_view イベント数 |
+| errorsToday | number | 本日の error イベント数 |
+| dauHistory | array | 過去7日間の DAU 履歴 |
+| topPages | array | 本日のページビュー Top 10 |
+| recentEvents | array | 直近50件のイベント |
+| errorEvents | array | 直近20件のエラーイベント |
+
+**ダッシュボード:**
+
+`/admin/analytics.html` で上記データを可視化。
+
 ---
 
 ## WebSocket API

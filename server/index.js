@@ -313,6 +313,152 @@ app.use('/', publicProfileRoutes);  // /u/:id public profile pages
 // ==================== Analytics Module ====================
 app.use('/api/analytics', analyticsRoutes);
 
+// ==================== Admin Analytics Dashboard ====================
+// Admin endpoint for analytics summary - requires authentication
+// For simplicity, all authenticated users can view (add admin check if needed)
+app.get('/api/admin/analytics/summary', authenticate, async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayISO = today.toISOString();
+
+    // Get 7 days ago for DAU history
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+
+    // Run all queries in parallel
+    const [
+      activeSessionsResult,
+      dauTodayResult,
+      pageViewsTodayResult,
+      errorsTodayResult,
+      dauHistoryResult,
+      topPagesResult,
+      recentEventsResult,
+      errorEventsResult,
+    ] = await Promise.all([
+      // Active sessions today (sessions started today that haven't ended)
+      supabaseAdmin
+        .from('user_sessions')
+        .select('id', { count: 'exact', head: true })
+        .gte('started_at', todayISO)
+        .is('ended_at', null),
+
+      // DAU today (unique users with events today)
+      supabaseAdmin
+        .from('user_events')
+        .select('user_id')
+        .gte('event_ts', todayISO)
+        .not('user_id', 'is', null),
+
+      // Page views today
+      supabaseAdmin
+        .from('user_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_type', 'page_view')
+        .gte('event_ts', todayISO),
+
+      // Errors today
+      supabaseAdmin
+        .from('user_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_type', 'error')
+        .gte('event_ts', todayISO),
+
+      // DAU history (last 7 days) - get daily unique user counts
+      supabaseAdmin.rpc('get_dau_history', {
+        p_start_date: sevenDaysAgoISO,
+        p_end_date: new Date().toISOString(),
+      }),
+
+      // Top pages today
+      supabaseAdmin
+        .from('user_events')
+        .select('path')
+        .eq('event_type', 'page_view')
+        .gte('event_ts', todayISO)
+        .not('path', 'is', null),
+
+      // Recent events (last 50)
+      supabaseAdmin
+        .from('user_events')
+        .select('event_type, event_ts, path')
+        .order('event_ts', { ascending: false })
+        .limit(50),
+
+      // Error events (last 20)
+      supabaseAdmin
+        .from('user_events')
+        .select('event_type, event_ts, path, properties')
+        .eq('event_type', 'error')
+        .order('event_ts', { ascending: false })
+        .limit(20),
+    ]);
+
+    // Process DAU today (unique users)
+    const uniqueUsersToday = new Set(
+      (dauTodayResult.data || []).map(row => row.user_id)
+    );
+
+    // Process top pages (count occurrences)
+    const pageCountMap = new Map();
+    (topPagesResult.data || []).forEach(row => {
+      const count = pageCountMap.get(row.path) || 0;
+      pageCountMap.set(row.path, count + 1);
+    });
+    const topPages = Array.from(pageCountMap.entries())
+      .map(([path, count]) => ({ path, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    // Process DAU history - if RPC doesn't exist, generate from events
+    let dauHistory = [];
+    if (dauHistoryResult.error) {
+      // Fallback: calculate from events (less efficient but works)
+      console.log('[Admin Analytics] DAU RPC not available, using fallback');
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const nextDate = new Date(date);
+        nextDate.setDate(nextDate.getDate() + 1);
+
+        const { data } = await supabaseAdmin
+          .from('user_events')
+          .select('user_id')
+          .gte('event_ts', date.toISOString())
+          .lt('event_ts', nextDate.toISOString())
+          .not('user_id', 'is', null);
+
+        const uniqueUsers = new Set((data || []).map(row => row.user_id));
+        dauHistory.push({
+          date: date.toISOString().split('T')[0],
+          count: uniqueUsers.size,
+        });
+      }
+    } else {
+      dauHistory = (dauHistoryResult.data || []).map(row => ({
+        date: row.date,
+        count: row.unique_users || 0,
+      }));
+    }
+
+    res.json({
+      activeSessions: activeSessionsResult.count || 0,
+      dauToday: uniqueUsersToday.size,
+      pageViewsToday: pageViewsTodayResult.count || 0,
+      errorsToday: errorsTodayResult.count || 0,
+      dauHistory,
+      topPages,
+      recentEvents: recentEventsResult.data || [],
+      errorEvents: errorEventsResult.data || [],
+    });
+  } catch (err) {
+    console.error('[Admin Analytics] Summary error:', err);
+    res.status(500).json({ error: 'Failed to fetch analytics summary' });
+  }
+});
+
 // ==================== Remix API ====================
 remixService.setupRoutes(app);
 
