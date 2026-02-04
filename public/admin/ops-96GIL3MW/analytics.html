@@ -929,6 +929,35 @@
         </div>
       </div>
 
+      <!-- AI Generation Metrics -->
+      <section class="section" style="margin-bottom: var(--s-32);">
+        <div class="section-header">AI生成メトリクス</div>
+        <div class="section-body">
+          <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="kpi-card" style="background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%); border: none;">
+              <div class="kpi-label" style="color: rgba(255,255,255,0.8);">AIリクエスト数</div>
+              <div class="kpi-value" id="kpiAiRequests" style="color: white;">-</div>
+              <div class="kpi-subtitle" style="color: rgba(255,255,255,0.7);">期間合計</div>
+            </div>
+            <div class="kpi-card" style="background: linear-gradient(135deg, #EC4899 0%, #F472B6 100%); border: none;">
+              <div class="kpi-label" style="color: rgba(255,255,255,0.8);">サジェスト表示数</div>
+              <div class="kpi-value" id="kpiSuggestionsShown" style="color: white;">-</div>
+              <div class="kpi-subtitle" style="color: rgba(255,255,255,0.7);">期間合計</div>
+            </div>
+            <div class="kpi-card" style="background: linear-gradient(135deg, #14B8A6 0%, #2DD4BF 100%); border: none;">
+              <div class="kpi-label" style="color: rgba(255,255,255,0.8);">サジェストクリック数</div>
+              <div class="kpi-value" id="kpiSuggestionsClicked" style="color: white;">-</div>
+              <div class="kpi-subtitle" style="color: rgba(255,255,255,0.7);">期間合計</div>
+            </div>
+            <div class="kpi-card" style="background: linear-gradient(135deg, #6366F1 0%, #818CF8 100%); border: none;">
+              <div class="kpi-label" style="color: rgba(255,255,255,0.8);">サジェストクリック率</div>
+              <div class="kpi-value" id="kpiSuggestionClickRate" style="color: white;">-</div>
+              <div class="kpi-subtitle" style="color: rgba(255,255,255,0.7);">クリック数 / 表示数</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- DAU Chart -->
       <section class="section">
         <div class="section-header">日次アクティブユーザー推移</div>
@@ -1307,6 +1336,13 @@
       document.getElementById('kpiMau').textContent = formatNumber(data.mau || 0);
       document.getElementById('kpiSessions').textContent = formatNumber(data.sessions || 0);
       document.getElementById('kpiDuration').textContent = formatDuration(data.avgDuration || 0);
+
+      // AI Generation Metrics
+      const aiMetrics = data.aiMetrics || {};
+      document.getElementById('kpiAiRequests').textContent = formatNumber(aiMetrics.requests || 0);
+      document.getElementById('kpiSuggestionsShown').textContent = formatNumber(aiMetrics.suggestionsShown || 0);
+      document.getElementById('kpiSuggestionsClicked').textContent = formatNumber(aiMetrics.suggestionsClicked || 0);
+      document.getElementById('kpiSuggestionClickRate').textContent = (aiMetrics.suggestionClickRate || 0) + '%';
 
       // DAU Chart
       renderDauChart(data.dauHistory || []);

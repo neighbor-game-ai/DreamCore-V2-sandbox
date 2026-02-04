@@ -14,6 +14,9 @@ const VALID_EVENT_TYPES = new Set([
   'error',
   // Future expansion
   'button_click', 'form_submit', 'scroll_depth',
+  // AI generation metrics
+  'ai_request', 'ai_response',
+  'suggestion_shown', 'suggestion_click',
 ]);
 
 // Max properties size (4KB)

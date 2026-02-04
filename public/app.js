@@ -2597,6 +2597,15 @@ class GameCreatorApp {
       attachedAssets: attachedAssetsCopy,  // For pendingPrompt restore
       debugOptions
     }));
+
+    // Track AI request for analytics
+    if (typeof DreamCoreAnalytics !== 'undefined') {
+      DreamCoreAnalytics.track('ai_request', {
+        projectId: this.currentProjectId,
+        hasAttachments: attachedAssetsCopy.length > 0,
+        promptLength: content.length
+      });
+    }
   }
 
   updateUIForProcessing(processing) {
@@ -2653,6 +2662,14 @@ class GameCreatorApp {
             this.applySuggestion(btn.dataset.suggestion);
           });
         });
+
+        // Track suggestion shown for analytics
+        if (typeof DreamCoreAnalytics !== 'undefined') {
+          DreamCoreAnalytics.track('suggestion_shown', {
+            count: suggestions.length,
+            projectId: this.currentProjectId
+          });
+        }
       } else {
         messageDiv.innerHTML = this.parseMarkdown(content);
       }
@@ -3263,6 +3280,14 @@ class GameCreatorApp {
       });
     });
 
+    // Track suggestion shown for analytics (realtime)
+    if (data.suggestions && data.suggestions.length > 0 && typeof DreamCoreAnalytics !== 'undefined') {
+      DreamCoreAnalytics.track('suggestion_shown', {
+        count: data.suggestions.length,
+        projectId: this.currentProjectId
+      });
+    }
+
     this.scrollToLatestMessage(messageDiv);
   }
 
@@ -3366,6 +3391,14 @@ class GameCreatorApp {
   applySuggestion(suggestion) {
     if (!this.chatInput) return;
     console.log('[applySuggestion]', suggestion, 'isProcessing:', this.isProcessing);
+
+    // Track suggestion click for analytics
+    if (typeof DreamCoreAnalytics !== 'undefined') {
+      DreamCoreAnalytics.track('suggestion_click', {
+        suggestion: suggestion,
+        projectId: this.currentProjectId
+      });
+    }
     // Check if this is a dimension selection (should send immediately)
     if (suggestion === '2Dで作成' || suggestion === '3Dで作成') {
       // Send immediately without adding して

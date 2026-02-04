@@ -442,6 +442,12 @@ app.get('/api/admin/analytics/summary', basicAuthAdmin, authenticate, async (req
       totalGamesResult,
       todayNewUsersResult,
       todayNewGamesResult,
+
+      // AI metrics
+      aiRequestsResult,
+      aiResponsesResult,
+      suggestionShownResult,
+      suggestionClickResult,
     ] = await Promise.all([
       // Total sessions in period
       supabaseAdmin
@@ -617,6 +623,38 @@ app.get('/api/admin/analytics/summary', basicAuthAdmin, authenticate, async (req
         .from('published_games')
         .select('id', { count: 'exact', head: true })
         .gte('published_at', new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()),
+
+      // AI request count (in period)
+      supabaseAdmin
+        .from('user_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_type', 'ai_request')
+        .gte('event_ts', periodStartISO)
+        .lte('event_ts', periodEndISO),
+
+      // AI response count (in period)
+      supabaseAdmin
+        .from('user_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_type', 'ai_response')
+        .gte('event_ts', periodStartISO)
+        .lte('event_ts', periodEndISO),
+
+      // Suggestion shown count (in period)
+      supabaseAdmin
+        .from('user_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_type', 'suggestion_shown')
+        .gte('event_ts', periodStartISO)
+        .lte('event_ts', periodEndISO),
+
+      // Suggestion click count (in period)
+      supabaseAdmin
+        .from('user_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_type', 'suggestion_click')
+        .gte('event_ts', periodStartISO)
+        .lte('event_ts', periodEndISO),
     ]);
 
     // ========== Process KPIs ==========
@@ -806,6 +844,15 @@ app.get('/api/admin/analytics/summary', basicAuthAdmin, authenticate, async (req
         totalGames: totalGamesResult.count || 0,
         todayNewUsers: todayNewUsersResult.count || 0,
         todayNewGames: todayNewGamesResult.count || 0,
+      },
+      aiMetrics: {
+        requests: aiRequestsResult.count || 0,
+        responses: aiResponsesResult.count || 0,
+        suggestionsShown: suggestionShownResult.count || 0,
+        suggestionsClicked: suggestionClickResult.count || 0,
+        suggestionClickRate: (suggestionShownResult.count || 0) > 0
+          ? Math.round(((suggestionClickResult.count || 0) / (suggestionShownResult.count || 0)) * 100)
+          : 0,
       },
       eventCounts,
       funnel,
