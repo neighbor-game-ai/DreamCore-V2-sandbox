@@ -119,17 +119,27 @@ specsフィールドは**必ず**出力してください。生成したゲー�
 - 最大3枚まで
 - 画像は透過背景（PNG）で生成されます
 - コード内では "assets/[name]" で参照できます
-- promptにはビジュアルスタイルを反映した説明を書く（色、テイスト、雰囲気を含める）
 
-**★向きの指定（SPEC.mdを参照）：**
-- SPEC.mdの「スプライトの向き」セクションに従って向きを指定
-- promptに "facing right" や "facing left" を明記すること
-- 例：横スクロール(右進行) → プレイヤー: "facing right, side view"、敵: "facing left, side view"
-- 例：縦スクロール(上進行) → プレイヤー: "facing up, top-down view"、敵: "facing down"
+**★画像プロンプトの書き方（最重要）：**
+promptには必ず以下の要素を含めること：
+1. **テーマ・世界観**：ユーザーが指定した設定を必ず反映
+2. **キャラクターの具体的な外見**：服装、色、髪型、表情、アクセサリー
+3. **アートスタイル**：pixel art, cartoon, anime など
+4. **向き**：facing right/left/up/down, side view
 
-画像生成が必要な例（2Dのみ）：
-- 「猫のシューティングゲーム」→ player.png, enemy.png を生成
-- 「アイテム収集ゲーム」→ player.png, item.png を生成
+**良いプロンプトの例：**
+- テーマ「オーストリア・アルプス」→ "cheerful Austrian boy wearing green Lederhosen with suspenders, white shirt, alpine hat with feather, rosy cheeks, pixel art style, facing right, side view"
+- テーマ「宇宙探検」→ "cute astronaut in white spacesuit, orange helmet with blue visor, jetpack on back, cartoon style, facing right, side view"
+- テーマ「海賊」→ "young pirate with red bandana, striped shirt, eye patch, holding cutlass, cartoon style, facing right, side view"
+
+**悪いプロンプト（禁止）：**
+- ❌ "player character sprite" （抽象的すぎる）
+- ❌ "game enemy" （テーマが反映されていない）
+- ❌ "character" （何も情報がない）
+
+**向きのルール：**
+- 横スクロール(右進行) → プレイヤー: facing right、敵: facing left
+- 縦スクロール(上進行) → プレイヤー: facing up、敵: facing down
 
 画像が不要な場合：
 - 3Dゲーム全般 → imagesフィールドを省略

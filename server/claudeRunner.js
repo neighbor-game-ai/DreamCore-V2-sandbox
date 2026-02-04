@@ -563,7 +563,7 @@ class ClaudeRunner {
     return patterns.join('\n\n') || code.substring(0, 1500);
   }
 
-  // Use SPEC.md to determine image direction (code analysis as fallback)
+  // Use SPEC.md to determine image direction and enhance prompt with theme/character info
   async analyzeImageDirection(gameCode, gameSpec, imageName, originalPrompt) {
     console.log(`Analyzing image direction for: ${imageName}`);
 
@@ -572,38 +572,56 @@ class ClaudeRunner {
     const specDirection = this.getDirectionFromSpec(gameSpec, role);
 
     if (specDirection) {
-      const enhancedPrompt = `${originalPrompt}, facing ${specDirection}, side view, 2D game sprite`;
+      // Use enhanced prompt builder that includes theme and character info
+      const enhancedPrompt = this.buildEnhancedImagePrompt(
+        originalPrompt,
+        gameSpec,
+        imageName,
+        specDirection
+      );
       console.log(`Direction from SPEC.md for ${imageName}: ${specDirection}`);
-      console.log(`Enhanced prompt: ${enhancedPrompt}`);
       return enhancedPrompt;
     }
 
-    // Fallback: Use AI to analyze (only if spec doesn't have direction info)
+    // Fallback: Use AI to analyze and build detailed prompt
     console.log(`No direction in SPEC.md, using AI analysis for: ${imageName}`);
 
-    const specContext = gameSpec ? gameSpec.substring(0, 800) : '';
+    // Extract available context from specs
+    const theme = this.extractThemeFromSpec(gameSpec);
+    const characterAppearance = this.extractCharacterAppearanceFromSpec(gameSpec, role);
+    const specContext = gameSpec ? gameSpec.substring(0, 1200) : '';
     const movementContext = this.extractMovementPatterns(gameCode);
 
-    const prompt = `ゲームの画像アセットの向きを決定してください。
+    const prompt = `ゲームの画像生成用プロンプトを作成してください。
 
 ${specContext ? `## ゲーム仕様書\n${specContext}\n` : ''}
 ${movementContext ? `## コードパターン\n${movementContext}\n` : ''}
+${theme ? `## 抽出済みテーマ\n${JSON.stringify(theme)}\n` : ''}
+${characterAppearance ? `## 抽出済みキャラクター外見\n${characterAppearance}\n` : ''}
 
 ## 生成する画像
 - 名前: ${imageName}
 - 元のプロンプト: ${originalPrompt}
 - 役割推測: ${role}
 
-## 判断ルール
-- 横スクロール（右に進む）: プレイヤー=right, 敵=left
-- 縦スクロール（上に進む）: プレイヤー=up, 敵=down
-- 不明な場合: プレイヤー=right, 敵=left（デフォルト）
+## 出力ルール
+1. **テーマ・世界観を必ず反映**：仕様書に記載された舞台・雰囲気を画像プロンプトに含める
+2. **キャラクター外見を具体的に**：服装、色、髪型、アクセサリーなど詳細に記述
+3. **向きを指定**：横スクロール(右進行)→player=right/enemy=left、縦スクロール→player=up/enemy=down
+4. **アートスタイル**：pixel art, cartoon, anime などを含める
 
-## 出力（1行のみ）
-結果: [向き指定を追加した英語プロンプト]
+## 出力形式（1行のみ）
+結果: [詳細な英語プロンプト]
 
-例:
-結果: cute cat character, game sprite, facing right, side view, 2D style`;
+## 良い例
+- テーマ「オーストリア」の場合:
+  結果: cheerful Austrian boy wearing green Lederhosen with suspenders, white shirt, alpine hat with feather, rosy cheeks, pixel art style, facing right, side view, 2D game sprite
+- テーマ「宇宙」の場合:
+  結果: cute astronaut in white spacesuit, orange helmet with blue visor, jetpack on back, cartoon style, facing right, side view, 2D game sprite
+
+## 悪い例（禁止）
+- 結果: player character sprite
+- 結果: game enemy`;
 
     // Helper function to parse result
     const parseDirectionResult = (result, imageName, originalPrompt) => {
@@ -3104,6 +3122,149 @@ ${dimension === '3d' ? '3D' : dimension === '2d' ? '2D' : '未指定'}
     }
 
     return null;
+  }
+
+  // Extract theme/world setting from SPEC.md
+  extractThemeFromSpec(spec) {
+    if (!spec) return null;
+
+    // Look for "世界観・テーマ" or "舞台" section
+    const themePatterns = [
+      /世界観[・\s]*テーマ[\s\S]*?(?=##|$)/i,
+      /##\s*世界観[\s\S]*?(?=##|$)/i,
+      /舞台[:\s]+([^\n]+)/i,
+      /テーマ[:\s]+([^\n]+)/i,
+      /setting[:\s]+([^\n]+)/i
+    ];
+
+    for (const pattern of themePatterns) {
+      const match = spec.match(pattern);
+      if (match) {
+        // Extract key info
+        const section = match[0];
+        const theme = {};
+
+        // Extract setting/location
+        const settingMatch = section.match(/舞台[:\s]+([^\n]+)/i) ||
+                            section.match(/setting[:\s]+([^\n]+)/i);
+        if (settingMatch) theme.setting = settingMatch[1].trim();
+
+        // Extract atmosphere
+        const atmosphereMatch = section.match(/雰囲気[:\s]+([^\n]+)/i) ||
+                               section.match(/atmosphere[:\s]+([^\n]+)/i);
+        if (atmosphereMatch) theme.atmosphere = atmosphereMatch[1].trim();
+
+        // Extract style
+        const styleMatch = section.match(/スタイル[:\s]+([^\n]+)/i) ||
+                          section.match(/style[:\s]+([^\n]+)/i);
+        if (styleMatch) theme.style = styleMatch[1].trim();
+
+        if (Object.keys(theme).length > 0) {
+          return theme;
+        }
+      }
+    }
+    return null;
+  }
+
+  // Extract character appearance from SPEC.md based on role
+  extractCharacterAppearanceFromSpec(spec, role) {
+    if (!spec) return null;
+
+    const roleLower = role.toLowerCase();
+    let searchTerms = [];
+
+    if (/player|プレイヤー|主人公/.test(roleLower)) {
+      searchTerms = ['プレイヤー', 'player', '主人公', 'hero'];
+    } else if (/enemy|敵|エネミー|monster/.test(roleLower)) {
+      searchTerms = ['敵', 'enemy', 'エネミー', 'monster', 'モンスター'];
+    } else if (/item|アイテム/.test(roleLower)) {
+      searchTerms = ['アイテム', 'item', 'コイン', 'coin'];
+    }
+
+    // Look for character section in mechanics
+    const mechanicsMatch = spec.match(/##\s*キャラクター[\s\S]*?(?=##\s*[^#]|$)/i) ||
+                          spec.match(/##\s*characters?[\s\S]*?(?=##\s*[^#]|$)/i);
+
+    if (mechanicsMatch) {
+      const section = mechanicsMatch[0];
+
+      for (const term of searchTerms) {
+        // Look for appearance description
+        const appearancePattern = new RegExp(
+          `${term}[\\s\\S]*?外見[:\\s]+([^\\n]+)`,
+          'i'
+        );
+        const match = section.match(appearancePattern);
+        if (match) {
+          return match[1].trim();
+        }
+
+        // Also try English pattern
+        const appearancePatternEn = new RegExp(
+          `${term}[\\s\\S]*?appearance[:\\s]+([^\\n]+)`,
+          'i'
+        );
+        const matchEn = section.match(appearancePatternEn);
+        if (matchEn) {
+          return matchEn[1].trim();
+        }
+      }
+    }
+
+    return null;
+  }
+
+  // Build enhanced image prompt from specs
+  buildEnhancedImagePrompt(originalPrompt, spec, imageName, direction) {
+    const role = this.guessImageRole(imageName, originalPrompt);
+
+    // Extract theme and character info from specs
+    const theme = this.extractThemeFromSpec(spec);
+    const characterAppearance = this.extractCharacterAppearanceFromSpec(spec, role);
+
+    // Build prompt parts
+    const parts = [];
+
+    // 1. Character appearance (most specific)
+    if (characterAppearance) {
+      parts.push(characterAppearance);
+    } else if (originalPrompt && originalPrompt.length > 10) {
+      // Use original prompt if it has meaningful content
+      parts.push(originalPrompt);
+    }
+
+    // 2. Theme/setting context
+    if (theme) {
+      if (theme.setting) {
+        parts.push(`${theme.setting} theme`);
+      }
+      if (theme.atmosphere) {
+        parts.push(`${theme.atmosphere} atmosphere`);
+      }
+      if (theme.style) {
+        parts.push(`${theme.style} style`);
+      }
+    }
+
+    // 3. Direction and view
+    if (direction) {
+      parts.push(`facing ${direction}`);
+      parts.push('side view');
+    }
+
+    // 4. Always add game sprite context
+    parts.push('2D game sprite');
+
+    // Combine and clean
+    const enhancedPrompt = parts.filter(p => p).join(', ');
+
+    console.log(`[buildEnhancedImagePrompt] Original: "${originalPrompt}"`);
+    console.log(`[buildEnhancedImagePrompt] Theme: ${JSON.stringify(theme)}`);
+    console.log(`[buildEnhancedImagePrompt] Character: "${characterAppearance}"`);
+    console.log(`[buildEnhancedImagePrompt] Enhanced: "${enhancedPrompt}"`);
+
+    return enhancedPrompt;
   }
 
   // Read SPEC.md for a project (legacy - reads old format or combines new format)

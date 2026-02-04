@@ -71,17 +71,25 @@ ${getBaseRules()}
 - 最大3枚まで
 - 画像は透過背景（PNG）で生成されます
 - コード内では "assets/[name]" で参照できます
-- promptにはビジュアルスタイルを反映した説明を書く
 
-**★向きの指定（SPEC.mdを参照）：**
-- 現在のゲーム仕様の「スプライトの向き」セクションに従う
-- promptに "facing right" や "facing left" を必ず明記
-- 例：横スクロール → プレイヤー: "facing right, side view"、敵: "facing left, side view"
-- 例：縦スクロール → プレイヤー: "facing up"、敵: "facing down"
+**★画像プロンプトの書き方（最重要）：**
+promptには必ず以下の要素を含めること：
+1. **テーマ・世界観**：ゲームの設定を必ず反映（SPEC.mdの世界観セクション参照）
+2. **キャラクターの具体的な外見**：服装、色、髪型、表情（SPEC.mdのキャラクターセクション参照）
+3. **アートスタイル**：既存のゲームスタイルと統一
+4. **向き**：facing right/left/up/down, side view
 
-画像生成が必要な例（2Dのみ）：
-- 「猫のキャラクターで」→ player.png を生成
-- 「敵を追加して」→ enemy.png を生成
+**良いプロンプトの例：**
+- "cheerful Austrian boy wearing green Lederhosen, white shirt, alpine hat, pixel art style, facing right, side view"
+- "fierce red dragon with golden scales, breathing fire, cartoon style, facing left, side view"
+
+**悪いプロンプト（禁止）：**
+- ❌ "new enemy sprite" （抽象的すぎる）
+- ❌ "character" （テーマが反映されていない）
+
+**向きのルール：**
+- 横スクロール(右進行) → プレイヤー: facing right、敵: facing left
+- 縦スクロール(上進行) → プレイヤー: facing up、敵: facing down
 
 画像が不要な場合（imagesフィールドを省略）：
 - 現在のコードがThree.jsや3Dを使用している場合
