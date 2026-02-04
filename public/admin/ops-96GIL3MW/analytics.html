@@ -767,10 +767,48 @@
         min-width: 50px;
       }
     }
+
+    /* Navigation Tabs */
+    .admin-nav {
+      display: flex;
+      background: var(--gray-100);
+      border-radius: var(--r-8);
+      padding: 2px;
+      margin-bottom: var(--s-24);
+    }
+
+    .nav-tab {
+      padding: var(--s-12) var(--s-24);
+      border: none;
+      background: transparent;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--gray-600);
+      cursor: pointer;
+      border-radius: var(--r-8);
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .nav-tab:hover {
+      color: var(--gray-900);
+    }
+
+    .nav-tab.active {
+      background: var(--white);
+      color: var(--gray-900);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
   </style>
 </head>
 <body>
   <div class="admin-container" id="mainContainer">
+    <!-- Navigation -->
+    <div class="admin-nav">
+      <a href="analytics.html" class="nav-tab active">概要</a>
+      <a href="retention.html" class="nav-tab">リテンション</a>
+    </div>
+
     <!-- Header -->
     <header class="admin-header">
       <div class="header-left">

@@ -790,6 +790,309 @@ app.get('/api/admin/analytics/summary', basicAuthAdmin, authenticate, async (req
   }
 });
 
+// Admin Retention Analytics API
+app.get('/api/admin/analytics/retention', basicAuthAdmin, authenticate, async (req, res) => {
+  try {
+    // Admin check
+    const userEmail = req.user?.email;
+    if (!isAdmin(userEmail)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+
+    // Week boundaries
+    const thisWeekStart = new Date(now);
+    thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay());
+    thisWeekStart.setHours(0, 0, 0, 0);
+
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+
+    const twoWeeksAgoStart = new Date(lastWeekStart);
+    twoWeeksAgoStart.setDate(twoWeeksAgoStart.getDate() - 7);
+
+    // Month boundaries
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // ========== Day N Retention ==========
+    // Get users who had their first session in the last 30+ days
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // Get all sessions from the last 60 days for retention calculation
+    const sixtyDaysAgo = new Date(now);
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+    const { data: sessionsData } = await supabaseAdmin
+      .from('user_sessions')
+      .select('user_id, started_at')
+      .gte('started_at', sixtyDaysAgo.toISOString())
+      .not('user_id', 'is', null)
+      .order('started_at', { ascending: true });
+
+    // Calculate first session date per user and their return days
+    const userFirstSession = new Map();
+    const userSessionDays = new Map();
+
+    (sessionsData || []).forEach(row => {
+      const userId = row.user_id;
+      const sessionDate = new Date(row.started_at);
+      sessionDate.setHours(0, 0, 0, 0);
+      const dayKey = sessionDate.toISOString().split('T')[0];
+
+      if (!userFirstSession.has(userId)) {
+        userFirstSession.set(userId, sessionDate);
+      }
+
+      if (!userSessionDays.has(userId)) {
+        userSessionDays.set(userId, new Set());
+      }
+      userSessionDays.get(userId).add(dayKey);
+    });
+
+    // Calculate Day N retention rates
+    const retentionDays = [1, 3, 7, 14, 30];
+    const dayRetention = {};
+
+    retentionDays.forEach(n => {
+      // Users who had their first session at least N days ago
+      const cutoff = new Date(now);
+      cutoff.setDate(cutoff.getDate() - n);
+
+      let eligibleUsers = 0;
+      let retainedUsers = 0;
+
+      userFirstSession.forEach((firstDate, userId) => {
+        if (firstDate <= cutoff) {
+          eligibleUsers++;
+          const sessionDays = userSessionDays.get(userId);
+          const targetDate = new Date(firstDate);
+          targetDate.setDate(targetDate.getDate() + n);
+          const targetKey = targetDate.toISOString().split('T')[0];
+
+          if (sessionDays.has(targetKey)) {
+            retainedUsers++;
+          }
+        }
+      });
+
+      dayRetention[`d${n}`] = eligibleUsers > 0 ? (retainedUsers / eligibleUsers) * 100 : 0;
+    });
+
+    // ========== Cohort Retention ==========
+    // Group users by their first session week (last 8 weeks)
+    const cohorts = [];
+    for (let i = 0; i < 8; i++) {
+      const cohortStart = new Date(thisWeekStart);
+      cohortStart.setDate(cohortStart.getDate() - (i * 7));
+      const cohortEnd = new Date(cohortStart);
+      cohortEnd.setDate(cohortEnd.getDate() + 7);
+
+      const cohortUsers = [];
+      userFirstSession.forEach((firstDate, userId) => {
+        if (firstDate >= cohortStart && firstDate < cohortEnd) {
+          cohortUsers.push(userId);
+        }
+      });
+
+      if (cohortUsers.length > 0) {
+        const weeklyRetention = [];
+        for (let w = 0; w <= 4; w++) {
+          const weekStart = new Date(cohortStart);
+          weekStart.setDate(weekStart.getDate() + (w * 7));
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekEnd.getDate() + 7);
+
+          // Check if this week has passed
+          if (weekEnd > now) {
+            weeklyRetention.push(null);
+            continue;
+          }
+
+          let activeInWeek = 0;
+          cohortUsers.forEach(userId => {
+            const sessionDays = userSessionDays.get(userId);
+            let foundInWeek = false;
+            sessionDays.forEach(dayKey => {
+              const d = new Date(dayKey);
+              if (d >= weekStart && d < weekEnd) {
+                foundInWeek = true;
+              }
+            });
+            if (foundInWeek) activeInWeek++;
+          });
+
+          weeklyRetention.push((activeInWeek / cohortUsers.length) * 100);
+        }
+
+        cohorts.push({
+          cohort: cohortStart.toISOString().split('T')[0],
+          cohortSize: cohortUsers.length,
+          week0: weeklyRetention[0],
+          week1: weeklyRetention[1],
+          week2: weeklyRetention[2],
+          week3: weeklyRetention[3],
+          week4: weeklyRetention[4]
+        });
+      }
+    }
+
+    // ========== Active Users ==========
+    // DAU - users active today
+    const { data: dauData } = await supabaseAdmin
+      .from('user_events')
+      .select('user_id')
+      .gte('event_ts', today.toISOString())
+      .not('user_id', 'is', null);
+
+    const dauUsers = new Set((dauData || []).map(r => r.user_id));
+    const dau = dauUsers.size;
+
+    // WAU - users active this week
+    const { data: wauData } = await supabaseAdmin
+      .from('user_events')
+      .select('user_id')
+      .gte('event_ts', thisWeekStart.toISOString())
+      .not('user_id', 'is', null);
+
+    const wauUsers = new Set((wauData || []).map(r => r.user_id));
+    const wau = wauUsers.size;
+
+    // MAU - users active this month
+    const { data: mauData } = await supabaseAdmin
+      .from('user_events')
+      .select('user_id')
+      .gte('event_ts', monthStart.toISOString())
+      .not('user_id', 'is', null);
+
+    const mauUsers = new Set((mauData || []).map(r => r.user_id));
+    const mau = mauUsers.size;
+
+    // Stickiness
+    const currentStickiness = mau > 0 ? (dau / mau) * 100 : 0;
+
+    // Stickiness trend (last 7 days)
+    const stickinessTrend = [];
+    for (let i = 6; i >= 0; i--) {
+      const dayStart = new Date(today);
+      dayStart.setDate(dayStart.getDate() - i);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+
+      const dayDau = new Set();
+      (sessionsData || []).forEach(row => {
+        const sessionDate = new Date(row.started_at);
+        if (sessionDate >= dayStart && sessionDate < dayEnd) {
+          dayDau.add(row.user_id);
+        }
+      });
+
+      const dayStickiness = mau > 0 ? (dayDau.size / mau) * 100 : 0;
+      stickinessTrend.push({
+        date: dayStart.toISOString().split('T')[0],
+        value: dayStickiness
+      });
+    }
+
+    // ========== Lifecycle Segments ==========
+    // Get users active last week
+    const { data: lastWeekData } = await supabaseAdmin
+      .from('user_events')
+      .select('user_id')
+      .gte('event_ts', lastWeekStart.toISOString())
+      .lt('event_ts', thisWeekStart.toISOString())
+      .not('user_id', 'is', null);
+
+    const lastWeekUsers = new Set((lastWeekData || []).map(r => r.user_id));
+
+    // Get users active this week
+    const thisWeekUsers = new Set((wauData || []).map(r => r.user_id));
+
+    // Get users active 2 weeks ago
+    const { data: twoWeeksAgoData } = await supabaseAdmin
+      .from('user_events')
+      .select('user_id')
+      .gte('event_ts', twoWeeksAgoStart.toISOString())
+      .lt('event_ts', lastWeekStart.toISOString())
+      .not('user_id', 'is', null);
+
+    const twoWeeksAgoUsers = new Set((twoWeeksAgoData || []).map(r => r.user_id));
+
+    // Calculate lifecycle segments
+    let newUsers = 0;
+    let activeUsers = 0;
+    let atRiskUsers = 0;
+    let dormantUsers = 0;
+    let resurrectedUsers = 0;
+
+    // New: First session this week
+    userFirstSession.forEach((firstDate, userId) => {
+      if (firstDate >= thisWeekStart) {
+        newUsers++;
+      }
+    });
+
+    // Active: Active this week AND last week (not new)
+    thisWeekUsers.forEach(userId => {
+      const firstDate = userFirstSession.get(userId);
+      if (firstDate && firstDate < thisWeekStart && lastWeekUsers.has(userId)) {
+        activeUsers++;
+      }
+    });
+
+    // At Risk: Active last week but NOT this week
+    lastWeekUsers.forEach(userId => {
+      if (!thisWeekUsers.has(userId)) {
+        atRiskUsers++;
+      }
+    });
+
+    // Dormant: Not active this week or last week, but had sessions before
+    userFirstSession.forEach((firstDate, userId) => {
+      if (!thisWeekUsers.has(userId) && !lastWeekUsers.has(userId) && firstDate < lastWeekStart) {
+        dormantUsers++;
+      }
+    });
+
+    // Resurrected: Active this week, was dormant (not active last week but had prior sessions)
+    thisWeekUsers.forEach(userId => {
+      const firstDate = userFirstSession.get(userId);
+      if (firstDate && firstDate < lastWeekStart && !lastWeekUsers.has(userId)) {
+        resurrectedUsers++;
+      }
+    });
+
+    // ========== Build Response ==========
+    res.json({
+      generated_at: new Date().toISOString(),
+      dayRetention,
+      cohortRetention: cohorts,
+      stickiness: {
+        current: currentStickiness,
+        trend: stickinessTrend
+      },
+      activeUsers: {
+        dau,
+        wau,
+        mau
+      },
+      lifecycle: {
+        new: newUsers,
+        active: activeUsers,
+        atRisk: atRiskUsers,
+        dormant: dormantUsers,
+        resurrected: resurrectedUsers
+      }
+    });
+  } catch (err) {
+    console.error('[Admin Analytics] Retention error:', err);
+    res.status(500).json({ error: 'Failed to fetch retention analytics' });
+  }
+});
+
 // ==================== Remix API ====================
 remixService.setupRoutes(app);
 
