@@ -841,7 +841,7 @@
 
       try {
         const session = await DreamCoreAuth.getSession();
-        const response = await fetch('/api/admin/analytics/retention', {
+        const response = await fetch('/api/analytics/admin/retention', {
           headers: {
             'Authorization': BASIC_AUTH_HEADER,
             'X-Auth-Token': session?.access_token || ''

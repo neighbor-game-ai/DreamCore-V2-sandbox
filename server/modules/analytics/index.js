@@ -1,13 +1,24 @@
 /**
  * Analytics Routes
  *
- * Express routes for event tracking.
+ * Express routes for event tracking and admin dashboard.
  * Mounted at /api/analytics
+ *
+ * Public endpoints:
+ *   POST /api/analytics/session - Start session
+ *   POST /api/analytics/session/:id/end - End session
+ *   POST /api/analytics/track - Track events
+ *   POST /api/analytics/link - Link user to session
+ *
+ * Admin endpoints (Basic Auth + JWT + Admin check):
+ *   GET /api/analytics/admin/summary - Dashboard summary
+ *   GET /api/analytics/admin/retention - Retention analytics
  */
 
 const express = require('express');
 const router = express.Router();
 const { optionalAuth } = require('../../authMiddleware');
+const adminRouter = require('./adminApi');
 const { enrichEventData } = require('./enrichment');
 const {
   isValidEventType,
@@ -233,5 +244,8 @@ router.post('/link', optionalAuth, jsonLimit, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// Mount admin routes at /api/analytics/admin/*
+router.use('/admin', adminRouter);
 
 module.exports = router;

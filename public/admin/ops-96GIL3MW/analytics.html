@@ -1265,7 +1265,7 @@
       dashboardContent.style.display = 'none';
 
       try {
-        let url = `/api/admin/analytics/summary?period=${encodeURIComponent(currentPeriod)}`;
+        let url = `/api/analytics/admin/summary?period=${encodeURIComponent(currentPeriod)}`;
         // Add Basic Auth + JWT Auth
         const session = await DreamCoreAuth.getSession();
         const response = await fetch(url, {
