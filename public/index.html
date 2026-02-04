@@ -113,27 +113,90 @@
       top: 16px;
       right: 16px;
     }
+    .login-divider {
+      display: flex;
+      align-items: center;
+      margin: 20px 0;
+      color: #9aa0a6;
+      font-size: 14px;
+    }
+    .login-divider::before,
+    .login-divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #dadce0;
+    }
+    .login-divider span {
+      padding: 0 12px;
+    }
+    .email-signin-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .email-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      font-size: 16px;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    .email-input:focus {
+      outline: none;
+      border-color: #FF3B30;
+    }
+    .email-signin-btn {
+      width: 100%;
+      padding: 14px 24px;
+      background: #FF3B30;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      color: #fff;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .email-signin-btn:hover {
+      background: #e0342d;
+    }
+    .email-signin-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .login-success {
+      color: #1e8e3e;
+      font-size: 14px;
+      margin-top: 12px;
+      text-align: center;
+    }
+    .login-success.hidden {
+      display: none;
+    }
   </style>
 </head>
 <body data-page="login">
   <!-- Login View -->
   <div class="login-view" id="loginView">
-    <div class="login-container">
-      <div class="login-lang-selector">
-        <div class="lang-selector" id="langSelector">
-          <button class="lang-selector-btn" id="langSelectorBtn">
-            <span id="currentLang">EN</span>
-            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 4.5L6 7.5L9 4.5"/>
-            </svg>
-          </button>
-          <div class="lang-selector-dropdown">
-            <button class="lang-option" data-lang="en">English</button>
-            <button class="lang-option" data-lang="ja">日本語</button>
-            <button class="lang-option" data-lang="zh">中文</button>
-          </div>
+    <!-- Language Selector (top right) -->
+    <div class="login-lang-selector">
+      <div class="lang-selector" id="langSelector">
+        <button class="lang-selector-btn" id="langSelectorBtn">
+          <span id="currentLang">EN</span>
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 4.5L6 7.5L9 4.5"/>
+          </svg>
+        </button>
+        <div class="lang-selector-dropdown">
+          <button class="lang-option" data-lang="en">English</button>
+          <button class="lang-option" data-lang="ja">日本語</button>
+          <button class="lang-option" data-lang="zh">中文</button>
         </div>
       </div>
+    </div>
+    <div class="login-container">
       <div class="login-header">
         <h1>DreamCore</h1>
         <p class="login-subtitle" data-i18n="page.index.subtitle">Create games by chatting</p>
@@ -154,7 +217,16 @@
           </svg>
           <span data-i18n="button.signInWithApple">Sign in with Apple</span>
         </button>
+
+        <div class="login-divider"><span data-i18n="common.or">or</span></div>
+
+        <div class="email-signin-form">
+          <input type="email" class="email-input" id="emailInput" placeholder="Email" data-i18n-placeholder="placeholder.email">
+          <button type="button" class="email-signin-btn" id="emailSignInButton" data-i18n="button.signInWithEmail">Sign in with Email</button>
+        </div>
+
         <div class="login-error hidden" id="loginError"></div>
+        <div class="login-success hidden" id="loginSuccess" data-i18n="message.magicLinkSent">Check your email for the login link!</div>
       </div>
     </div>
   </div>
@@ -208,19 +280,25 @@
 
       document.addEventListener('click', () => selector.classList.remove('open'));
       const errorEl = document.getElementById('loginError');
+      const successEl = document.getElementById('loginSuccess');
       const googleSignInBtn = document.getElementById('googleSignInButton');
       const appleSignInBtn = document.getElementById('appleSignInButton');
+      const emailInput = document.getElementById('emailInput');
+      const emailSignInBtn = document.getElementById('emailSignInButton');
 
       // 1. Show UI immediately (buttons disabled until auth check completes)
       googleSignInBtn.disabled = true;
       googleSignInBtn.textContent = DreamCoreI18n ? DreamCoreI18n.t('common.loading') : 'Loading...';
       appleSignInBtn.disabled = true;
+      emailSignInBtn.disabled = true;
 
       // 2. Setup click handlers now (will work once enabled)
       googleSignInBtn.addEventListener('click', async () => {
         googleSignInBtn.disabled = true;
         appleSignInBtn.disabled = true;
+        emailSignInBtn.disabled = true;
         errorEl.classList.add('hidden');
+        successEl.classList.add('hidden');
 
         try {
           await DreamCoreAuth.signInWithGoogle();
@@ -230,13 +308,16 @@
           errorEl.classList.remove('hidden');
           googleSignInBtn.disabled = false;
           appleSignInBtn.disabled = false;
+          emailSignInBtn.disabled = false;
         }
       });
 
       appleSignInBtn.addEventListener('click', async () => {
         googleSignInBtn.disabled = true;
         appleSignInBtn.disabled = true;
+        emailSignInBtn.disabled = true;
         errorEl.classList.add('hidden');
+        successEl.classList.add('hidden');
 
         try {
           await DreamCoreAuth.signInWithApple();
@@ -246,7 +327,40 @@
           errorEl.classList.remove('hidden');
           googleSignInBtn.disabled = false;
           appleSignInBtn.disabled = false;
+          emailSignInBtn.disabled = false;
         }
+      });
+
+      emailSignInBtn.addEventListener('click', async () => {
+        const email = emailInput.value.trim();
+        if (!email) {
+          errorEl.textContent = DreamCoreI18n ? DreamCoreI18n.t('error.emailRequired') : 'Please enter your email';
+          errorEl.classList.remove('hidden');
+          return;
+        }
+
+        googleSignInBtn.disabled = true;
+        appleSignInBtn.disabled = true;
+        emailSignInBtn.disabled = true;
+        errorEl.classList.add('hidden');
+        successEl.classList.add('hidden');
+
+        try {
+          await DreamCoreAuth.signInWithMagicLink(email);
+          successEl.classList.remove('hidden');
+          emailSignInBtn.disabled = false;
+        } catch (err) {
+          errorEl.textContent = err.message || (DreamCoreI18n ? DreamCoreI18n.t('error.signInFailed') : 'Sign in failed');
+          errorEl.classList.remove('hidden');
+          googleSignInBtn.disabled = false;
+          appleSignInBtn.disabled = false;
+          emailSignInBtn.disabled = false;
+        }
+      });
+
+      // Enter key to submit email
+      emailInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') emailSignInBtn.click();
       });
 
       // 3. Check session in background (non-blocking)
@@ -272,6 +386,7 @@
               ${DreamCoreI18n ? DreamCoreI18n.t('button.signInWithGoogle') : 'Sign in with Google'}
             `;
             appleSignInBtn.disabled = false;
+            emailSignInBtn.disabled = false;
           }
         } catch (err) {
           console.error('[Auth] Init error:', err);
@@ -280,6 +395,7 @@
           googleSignInBtn.disabled = false;
           googleSignInBtn.textContent = DreamCoreI18n ? DreamCoreI18n.t('common.retry') : 'Retry';
           appleSignInBtn.disabled = false;
+          emailSignInBtn.disabled = false;
         }
       })();
     });

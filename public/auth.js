@@ -222,6 +222,28 @@ async function signInWithApple() {
 }
 
 /**
+ * Sign in with Magic Link (Email)
+ * @param {string} email - User's email address
+ */
+async function signInWithMagicLink(email) {
+  if (!supabaseClient) await initAuth();
+
+  const { data, error } = await supabaseClient.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: window.location.origin + '/create.html'
+    }
+  });
+
+  if (error) {
+    console.error('[Auth] Magic link error:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
  * Sign out
  */
 async function signOut() {
@@ -568,6 +590,7 @@ window.DreamCoreAuth = {
   initAuth,
   signInWithGoogle,
   signInWithApple,
+  signInWithMagicLink,
   signOut,
   getSession,
   getFreshSession,   // For reconnection: always returns fresh token
