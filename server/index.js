@@ -319,7 +319,7 @@ app.use('/api/analytics', analyticsRoutes);
 
 // Basic Auth middleware for admin routes
 const ADMIN_BASIC_USER = process.env.ADMIN_BASIC_USER || 'admin';
-const ADMIN_BASIC_PASS = process.env.ADMIN_BASIC_PASS || 'dreamcore-ops-2026';
+const ADMIN_BASIC_PASS = process.env.ADMIN_BASIC_PASS || 'dc-ops-f1f0c1ad';
 
 function basicAuthAdmin(req, res, next) {
   const authHeader = req.headers.authorization;
