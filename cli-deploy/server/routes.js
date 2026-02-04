@@ -60,7 +60,8 @@ const deployLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
   message: { error: 'rate_limit', message: 'Deploy limit exceeded' },
-  keyGenerator: (req) => req.userId || req.ip
+  keyGenerator: (req) => req.userId || req.ip,
+  validate: false  // カスタムkeyGeneratorのバリデーション警告を抑制
 });
 
 // /device/authorize 用（user_id ベース）
@@ -68,7 +69,8 @@ const authorizeLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
   message: { error: 'rate_limit', message: 'Too many authorize requests' },
-  keyGenerator: (req) => req.userId || req.ip
+  keyGenerator: (req) => req.userId || req.ip,
+  validate: false
 });
 
 // /projects GET 用
@@ -76,7 +78,8 @@ const projectsGetLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 60,
   message: { error: 'rate_limit', message: 'Too many requests' },
-  keyGenerator: (req) => req.userId || req.ip
+  keyGenerator: (req) => req.userId || req.ip,
+  validate: false
 });
 
 // /projects DELETE 用
@@ -84,7 +87,8 @@ const projectsDeleteLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
   message: { error: 'rate_limit', message: 'Too many delete requests' },
-  keyGenerator: (req) => req.userId || req.ip
+  keyGenerator: (req) => req.userId || req.ip,
+  validate: false
 });
 
 // /projects PATCH 用（メタデータ編集）
@@ -92,7 +96,8 @@ const projectsPatchLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 30,
   message: { error: 'rate_limit', message: 'Too many update requests' },
-  keyGenerator: (req) => req.userId || req.ip
+  keyGenerator: (req) => req.userId || req.ip,
+  validate: false
 });
 
 /**
