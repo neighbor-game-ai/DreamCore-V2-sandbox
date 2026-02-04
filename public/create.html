@@ -120,6 +120,9 @@
             <button class="lang-option" data-lang="en">English</button>
             <button class="lang-option" data-lang="ja">日本語</button>
             <button class="lang-option" data-lang="zh">中文</button>
+            <button class="lang-option" data-lang="es">Español</button>
+            <button class="lang-option" data-lang="pt">Português</button>
+            <button class="lang-option" data-lang="ko">한국어</button>
           </div>
         </div>
         <span class="connection-dot" id="listStatusIndicator"></span>
@@ -370,7 +373,7 @@
       const options = selector.querySelectorAll('.lang-option');
 
       // Set current language display
-      const langLabels = { en: 'EN', ja: 'JA', zh: 'ZH' };
+      const langLabels = { en: 'EN', ja: 'JA', zh: 'ZH', es: 'ES', pt: 'PT', ko: 'KO' };
       const currentLang = DreamCoreI18n.getLanguage();
       currentLangEl.textContent = langLabels[currentLang] || 'EN';
 

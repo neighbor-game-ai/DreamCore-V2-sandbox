@@ -1,11 +1,11 @@
 /**
  * DreamCore i18n - Lightweight internationalization
- * Supports: English (default), Japanese, Chinese
+ * Supports: English (default), Japanese, Chinese, Spanish, Portuguese, Korean
  */
 (function() {
   'use strict';
 
-  const SUPPORTED_LANGS = ['en', 'ja', 'zh'];
+  const SUPPORTED_LANGS = ['en', 'ja', 'zh', 'es', 'pt', 'ko'];
   const DEFAULT_LANG = 'en';
   const STORAGE_KEY = 'dreamcore_lang';
 

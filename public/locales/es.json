@@ -1,0 +1,92 @@
+{
+  "common": {
+    "appName": "DreamCore",
+    "loading": "Cargando...",
+    "retry": "Intentar de nuevo",
+    "or": "o"
+  },
+  "nav": {
+    "create": "Crear",
+    "discover": "Explorar",
+    "notifications": "Avisos",
+    "myPage": "Mi página",
+    "next": "Siguiente"
+  },
+  "button": {
+    "signInWithGoogle": "Continuar con Google",
+    "signInWithApple": "Continuar con Apple",
+    "signInWithEmail": "Continuar con email",
+    "signOut": "Cerrar sesión",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "create": "Crear",
+    "change": "Guardar",
+    "ok": "OK",
+    "editProfile": "Editar perfil",
+    "logout": "Salir"
+  },
+  "filter": {
+    "all": "Todo",
+    "published": "Publicado",
+    "draft": "Borrador"
+  },
+  "page": {
+    "index": {
+      "title": "DreamCore - Crea juegos solo conversando",
+      "subtitle": "Crea juegos solo conversando",
+      "ogTitle": "DreamCore - Crea tus propios juegos con IA",
+      "ogDescription": "Solo dile a la IA qué juego quieres y lo crea por ti. No necesitas saber programar. ¡Cualquiera puede hacerlo!",
+      "description": "Crea tus propios juegos solo conversando. No necesitas saber nada de programación."
+    },
+    "create": {
+      "title": "Crear - DreamCore",
+      "description": "Crea tus propios juegos solo conversando."
+    },
+    "mypage": {
+      "title": "Mi página - DreamCore",
+      "header": "Mi página",
+      "description": "Tus juegos y tu perfil"
+    }
+  },
+  "modal": {
+    "newGame": {
+      "title": "Nuevo juego",
+      "nameLabel": "¿Cómo lo quieres llamar?",
+      "namePlaceholder": "Ej: Aventura espacial",
+      "nameHint": "Puedes cambiarlo cuando quieras"
+    },
+    "rename": {
+      "title": "Cambiar nombre",
+      "nameLabel": "Nuevo nombre",
+      "namePlaceholder": "Nombre del juego"
+    },
+    "delete": {
+      "title": "¿Eliminar este juego?",
+      "message": "¿Eliminar \"{name}\"?",
+      "warning": "No se puede deshacer"
+    },
+    "quotaLimit": {
+      "title": "Llegaste al límite de hoy"
+    }
+  },
+  "stats": {
+    "games": "juegos",
+    "plays": "jugadas",
+    "likes": "me gusta"
+  },
+  "error": {
+    "signInFailed": "No pudimos iniciar sesión. Intenta de nuevo.",
+    "systemError": "Algo salió mal. Intenta de nuevo.",
+    "emailRequired": "Escribe tu email"
+  },
+  "placeholder": {
+    "email": "Tu email"
+  },
+  "message": {
+    "magicLinkSent": "¡Revisa tu email! Te enviamos un enlace para entrar."
+  },
+  "status": {
+    "connecting": "Conectando...",
+    "reconnecting": "Reconectando..."
+  }
+}

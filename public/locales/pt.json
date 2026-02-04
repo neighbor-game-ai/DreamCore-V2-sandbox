@@ -1,0 +1,92 @@
+{
+  "common": {
+    "appName": "DreamCore",
+    "loading": "Carregando...",
+    "retry": "Tentar de novo",
+    "or": "ou"
+  },
+  "nav": {
+    "create": "Criar",
+    "discover": "Explorar",
+    "notifications": "Avisos",
+    "myPage": "Minha página",
+    "next": "Próximo"
+  },
+  "button": {
+    "signInWithGoogle": "Continuar com Google",
+    "signInWithApple": "Continuar com Apple",
+    "signInWithEmail": "Continuar com email",
+    "signOut": "Sair",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "create": "Criar",
+    "change": "Salvar",
+    "ok": "OK",
+    "editProfile": "Editar perfil",
+    "logout": "Sair"
+  },
+  "filter": {
+    "all": "Tudo",
+    "published": "Publicado",
+    "draft": "Rascunho"
+  },
+  "page": {
+    "index": {
+      "title": "DreamCore - Crie jogos só conversando",
+      "subtitle": "Crie jogos só conversando",
+      "ogTitle": "DreamCore - Crie seus próprios jogos com IA",
+      "ogDescription": "É só falar pra IA que tipo de jogo você quer e ela faz pra você. Não precisa saber programar. Qualquer um consegue!",
+      "description": "Crie seus próprios jogos só conversando. Não precisa saber nada de programação."
+    },
+    "create": {
+      "title": "Criar - DreamCore",
+      "description": "Crie seus próprios jogos só conversando."
+    },
+    "mypage": {
+      "title": "Minha página - DreamCore",
+      "header": "Minha página",
+      "description": "Seus jogos e seu perfil"
+    }
+  },
+  "modal": {
+    "newGame": {
+      "title": "Novo jogo",
+      "nameLabel": "Qual vai ser o nome?",
+      "namePlaceholder": "Ex: Aventura espacial",
+      "nameHint": "Você pode mudar depois"
+    },
+    "rename": {
+      "title": "Mudar nome",
+      "nameLabel": "Novo nome",
+      "namePlaceholder": "Nome do jogo"
+    },
+    "delete": {
+      "title": "Excluir esse jogo?",
+      "message": "Excluir \"{name}\"?",
+      "warning": "Não dá pra desfazer"
+    },
+    "quotaLimit": {
+      "title": "Você chegou no limite de hoje"
+    }
+  },
+  "stats": {
+    "games": "jogos",
+    "plays": "jogadas",
+    "likes": "curtidas"
+  },
+  "error": {
+    "signInFailed": "Não deu pra entrar. Tenta de novo.",
+    "systemError": "Algo deu errado. Tenta de novo.",
+    "emailRequired": "Coloca seu email"
+  },
+  "placeholder": {
+    "email": "Seu email"
+  },
+  "message": {
+    "magicLinkSent": "Olha seu email! Mandamos um link pra você entrar."
+  },
+  "status": {
+    "connecting": "Conectando...",
+    "reconnecting": "Reconectando..."
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "common": {
+    "appName": "DreamCore",
+    "loading": "로딩 중...",
+    "retry": "다시 시도",
+    "or": "또는"
+  },
+  "nav": {
+    "create": "만들기",
+    "discover": "둘러보기",
+    "notifications": "알림",
+    "myPage": "내 페이지",
+    "next": "다음"
+  },
+  "button": {
+    "signInWithGoogle": "Google로 시작하기",
+    "signInWithApple": "Apple로 시작하기",
+    "signInWithEmail": "이메일로 시작하기",
+    "signOut": "로그아웃",
+    "cancel": "취소",
+    "delete": "삭제",
+    "create": "만들기",
+    "change": "저장",
+    "ok": "확인",
+    "editProfile": "프로필 수정",
+    "logout": "로그아웃"
+  },
+  "filter": {
+    "all": "전체",
+    "published": "공개",
+    "draft": "임시저장"
+  },
+  "page": {
+    "index": {
+      "title": "DreamCore - 대화만으로 게임 만들기",
+      "subtitle": "대화만으로 게임 만들기",
+      "ogTitle": "DreamCore - AI와 대화로 나만의 게임 만들기",
+      "ogDescription": "원하는 게임을 AI에게 말하면 만들어줘요. 코딩 몰라도 OK! 누구나 게임을 만들 수 있어요!",
+      "description": "대화만으로 나만의 게임을 만들어요. 어려운 건 몰라도 돼요."
+    },
+    "create": {
+      "title": "만들기 - DreamCore",
+      "description": "대화만으로 나만의 게임을 만들어요."
+    },
+    "mypage": {
+      "title": "내 페이지 - DreamCore",
+      "header": "내 페이지",
+      "description": "내 게임과 프로필"
+    }
+  },
+  "modal": {
+    "newGame": {
+      "title": "새 게임",
+      "nameLabel": "게임 이름을 지어주세요",
+      "namePlaceholder": "예: 우주 모험",
+      "nameHint": "나중에 바꿀 수 있어요"
+    },
+    "rename": {
+      "title": "이름 바꾸기",
+      "nameLabel": "새 이름",
+      "namePlaceholder": "게임 이름"
+    },
+    "delete": {
+      "title": "이 게임을 삭제할까요?",
+      "message": "\"{name}\" 삭제할까요?",
+      "warning": "삭제하면 되돌릴 수 없어요"
+    },
+    "quotaLimit": {
+      "title": "오늘은 여기까지!"
+    }
+  },
+  "stats": {
+    "games": "게임",
+    "plays": "플레이",
+    "likes": "좋아요"
+  },
+  "error": {
+    "signInFailed": "로그인이 안 됐어요. 다시 시도해주세요.",
+    "systemError": "뭔가 잘못됐어요. 다시 시도해주세요.",
+    "emailRequired": "이메일을 입력해주세요"
+  },
+  "placeholder": {
+    "email": "이메일"
+  },
+  "message": {
+    "magicLinkSent": "이메일을 확인하세요! 로그인 링크를 보냈어요."
+  },
+  "status": {
+    "connecting": "연결 중...",
+    "reconnecting": "다시 연결 중..."
+  }
+}
