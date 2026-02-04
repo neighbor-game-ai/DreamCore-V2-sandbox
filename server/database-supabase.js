@@ -156,20 +156,21 @@ const getUserByPublicId = async (publicId) => {
 };
 
 /**
- * Get user by username (case-insensitive)
+ * Get user by username (exact match, case-insensitive via normalization)
+ * Note: Username is stored lowercase in DB, so we normalize input and use eq()
  * @param {string} username - Username to search for
  * @returns {Promise<Object|null>} User profile or null
  */
 const getUserByUsername = async (username) => {
   if (!username || typeof username !== 'string') return null;
 
-  // Normalize to lowercase for case-insensitive search
+  // Normalize to lowercase (DB stores lowercase)
   const normalizedUsername = username.toLowerCase();
 
   const { data, error } = await supabaseAdmin
     .from('users')
     .select(USER_PUBLIC_FIELDS)
-    .ilike('username', normalizedUsername)
+    .eq('username', normalizedUsername)
     .single();
 
   if (error) {
@@ -181,19 +182,21 @@ const getUserByUsername = async (username) => {
 };
 
 /**
- * Check if username is available
+ * Check if username is available (exact match)
+ * Note: Username is stored lowercase in DB, so we normalize input and use eq()
  * @param {string} username - Username to check
  * @returns {Promise<boolean>} true if available, false if taken
  */
 const checkUsernameAvailable = async (username) => {
   if (!username || typeof username !== 'string') return false;
 
+  // Normalize to lowercase (DB stores lowercase)
   const normalizedUsername = username.toLowerCase();
 
   const { data, error } = await supabaseAdmin
     .from('users')
     .select('id')
-    .ilike('username', normalizedUsername)
+    .eq('username', normalizedUsername)
     .maybeSingle();
 
   if (error) {

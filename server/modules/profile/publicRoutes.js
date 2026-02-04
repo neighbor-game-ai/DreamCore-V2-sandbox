@@ -29,10 +29,10 @@ router.get('/@/:username', async (req, res) => {
     return res.status(404).send('Not found');
   }
 
-  // Validate username format
+  // Validate username format (return 404 for invalid format - no info leak)
   const normalizedUsername = username.toLowerCase();
   if (!USERNAME_REGEX.test(normalizedUsername)) {
-    return res.status(400).send('Invalid username');
+    return res.status(404).send('User not found');
   }
 
   try {
