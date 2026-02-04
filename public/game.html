@@ -3077,6 +3077,18 @@
             openPanel('infoPanelOverlay');
         });
 
+        // Profile nav: use /@username if available
+        document.querySelector('.nav-item[data-tab="profile"]')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (typeof DreamCoreAuth !== 'undefined' && DreamCoreAuth.getMyProfileUrl) {
+                DreamCoreAuth.getMyProfileUrl().then(url => {
+                    window.location.href = url;
+                });
+            } else {
+                window.location.href = '/mypage.html';
+            }
+        });
+
         ['infoPanelOverlay', 'sharePanelOverlay', 'commentPanelOverlay'].forEach(id => {
             document.getElementById(id).addEventListener('click', (e) => {
                 if (e.target.id === id) {

@@ -186,7 +186,14 @@
           if (tab === 'create') {
             window.location.href = '/create.html';
           } else if (tab === 'profile') {
-            window.location.href = '/mypage.html';
+            // Use /@username if available, otherwise /mypage.html
+            if (typeof DreamCoreAuth !== 'undefined' && DreamCoreAuth.getMyProfileUrl) {
+              DreamCoreAuth.getMyProfileUrl().then(function(url) {
+                window.location.href = url;
+              });
+            } else {
+              window.location.href = '/mypage.html';
+            }
           } else if (tab === 'notifications') {
             window.location.href = '/notifications.html';
           }

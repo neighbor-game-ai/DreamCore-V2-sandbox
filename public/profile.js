@@ -157,7 +157,9 @@ class ProfileApp {
           case 'profile':
             // If logged in and viewing another's profile, go to own profile
             if (this.currentUser?.id && !this.isOwner) {
-              window.location.href = '/mypage.html';
+              DreamCoreAuth.getMyProfileUrl().then(url => {
+                window.location.href = url;
+              });
             }
             // If viewing own profile, stay here
             break;

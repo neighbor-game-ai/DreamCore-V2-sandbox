@@ -479,6 +479,69 @@ async function requireAuthAndAccess() {
   return true;
 }
 
+/**
+ * Get the URL for the user's profile page
+ * Returns /@{username} if username is set, otherwise /mypage.html
+ * @returns {Promise<string>} Profile URL
+ */
+async function getMyProfileUrl() {
+  const session = await getSession();
+  if (!session) {
+    return '/mypage.html';
+  }
+
+  try {
+    // Check cache first
+    const cached = sessionStorage.getItem('dreamcore_my_username');
+    if (cached) {
+      const { username, timestamp } = JSON.parse(cached);
+      // Cache valid for 5 minutes
+      if (Date.now() - timestamp < 5 * 60 * 1000) {
+        return username ? `/@${username}` : '/mypage.html';
+      }
+    }
+
+    // Fetch from API
+    const res = await authFetch('/api/users/me');
+    if (res.ok) {
+      const profile = await res.json();
+      // Cache the username
+      sessionStorage.setItem('dreamcore_my_username', JSON.stringify({
+        username: profile.username || null,
+        timestamp: Date.now()
+      }));
+      return profile.username ? `/@${profile.username}` : '/mypage.html';
+    }
+  } catch (e) {
+    console.error('[Auth] Failed to get profile URL:', e);
+  }
+
+  return '/mypage.html';
+}
+
+/**
+ * Clear the cached username (call after username change)
+ */
+function clearMyUsernameCache() {
+  sessionStorage.removeItem('dreamcore_my_username');
+}
+
+/**
+ * Setup bottom navigation with proper profile link
+ * Call this after DOM is ready on pages with bottom nav
+ */
+async function setupBottomNav() {
+  const profileTab = document.querySelector('.nav-item[data-tab="profile"]');
+  if (!profileTab) return;
+
+  const profileUrl = await getMyProfileUrl();
+
+  profileTab.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.href = profileUrl;
+  });
+}
+
 // Export for use in other scripts
 window.DreamCoreAuth = {
   initAuth,
@@ -496,5 +559,8 @@ window.DreamCoreAuth = {
   authFetch,
   requireAuth,
   checkAccess,           // V2 waitlist: check access status
-  requireAuthAndAccess   // V2 waitlist: require auth + approval
+  requireAuthAndAccess,  // V2 waitlist: require auth + approval
+  getMyProfileUrl,       // Get /@username or /mypage.html
+  clearMyUsernameCache,  // Clear cached username
+  setupBottomNav         // Setup bottom nav with profile link
 };

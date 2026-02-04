@@ -1512,7 +1512,10 @@ class GameCreatorApp {
         window.location.href = '/notifications';
         break;
       case 'profile':
-        window.location.href = '/mypage';
+        // Use /@username if available, otherwise /mypage.html
+        DreamCoreAuth.getMyProfileUrl().then(url => {
+          window.location.href = url;
+        });
         break;
     }
   }

@@ -420,7 +420,10 @@ class ProfileEditor {
         throw new Error(errData.error || 'プロフィールの更新に失敗しました');
       }
 
-      // Success - reload to show changes
+      // Success - clear username cache and reload to show changes
+      if (typeof DreamCoreAuth !== 'undefined' && DreamCoreAuth.clearMyUsernameCache) {
+        DreamCoreAuth.clearMyUsernameCache();
+      }
       this.close();
       location.reload();
     } catch (err) {
