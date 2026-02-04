@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Information Panel - Nintendo Switch Style v2</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --red: #FF3B30;
+            --red-hover: #E53529;
+            --white: #FFFFFF;
+            --black: #000000;
+            --gray-50: #FAFAFA;
+            --gray-100: #F5F5F5;
+            --gray-200: #EEEEEE;
+            --gray-300: #E0E0E0;
+            --gray-400: #BDBDBD;
+            --gray-500: #9E9E9E;
+            --gray-600: #757575;
+            --gray-700: #616161;
+            --gray-800: #424242;
+            --gray-900: #212121;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #E8E8E8;
+            min-height: 100vh;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .sample-container {
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 16px;
+            padding-left: 4px;
+        }
+
+        /* ========================================
+           Nintendo Switch Style - 修正版
+           ======================================== */
+
+        .panel {
+            background: var(--white);
+            border-radius: 24px;
+            overflow: hidden;
+            margin-bottom: 48px;
+        }
+
+        .handle {
+            width: 36px;
+            height: 4px;
+            background: var(--gray-300);
+            border-radius: 2px;
+            margin: 14px auto 0;
+        }
+
+        .content {
+            padding: 28px 24px 0;
+        }
+
+        /* タイトルエリア - アクセントバー付き */
+        .title-area {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .accent-bar {
+            width: 4px;
+            min-height: 100%;
+            background: var(--red);
+            border-radius: 2px;
+            flex-shrink: 0;
+            align-self: stretch;
+        }
+
+        .title-content {
+            flex: 1;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--black);
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            margin-bottom: 12px;
+        }
+
+        /* 作者情報 */
+        .creator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .creator-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 14px;
+            font-weight: 700;
+            overflow: hidden;
+        }
+
+        .creator-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .creator-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+
+        .creator-label {
+            font-size: 11px;
+            color: var(--gray-400);
+        }
+
+        /* 説明文 */
+        .description {
+            font-size: 15px;
+            color: var(--gray-600);
+            line-height: 1.7;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        /* 情報行 */
+        .info-row {
+            margin-bottom: 20px;
+        }
+
+        .row-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--red);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 10px;
+        }
+
+        .how-to-play {
+            font-size: 14px;
+            color: var(--gray-700);
+            line-height: 1.7;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-700);
+            padding: 8px 14px;
+            background: var(--gray-100);
+            border-radius: 8px;
+        }
+
+        /* オーナーセクション */
+        .owner-section {
+            background: var(--gray-50);
+            margin: 24px -24px 0;
+            padding: 20px 24px 28px;
+        }
+
+        .owner-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 12px;
+        }
+
+        .owner-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .owner-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            text-decoration: none;
+        }
+
+        .owner-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .btn-edit {
+            background: var(--red);
+            color: var(--white);
+        }
+
+        .btn-edit:hover {
+            background: var(--red-hover);
+        }
+
+        .btn-lineage {
+            background: var(--white);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-200);
+        }
+
+        .btn-lineage:hover {
+            background: var(--gray-100);
+        }
+
+        /* 非オーナー時のアクション */
+        .visitor-actions {
+            margin: 24px -24px 0;
+            padding: 20px 24px 28px;
+            background: var(--gray-50);
+        }
+
+        .visitor-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 16px 20px;
+            background: var(--white);
+            color: var(--gray-700);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: 1px solid var(--gray-200);
+        }
+
+        .visitor-btn:hover {
+            background: var(--gray-100);
+        }
+
+        .visitor-btn-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .visitor-btn svg {
+            width: 18px;
+            height: 18px;
+            color: var(--gray-500);
+        }
+
+        .visitor-btn .badge {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--gray-400);
+        }
+
+    </style>
+</head>
+<body>
+    <div class="sample-container">
+
+        <!-- パターンA: 通常タイトル -->
+        <div class="section-label">パターンA: 通常タイトル</div>
+        <div class="panel">
+            <div class="handle"></div>
+            <div class="content">
+                <div class="title-area">
+                    <div class="accent-bar"></div>
+                    <div class="title-content">
+                        <h1 class="title">COMIC HERO BLAST</h1>
+                        <div class="creator">
+                            <div class="creator-avatar">N</div>
+                            <div>
+                                <div class="creator-name">notef</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="description">アメコミの世界観そのままの縦スクロールシューティング。</p>
+
+                <div class="info-row">
+                    <div class="row-label">タグ</div>
+                    <div class="tags">
+                        <span class="tag">シューティング</span>
+                        <span class="tag">アメコミ</span>
+                    </div>
+                </div>
+
+                <div class="owner-section">
+                    <div class="owner-label">あなたのゲーム</div>
+                    <div class="owner-actions">
+                        <button class="owner-btn btn-edit">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                            編集
+                        </button>
+                        <a href="#" class="owner-btn btn-lineage">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                                <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                            </svg>
+                            系譜
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- パターンA-2: 長いタイトル（日本語） -->
+        <div class="section-label">長いタイトル（日本語）</div>
+        <div class="panel">
+            <div class="handle"></div>
+            <div class="content">
+                <div class="title-area">
+                    <div class="accent-bar"></div>
+                    <div class="title-content">
+                        <h1 class="title">アメコミ風シューティングゲーム - コミックヒーローブラスト</h1>
+                        <div class="creator">
+                            <div class="creator-avatar">N</div>
+                            <div>
+                                <div class="creator-name">notef</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="description">アメコミの世界観そのままの縦スクロールシューティング。</p>
+
+                <div class="info-row">
+                    <div class="row-label">タグ</div>
+                    <div class="tags">
+                        <span class="tag">シューティング</span>
+                        <span class="tag">アメコミ</span>
+                    </div>
+                </div>
+
+                <div class="owner-section">
+                    <div class="owner-label">あなたのゲーム</div>
+                    <div class="owner-actions">
+                        <button class="owner-btn btn-edit">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                            編集
+                        </button>
+                        <a href="#" class="owner-btn btn-lineage">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                                <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                            </svg>
+                            系譜
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- パターンA-3: 長いタイトル（英語） -->
+        <div class="section-label">長いタイトル（英語）</div>
+        <div class="panel">
+            <div class="handle"></div>
+            <div class="content">
+                <div class="title-area">
+                    <div class="accent-bar"></div>
+                    <div class="title-content">
+                        <h1 class="title">THE ULTIMATE COSMIC ADVENTURE: GALAXY DEFENDERS UNITE</h1>
+                        <div class="creator">
+                            <div class="creator-avatar">N</div>
+                            <div>
+                                <div class="creator-name">notef</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="description">宇宙を舞台にした壮大なアドベンチャーゲーム。</p>
+
+                <div class="info-row">
+                    <div class="row-label">タグ</div>
+                    <div class="tags">
+                        <span class="tag">アドベンチャー</span>
+                        <span class="tag">宇宙</span>
+                    </div>
+                </div>
+
+                <div class="owner-section">
+                    <div class="owner-label">あなたのゲーム</div>
+                    <div class="owner-actions">
+                        <button class="owner-btn btn-edit">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                            編集
+                        </button>
+                        <a href="#" class="owner-btn btn-lineage">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                                <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                            </svg>
+                            系譜
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- パターンA-4: 超長いタイトル -->
+        <div class="section-label">超長いタイトル</div>
+        <div class="panel">
+            <div class="handle"></div>
+            <div class="content">
+                <div class="title-area">
+                    <div class="accent-bar"></div>
+                    <div class="title-content">
+                        <h1 class="title">伝説の勇者と魔王の最終決戦 〜光と闇の狭間で紡がれる壮大な物語〜 完全版</h1>
+                        <div class="creator">
+                            <div class="creator-avatar">N</div>
+                            <div>
+                                <div class="creator-name">notef</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="description">ファンタジーRPGの決定版。</p>
+
+                <div class="info-row">
+                    <div class="row-label">タグ</div>
+                    <div class="tags">
+                        <span class="tag">RPG</span>
+                        <span class="tag">ファンタジー</span>
+                    </div>
+                </div>
+
+                <div class="owner-section">
+                    <div class="owner-label">あなたのゲーム</div>
+                    <div class="owner-actions">
+                        <button class="owner-btn btn-edit">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                            編集
+                        </button>
+                        <a href="#" class="owner-btn btn-lineage">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                                <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                            </svg>
+                            系譜
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr style="margin: 40px 0; border: none; border-top: 1px solid var(--gray-300);">
+
+        <!-- パターンA: アクセントバー左配置 -->
+        <div class="section-label">パターンA: アクセントバー左配置（オーナー表示）</div>
+        <div class="panel">
+            <div class="handle"></div>
+            <div class="content">
+                <div class="title-area">
+                    <div class="accent-bar"></div>
+                    <div class="title-content">
+                        <h1 class="title">COMIC HERO BLAST</h1>
+                        <div class="creator">
+                            <div class="creator-avatar">
+                                <img src="https://lh3.googleusercontent.com/a/default-user=s96-c" alt="" onerror="this.style.display='none'; this.parentElement.textContent='N';">
+                            </div>
+                            <div>
+                                <div class="creator-name">notef</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="description">アメコミの世界観そのままの縦スクロールシューティング。明るくダイナミックな都市上空を舞台に、敵キャラクターたちとの戦闘を繰り広げます。</p>
+
+                <div class="info-row">
+                    <div class="row-label">遊び方</div>
+                    <p class="how-to-play">画面左下のジョイスティックでプレイヤーを操作し、敵を避けながら進みます。右下のFIREボタンで弾を発射して敵を撃破します。</p>
+                </div>
+
+                <div class="info-row">
+                    <div class="row-label">タグ</div>
+                    <div class="tags">
+                        <span class="tag">シューティング</span>
+                        <span class="tag">縦スクロール</span>
+                        <span class="tag">アメコミ</span>
+                        <span class="tag">2D</span>
+                    </div>
+                </div>
+
+                <div class="owner-section">
+                    <div class="owner-label">あなたのゲーム</div>
+                    <div class="owner-actions">
+                        <button class="owner-btn btn-edit">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                            編集
+                        </button>
+                        <a href="#" class="owner-btn btn-lineage">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                                <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                            </svg>
+                            系譜
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- パターンB: 非オーナー表示 -->
+        <div class="section-label">パターンB: 非オーナー表示（編集ボタンなし）</div>
+        <div class="panel">
+            <div class="handle"></div>
+            <div class="content">
+                <div class="title-area">
+                    <div class="accent-bar"></div>
+                    <div class="title-content">
+                        <h1 class="title">COMIC HERO BLAST</h1>
+                        <div class="creator">
+                            <div class="creator-avatar">N</div>
+                            <div>
+                                <div class="creator-name">notef</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="description">アメコミの世界観そのままの縦スクロールシューティング。明るくダイナミックな都市上空を舞台に、敵キャラクターたちとの戦闘を繰り広げます。</p>
+
+                <div class="info-row">
+                    <div class="row-label">遊び方</div>
+                    <p class="how-to-play">画面左下のジョイスティックでプレイヤーを操作し、敵を避けながら進みます。右下のFIREボタンで弾を発射して敵を撃破します。</p>
+                </div>
+
+                <div class="info-row">
+                    <div class="row-label">タグ</div>
+                    <div class="tags">
+                        <span class="tag">シューティング</span>
+                        <span class="tag">縦スクロール</span>
+                        <span class="tag">アメコミ</span>
+                        <span class="tag">2D</span>
+                    </div>
+                </div>
+
+                <div class="visitor-actions">
+                    <a href="#" class="visitor-btn">
+                        <div class="visitor-btn-left">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                                <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                            </svg>
+                            系譜を見る
+                        </div>
+                        <span class="badge">3 リミックス</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- パターンC: アクセントバー上配置 -->
+        <div class="section-label">パターンC: アクセントバー上配置</div>
+        <div class="panel" style="border-top: 4px solid var(--red);">
+            <div class="handle"></div>
+            <div class="content">
+                <div style="margin-bottom: 20px;">
+                    <h1 class="title" style="margin-bottom: 12px;">COMIC HERO BLAST</h1>
+                    <div class="creator">
+                        <div class="creator-avatar">N</div>
+                        <div>
+                            <div class="creator-name">notef</div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="description">アメコミの世界観そのままの縦スクロールシューティング。明るくダイナミックな都市上空を舞台に、敵キャラクターたちとの戦闘を繰り広げます。</p>
+
+                <div class="info-row">
+                    <div class="row-label">遊び方</div>
+                    <p class="how-to-play">画面左下のジョイスティックでプレイヤーを操作し、敵を避けながら進みます。</p>
+                </div>
+
+                <div class="info-row">
+                    <div class="row-label">タグ</div>
+                    <div class="tags">
+                        <span class="tag">シューティング</span>
+                        <span class="tag">縦スクロール</span>
+                        <span class="tag">アメコミ</span>
+                    </div>
+                </div>
+
+                <div class="owner-section">
+                    <div class="owner-label">あなたのゲーム</div>
+                    <div class="owner-actions">
+                        <button class="owner-btn btn-edit">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                            編集
+                        </button>
+                        <a href="#" class="owner-btn btn-lineage">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                                <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                            </svg>
+                            系譜
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- パターンD: 作者を目立たせる -->
+        <div class="section-label">パターンD: 作者を目立たせる</div>
+        <div class="panel">
+            <div class="handle"></div>
+            <div class="content">
+                <!-- 作者を上部に大きく -->
+                <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--gray-100);">
+                    <div class="creator-avatar" style="width: 48px; height: 48px; font-size: 20px;">N</div>
+                    <div>
+                        <div class="creator-name" style="font-size: 16px; margin-bottom: 2px;">notef</div>
+                        <div class="creator-label">Creator</div>
+                    </div>
+                </div>
+
+                <div class="title-area">
+                    <div class="accent-bar"></div>
+                    <div class="title-content">
+                        <h1 class="title">COMIC HERO BLAST</h1>
+                    </div>
+                </div>
+
+                <p class="description">アメコミの世界観そのままの縦スクロールシューティング。明るくダイナミックな都市上空を舞台に、敵キャラクターたちとの戦闘を繰り広げます。</p>
+
+                <div class="info-row">
+                    <div class="row-label">遊び方</div>
+                    <p class="how-to-play">画面左下のジョイスティックでプレイヤーを操作。右下のFIREボタンで敵を撃破。</p>
+                </div>
+
+                <div class="info-row">
+                    <div class="row-label">タグ</div>
+                    <div class="tags">
+                        <span class="tag">シューティング</span>
+                        <span class="tag">縦スクロール</span>
+                        <span class="tag">アメコミ</span>
+                    </div>
+                </div>
+
+                <div class="owner-section">
+                    <div class="owner-label">あなたのゲーム</div>
+                    <div class="owner-actions">
+                        <button class="owner-btn btn-edit">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                            編集
+                        </button>
+                        <a href="#" class="owner-btn btn-lineage">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                                <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                            </svg>
+                            系譜
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

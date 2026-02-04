@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E2E Test Report (Production) - Asset API Modularization</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #059669;
+      border-bottom: 3px solid #059669;
+      padding-bottom: 10px;
+    }
+    .env-badge {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .env-badge span {
+      background: #059669;
+      color: white;
+      padding: 4px 16px;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+    h2 {
+      color: #047857;
+      margin-top: 40px;
+      border-left: 4px solid #059669;
+      padding-left: 12px;
+    }
+    .summary {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .summary h3 {
+      margin-top: 0;
+      color: #059669;
+    }
+    .test-result {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      margin: 4px 0;
+      border-radius: 4px;
+    }
+    .test-result.pass {
+      background: #d1fae5;
+      border-left: 4px solid #059669;
+    }
+    .test-result .icon {
+      font-size: 20px;
+      margin-right: 10px;
+    }
+    .screenshot-section {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .screenshot-section h3 {
+      margin-top: 0;
+      color: #374151;
+    }
+    .screenshot-section img {
+      max-width: 100%;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    .description {
+      color: #6b7280;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    .api-test {
+      background: #1f2937;
+      color: #10b981;
+      padding: 12px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      margin: 10px 0;
+      white-space: pre;
+    }
+    .timestamp {
+      text-align: center;
+      color: #9ca3af;
+      font-size: 12px;
+      margin-top: 40px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th {
+      background: #f9fafb;
+      font-weight: 600;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .badge.pass { background: #d1fae5; color: #065f46; }
+    .badge.redirect { background: #dbeafe; color: #1e40af; }
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <h1>E2E Test Report (Production)</h1>
+  <div class="env-badge">
+    <span>PRODUCTION - v2.dreamcore.gg</span>
+  </div>
+  <p style="text-align: center; color: #6b7280;">Asset API Modularization - Post-Deploy Verification</p>
+
+  <div class="summary">
+    <h3>Test Summary</h3>
+    <table>
+      <tr>
+        <th>Category</th>
+        <th>Tests</th>
+        <th>Status</th>
+      </tr>
+      <tr>
+        <td>API Route Tests (Production)</td>
+        <td>5</td>
+        <td><span class="badge pass">ALL PASSED</span></td>
+      </tr>
+      <tr>
+        <td>E2E Browser Tests (Production)</td>
+        <td>5</td>
+        <td><span class="badge pass">ALL PASSED</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <h2>Production API Tests</h2>
+  <div class="summary">
+    <div class="api-test">=== Production API Tests ===
+
+1. /user-assets CDN redirect:
+   HTTP 302 → https://cdn.dreamcore.gg/user-assets/.../player.png  ✓
+
+2. /user-assets 404 for nonexistent:
+   HTTP 404  ✓
+
+3. /api/assets without auth (should 401):
+   HTTP 401  ✓
+
+4. /api/assets/search without auth (should 401):
+   HTTP 401  ✓
+
+5. Health check /api/config:
+   HTTP 200  ✓</div>
+
+    <table>
+      <tr>
+        <th>Endpoint</th>
+        <th>Expected</th>
+        <th>Actual</th>
+        <th>Status</th>
+      </tr>
+      <tr>
+        <td><code>GET /user-assets/:userId/:alias</code></td>
+        <td>302 → CDN</td>
+        <td>302 → cdn.dreamcore.gg</td>
+        <td><span class="badge redirect">REDIRECT</span></td>
+      </tr>
+      <tr>
+        <td><code>GET /user-assets/.../nonexistent.png</code></td>
+        <td>404</td>
+        <td>404</td>
+        <td><span class="badge pass">PASS</span></td>
+      </tr>
+      <tr>
+        <td><code>GET /api/assets</code> (no auth)</td>
+        <td>401</td>
+        <td>401</td>
+        <td><span class="badge pass">PASS</span></td>
+      </tr>
+      <tr>
+        <td><code>GET /api/assets/search</code> (no auth)</td>
+        <td>401</td>
+        <td>401</td>
+        <td><span class="badge pass">PASS</span></td>
+      </tr>
+      <tr>
+        <td><code>GET /api/config</code></td>
+        <td>200</td>
+        <td>200</td>
+        <td><span class="badge pass">PASS</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <h2>Production Browser E2E Tests</h2>
+
+  <div class="screenshot-section">
+    <h3>1. Login (Production)</h3>
+    <p class="description">Magic Link 認証で本番環境にログイン成功。</p>
+    <div class="test-result pass">
+      <span class="icon">✓</span>
+      <span>Production login successful via v2.dreamcore.gg</span>
+    </div>
+    <img src="01-login.png" alt="Login">
+  </div>
+
+  <div class="screenshot-section">
+    <h3>2. Create Page (Production)</h3>
+    <p class="description">プロジェクト一覧ページが正常に表示される。</p>
+    <div class="test-result pass">
+      <span class="icon">✓</span>
+      <span>Project list loaded from production API</span>
+    </div>
+    <img src="02-create.png" alt="Create Page">
+  </div>
+
+  <div class="screenshot-section">
+    <h3>3. User Assets → CDN Redirect</h3>
+    <p class="description">/user-assets/ へのアクセスが cdn.dreamcore.gg にリダイレクトされ、画像が正常に表示される。</p>
+    <div class="test-result pass">
+      <span class="icon">✓</span>
+      <span>Asset served via CDN (302 redirect working)</span>
+    </div>
+    <img src="03-user-assets-cdn.png" alt="User Assets CDN">
+  </div>
+
+  <div class="screenshot-section">
+    <h3>4. Editor Page</h3>
+    <p class="description">プロジェクトエディターが正常に動作。</p>
+    <div class="test-result pass">
+      <span class="icon">✓</span>
+      <span>Editor loaded with chat UI</span>
+    </div>
+    <img src="04-editor.png" alt="Editor">
+  </div>
+
+  <div class="screenshot-section">
+    <h3>5. Published Game (play.dreamcore.gg)</h3>
+    <p class="description">公開ゲームが play ドメインで正常に動作。</p>
+    <div class="test-result pass">
+      <span class="icon">✓</span>
+      <span>Published game accessible on play domain</span>
+    </div>
+    <img src="05-published-game.png" alt="Published Game">
+  </div>
+
+  <h2>Deployment Info</h2>
+  <div class="summary">
+    <table>
+      <tr>
+        <th>Item</th>
+        <th>Value</th>
+      </tr>
+      <tr>
+        <td>Commit</td>
+        <td><code>c9ddc95</code></td>
+      </tr>
+      <tr>
+        <td>Branch</td>
+        <td>main</td>
+      </tr>
+      <tr>
+        <td>Deploy Target</td>
+        <td>GCE dreamcore-v2 (asia-northeast1-a)</td>
+      </tr>
+      <tr>
+        <td>PM2 Process</td>
+        <td>dreamcore-sandbox (online)</td>
+      </tr>
+      <tr>
+        <td>Production URL</td>
+        <td>https://v2.dreamcore.gg</td>
+      </tr>
+    </table>
+  </div>
+
+  <h2>Conclusion</h2>
+  <div class="summary">
+    <div class="test-result pass">
+      <span class="icon">✓</span>
+      <span><strong>All production tests passed.</strong> Asset API modularization is working correctly in production.</span>
+    </div>
+    <ul style="margin-top: 15px; color: #374151;">
+      <li>CDN redirect: Working (302 → cdn.dreamcore.gg)</li>
+      <li>Authentication: Working (401 for unauthorized)</li>
+      <li>404 handling: Working (nonexistent assets)</li>
+      <li>Editor: Working</li>
+      <li>Published games: Working</li>
+    </ul>
+  </div>
+
+  <p class="timestamp">Generated: 2026-02-04 12:00 JST | Post-Deploy Verification</p>
+</body>
+</html>

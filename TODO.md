@@ -8,6 +8,27 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-04: Asset API モジュール化 (Phase 1) ✅
+
+**詳細:** `.claude/logs/2026-02-04-asset-api-modularization.md`
+
+server/index.js (3,451行) からアセット関連ルートを抽出し、モジュール化:
+
+| 新規ファイル | 内容 |
+|--------------|------|
+| `server/middleware/uploads.js` | Multer アップロード設定 |
+| `server/middleware/assetChecks.js` | アクセス制御ミドルウェア |
+| `server/routes/assetsApi.js` | `/api/assets/*` エンドポイント |
+| `server/routes/assetsPublic.js` | `/user-assets/*`, `/global-assets/*` |
+
+**結果:** index.js から約540行削減、4ファイルに分割
+
+**テスト:** Unit + E2E (本番) 全て PASS
+
+**E2E レポート:** `screenshots/e2e-test-prod/report.html`
+
+---
+
 ### 2026-02-04: 送信ボタン状態表示改善 ✅
 
 **詳細:** `.claude/logs/2026-02-04-login-title-cors-fix.md`

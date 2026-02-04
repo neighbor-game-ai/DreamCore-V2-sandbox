@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>編集ボタン デザインサンプル</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --red: #FF3B30;
+            --red-light: rgba(255, 59, 48, 0.1);
+            --white: #FFFFFF;
+            --black: #000000;
+            --gray-50: #F9FAFB;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-400: #9CA3AF;
+            --gray-500: #6B7280;
+            --gray-600: #4B5563;
+            --gray-700: #374151;
+            --gray-800: #1F2937;
+            --gray-900: #111827;
+            --surface: rgba(0, 0, 0, 0.04);
+            --surface-hover: rgba(0, 0, 0, 0.08);
+            --s-4: 4px;
+            --s-8: 8px;
+            --s-12: 12px;
+            --s-16: 16px;
+            --s-24: 24px;
+            --r-8: 8px;
+            --r-12: 12px;
+            --r-full: 9999px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .sample-container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        h2 {
+            font-size: 14px;
+            color: var(--gray-500);
+            margin-bottom: 12px;
+            padding-left: 4px;
+        }
+
+        /* Panel styles (from game.html) */
+        .panel {
+            background: var(--white);
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 40px;
+        }
+
+        .panel-handle {
+            width: 36px;
+            height: 4px;
+            background: var(--gray-300);
+            border-radius: 2px;
+            margin: 12px auto;
+        }
+
+        .panel-content {
+            padding: 0 var(--s-24) var(--s-24);
+        }
+
+        .info-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: var(--s-8);
+        }
+
+        .info-meta {
+            color: var(--gray-400);
+            font-size: 13px;
+            margin-bottom: var(--s-16);
+        }
+
+        .info-description {
+            color: var(--gray-600);
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: var(--s-24);
+        }
+
+        .info-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: var(--s-8);
+        }
+
+        .info-how-to-play {
+            background: var(--gray-50);
+            padding: var(--s-16);
+            border-radius: var(--r-12);
+            color: var(--gray-700);
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: var(--s-24);
+        }
+
+        .info-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--s-8);
+            margin-bottom: var(--s-24);
+        }
+
+        .info-tag {
+            background: var(--gray-100);
+            color: var(--gray-600);
+            padding: 6px var(--s-12);
+            border-radius: var(--r-full);
+            font-size: 13px;
+        }
+
+        .info-lineage-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--surface);
+            border-radius: var(--r-12);
+            color: var(--gray-700);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.15s;
+        }
+
+        .info-lineage-link:hover {
+            background: var(--surface-hover);
+        }
+
+        .info-lineage-link svg {
+            color: var(--gray-500);
+        }
+
+        /* ========================================
+           編集ボタン デザイン案
+           ======================================== */
+
+        /* 案A: プライマリボタン（目立つ） */
+        .edit-btn-primary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 14px 20px;
+            background: var(--gray-900);
+            color: var(--white);
+            border: none;
+            border-radius: var(--r-12);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-bottom: var(--s-12);
+        }
+
+        .edit-btn-primary:hover {
+            background: var(--gray-800);
+        }
+
+        .edit-btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        /* 案B: セカンダリボタン（控えめ） */
+        .edit-btn-secondary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 14px 20px;
+            background: var(--surface);
+            color: var(--gray-700);
+            border: none;
+            border-radius: var(--r-12);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-bottom: var(--s-12);
+        }
+
+        .edit-btn-secondary:hover {
+            background: var(--surface-hover);
+        }
+
+        /* 案C: アウトラインボタン */
+        .edit-btn-outline {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 13px 20px;
+            background: transparent;
+            color: var(--gray-700);
+            border: 1.5px solid var(--gray-200);
+            border-radius: var(--r-12);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-bottom: var(--s-12);
+        }
+
+        .edit-btn-outline:hover {
+            border-color: var(--gray-300);
+            background: var(--gray-50);
+        }
+
+        /* 案D: 系譜リンクと同じスタイル */
+        .edit-btn-link-style {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--surface);
+            border-radius: var(--r-12);
+            color: var(--gray-700);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.15s;
+            margin-bottom: var(--s-12);
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+        }
+
+        .edit-btn-link-style:hover {
+            background: var(--surface-hover);
+        }
+
+        .edit-btn-link-style svg {
+            color: var(--gray-500);
+        }
+
+        /* 案E: アクセントカラー */
+        .edit-btn-accent {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 14px 20px;
+            background: var(--red);
+            color: var(--white);
+            border: none;
+            border-radius: var(--r-12);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-bottom: var(--s-12);
+        }
+
+        .edit-btn-accent:hover {
+            background: #E53529;
+        }
+
+        /* オーナーセクション（案F: セクションとしてまとめる） */
+        .owner-section {
+            background: var(--gray-50);
+            border-radius: var(--r-12);
+            padding: var(--s-16);
+            margin-bottom: var(--s-16);
+        }
+
+        .owner-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: var(--s-12);
+        }
+
+        .owner-actions {
+            display: flex;
+            gap: var(--s-8);
+        }
+
+        .owner-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 16px;
+            background: var(--white);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--r-8);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .owner-btn:hover {
+            border-color: var(--gray-300);
+            background: var(--gray-50);
+        }
+
+        .owner-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* ========================================
+           上部バー スタイル（game.html から）
+           ======================================== */
+
+        .header-sample {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .back-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--r-full);
+            background: var(--surface);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--gray-700);
+            transition: all 0.15s;
+        }
+
+        .back-btn:hover {
+            background: var(--surface-hover);
+        }
+
+        .action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--r-full);
+            background: var(--surface);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--gray-700);
+            transition: all 0.15s;
+        }
+
+        .action-btn:hover {
+            background: var(--surface-hover);
+        }
+
+        .action-btn:active {
+            transform: scale(0.96);
+        }
+
+        /* Remix Button - テキスト付き */
+        .remix-btn {
+            width: auto;
+            padding: 0 16px;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        /* 編集ボタン（アイコンのみ）- 通常と同じ */
+        .edit-action-btn {
+            /* action-btn と同じ */
+        }
+
+        /* 編集ボタン（テキスト付き）- Remix と同じスタイル */
+        .edit-btn-text {
+            width: auto;
+            padding: 0 16px;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        /* オーナー専用 Edit - 少し目立たせる */
+        .owner-edit {
+            background: var(--gray-100);
+        }
+
+        .owner-edit:hover {
+            background: var(--gray-200);
+        }
+
+        /* 編集ボタン（黒背景で目立つ） */
+        .edit-btn-dark {
+            width: auto;
+            padding: 0 16px;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            background: var(--gray-900);
+            color: var(--white);
+        }
+
+        .edit-btn-dark:hover {
+            background: var(--gray-800);
+        }
+    </style>
+</head>
+<body>
+    <div class="sample-container">
+
+        <!-- ========================================
+             上部バー パターン
+             ======================================== -->
+
+        <h2>上部バー案G: Remix の右に追加（アイコンのみ）</h2>
+        <div class="header-sample">
+            <button class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <div class="action-buttons">
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                </button>
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </button>
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                        <polyline points="16 6 12 2 8 6"/>
+                        <line x1="12" y1="2" x2="12" y2="15"/>
+                    </svg>
+                </button>
+                <button class="action-btn remix-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="16 3 21 3 21 8"/>
+                        <line x1="4" y1="20" x2="21" y2="3"/>
+                        <polyline points="21 16 21 21 16 21"/>
+                        <line x1="15" y1="15" x2="21" y2="21"/>
+                        <line x1="4" y1="4" x2="9" y2="9"/>
+                    </svg>
+                    <span>Remix</span>
+                </button>
+                <!-- 編集ボタン（アイコンのみ） -->
+                <button class="action-btn edit-action-btn" title="編集">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                </button>
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <h2>上部バー案H: テキスト付き「Edit」</h2>
+        <div class="header-sample">
+            <button class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <div class="action-buttons">
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                </button>
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </button>
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                        <polyline points="16 6 12 2 8 6"/>
+                        <line x1="12" y1="2" x2="12" y2="15"/>
+                    </svg>
+                </button>
+                <button class="action-btn remix-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="16 3 21 3 21 8"/>
+                        <line x1="4" y1="20" x2="21" y2="3"/>
+                        <polyline points="21 16 21 21 16 21"/>
+                        <line x1="15" y1="15" x2="21" y2="21"/>
+                        <line x1="4" y1="4" x2="9" y2="9"/>
+                    </svg>
+                    <span>Remix</span>
+                </button>
+                <!-- 編集ボタン（テキスト付き） -->
+                <button class="action-btn edit-btn-text">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    <span>Edit</span>
+                </button>
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <h2>上部バー案I: Remix を Edit に置き換え（オーナーのみ）</h2>
+        <div class="header-sample">
+            <button class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <div class="action-buttons">
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                </button>
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </button>
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                        <polyline points="16 6 12 2 8 6"/>
+                        <line x1="12" y1="2" x2="12" y2="15"/>
+                    </svg>
+                </button>
+                <!-- オーナー時は Edit を表示（Remix の代わり） -->
+                <button class="action-btn edit-btn-text owner-edit">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    <span>Edit</span>
+                </button>
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <h2>上部バー案J: 黒背景で目立たせる</h2>
+        <div class="header-sample">
+            <button class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <div class="action-buttons">
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                </button>
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </button>
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                        <polyline points="16 6 12 2 8 6"/>
+                        <line x1="12" y1="2" x2="12" y2="15"/>
+                    </svg>
+                </button>
+                <button class="action-btn remix-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="16 3 21 3 21 8"/>
+                        <line x1="4" y1="20" x2="21" y2="3"/>
+                        <polyline points="21 16 21 21 16 21"/>
+                        <line x1="15" y1="15" x2="21" y2="21"/>
+                        <line x1="4" y1="4" x2="9" y2="9"/>
+                    </svg>
+                    <span>Remix</span>
+                </button>
+                <!-- 編集ボタン（黒背景で目立つ） -->
+                <button class="action-btn edit-btn-dark">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    <span>Edit</span>
+                </button>
+                <button class="action-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <hr style="margin: 40px 0; border: none; border-top: 1px solid var(--gray-200);">
+
+        <!-- ========================================
+             Information 内 パターン（既存）
+             ======================================== -->
+
+        <!-- 案A: プライマリボタン -->
+        <h2>案A: プライマリ（目立つ）</h2>
+        <div class="panel">
+            <div class="panel-handle"></div>
+            <div class="panel-content">
+                <h1 class="info-title">COMIC HERO BLAST</h1>
+                <div class="info-meta">45 plays</div>
+                <p class="info-description">アメコミの世界観そのままの縦スクロールシューティング。</p>
+
+                <div class="info-section-title">タグ</div>
+                <div class="info-tags">
+                    <span class="info-tag">シューティング</span>
+                    <span class="info-tag">アメコミ</span>
+                    <span class="info-tag">2D</span>
+                </div>
+
+                <!-- 編集ボタン（オーナーのみ表示） -->
+                <button class="edit-btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    編集する
+                </button>
+
+                <a href="#" class="info-lineage-link">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                        <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                        <line x1="12" y1="14" x2="6" y2="16"/><line x1="12" y1="14" x2="18" y2="16"/>
+                    </svg>
+                    <span>系譜を見る (3 リミックス)</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 案B: セカンダリボタン -->
+        <h2>案B: セカンダリ（控えめ）</h2>
+        <div class="panel">
+            <div class="panel-handle"></div>
+            <div class="panel-content">
+                <h1 class="info-title">COMIC HERO BLAST</h1>
+                <div class="info-meta">45 plays</div>
+                <p class="info-description">アメコミの世界観そのままの縦スクロールシューティング。</p>
+
+                <div class="info-section-title">タグ</div>
+                <div class="info-tags">
+                    <span class="info-tag">シューティング</span>
+                    <span class="info-tag">アメコミ</span>
+                </div>
+
+                <button class="edit-btn-secondary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    編集する
+                </button>
+
+                <a href="#" class="info-lineage-link">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                        <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                        <line x1="12" y1="14" x2="6" y2="16"/><line x1="12" y1="14" x2="18" y2="16"/>
+                    </svg>
+                    <span>系譜を見る (3 リミックス)</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 案C: アウトラインボタン -->
+        <h2>案C: アウトライン</h2>
+        <div class="panel">
+            <div class="panel-handle"></div>
+            <div class="panel-content">
+                <h1 class="info-title">COMIC HERO BLAST</h1>
+                <div class="info-meta">45 plays</div>
+                <p class="info-description">アメコミの世界観そのままの縦スクロールシューティング。</p>
+
+                <div class="info-section-title">タグ</div>
+                <div class="info-tags">
+                    <span class="info-tag">シューティング</span>
+                    <span class="info-tag">アメコミ</span>
+                </div>
+
+                <button class="edit-btn-outline">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    編集する
+                </button>
+
+                <a href="#" class="info-lineage-link">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                        <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                        <line x1="12" y1="14" x2="6" y2="16"/><line x1="12" y1="14" x2="18" y2="16"/>
+                    </svg>
+                    <span>系譜を見る (3 リミックス)</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 案D: リンクスタイル（系譜と統一） -->
+        <h2>案D: リンクスタイル（系譜と統一）</h2>
+        <div class="panel">
+            <div class="panel-handle"></div>
+            <div class="panel-content">
+                <h1 class="info-title">COMIC HERO BLAST</h1>
+                <div class="info-meta">45 plays</div>
+                <p class="info-description">アメコミの世界観そのままの縦スクロールシューティング。</p>
+
+                <div class="info-section-title">タグ</div>
+                <div class="info-tags">
+                    <span class="info-tag">シューティング</span>
+                    <span class="info-tag">アメコミ</span>
+                </div>
+
+                <button class="edit-btn-link-style">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    <span>このゲームを編集</span>
+                </button>
+
+                <a href="#" class="info-lineage-link">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                        <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                        <line x1="12" y1="14" x2="6" y2="16"/><line x1="12" y1="14" x2="18" y2="16"/>
+                    </svg>
+                    <span>系譜を見る (3 リミックス)</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 案E: アクセントカラー -->
+        <h2>案E: アクセントカラー（赤）</h2>
+        <div class="panel">
+            <div class="panel-handle"></div>
+            <div class="panel-content">
+                <h1 class="info-title">COMIC HERO BLAST</h1>
+                <div class="info-meta">45 plays</div>
+                <p class="info-description">アメコミの世界観そのままの縦スクロールシューティング。</p>
+
+                <div class="info-section-title">タグ</div>
+                <div class="info-tags">
+                    <span class="info-tag">シューティング</span>
+                    <span class="info-tag">アメコミ</span>
+                </div>
+
+                <button class="edit-btn-accent">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    編集する
+                </button>
+
+                <a href="#" class="info-lineage-link">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                        <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                        <line x1="12" y1="14" x2="6" y2="16"/><line x1="12" y1="14" x2="18" y2="16"/>
+                    </svg>
+                    <span>系譜を見る (3 リミックス)</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 案F: オーナーセクション -->
+        <h2>案F: オーナーセクション（複数アクション）</h2>
+        <div class="panel">
+            <div class="panel-handle"></div>
+            <div class="panel-content">
+                <h1 class="info-title">COMIC HERO BLAST</h1>
+                <div class="info-meta">45 plays</div>
+                <p class="info-description">アメコミの世界観そのままの縦スクロールシューティング。</p>
+
+                <div class="info-section-title">タグ</div>
+                <div class="info-tags">
+                    <span class="info-tag">シューティング</span>
+                    <span class="info-tag">アメコミ</span>
+                </div>
+
+                <!-- オーナー専用セクション -->
+                <div class="owner-section">
+                    <div class="owner-section-title">あなたのゲーム</div>
+                    <div class="owner-actions">
+                        <button class="owner-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                            編集
+                        </button>
+                        <button class="owner-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                            </svg>
+                            設定
+                        </button>
+                    </div>
+                </div>
+
+                <a href="#" class="info-lineage-link">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                        <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                        <line x1="12" y1="14" x2="6" y2="16"/><line x1="12" y1="14" x2="18" y2="16"/>
+                    </svg>
+                    <span>系譜を見る (3 リミックス)</span>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

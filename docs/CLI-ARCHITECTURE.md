@@ -193,3 +193,33 @@ ZIP ルートに配置するとサムネイルとしてアップロード。
 users/{user_id}/projects/{public_id}/thumbnail.webp
 ```
 
+## Future: Remix Support
+
+### CLI から Remix
+
+CLI からゲーム URL を指定して Remix する機能（将来実装予定）:
+
+```bash
+# 例: ゲームURLを指定してRemix
+# Skills が自動でダウンロード → 新プロジェクト作成 → デプロイ
+```
+
+**フロー:**
+1. ユーザーが Remix したいゲームの URL を Claude Code に伝える
+2. Skills が `/api/games/:id/remix` 相当の処理を実行
+3. 元ゲームのファイルをダウンロード → 新プロジェクトとして展開
+4. `dreamcore.json` に `remixedFrom` フィールドを追加（系譜追跡用）
+
+### Web UI から CLI ゲームを Remix
+
+CLI でアップロードしたゲームを Web UI (`/game/:id`) から Remix する機能:
+
+**現状:**
+- Play で作成したゲームのみ Remix 可能
+- CLI ゲームは `is_cli_game=true` だが Remix ボタンが機能しない
+
+**将来:**
+- CLI ゲームも `/api/games/:id/remix` で Remix 可能に
+- Play と CLI のゲームが相互に Remix できるエコシステム
+- 系譜（lineage）も統合表示
+

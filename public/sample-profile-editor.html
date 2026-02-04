@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Editor Modal - Preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/modules/profile.css">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #F5F5F5;
+            min-height: 100vh;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .preview-header {
+            max-width: 600px;
+            margin: 0 auto 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 16px;
+        }
+
+        .preview-header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .preview-header p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .preview-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .preview-btn {
+            padding: 12px 20px;
+            background: #171717;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .preview-btn:hover {
+            background: #404040;
+        }
+
+        .preview-btn.secondary {
+            background: #E5E5E5;
+            color: #525252;
+        }
+
+        .preview-btn.secondary:hover {
+            background: #D4D4D4;
+        }
+
+        /* Force modal to show for preview */
+        .profile-modal-backdrop.preview-mode {
+            display: flex !important;
+            opacity: 1;
+            position: relative;
+            padding: 20px;
+            background: transparent;
+            backdrop-filter: none;
+        }
+
+        .profile-modal-backdrop.preview-mode .profile-modal {
+            transform: none;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+
+        /* Mobile preview container */
+        .mobile-preview {
+            max-width: 390px;
+            margin: 20px auto;
+            border: 8px solid #1a1a1a;
+            border-radius: 40px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .mobile-notch {
+            height: 30px;
+            background: #1a1a1a;
+            border-radius: 0 0 20px 20px;
+            margin: 0 60px;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-header">
+        <h1>Profile Editor Modal - Preview</h1>
+        <p>DreamCore V2 - Nintendo x Kashiwa Sato Design</p>
+        <div class="preview-buttons">
+            <button class="preview-btn" onclick="showDesktopPreview()">Desktop Preview</button>
+            <button class="preview-btn secondary" onclick="showMobilePreview()">Mobile Preview</button>
+        </div>
+    </div>
+
+    <!-- Desktop Preview -->
+    <div id="desktopPreview">
+        <div class="profile-modal-backdrop preview-mode" id="profileEditModal">
+            <div class="profile-modal">
+                <div class="profile-modal-header">
+                    <h2 class="profile-modal-title">プロフィール編集</h2>
+                    <button class="profile-modal-close" id="profileCloseBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="profile-modal-body">
+                    <div id="profileError" class="profile-error-message" style="display: none;">
+                        エラーメッセージがここに表示されます
+                    </div>
+
+                    <!-- Avatar Section -->
+                    <div class="profile-avatar-section">
+                        <div class="profile-avatar-preview" id="avatarPreview">
+                            <img src="https://lh3.googleusercontent.com/a/ACg8ocLrrKjwk40jm-qOeNqH1xsXsqXr-Jk9ddVSmEeCeoJN8CJuLA=s96-c" alt="Avatar">
+                        </div>
+                        <button class="profile-avatar-upload-btn" id="avatarUploadBtn">画像を変更</button>
+                    </div>
+
+                    <!-- Display Name -->
+                    <div class="profile-form-group">
+                        <label class="profile-form-label" for="editDisplayName">表示名</label>
+                        <input type="text" id="editDisplayName" class="profile-form-input" placeholder="ユーザー名" maxlength="50" value="notef">
+                        <div class="profile-form-hint">最大50文字</div>
+                    </div>
+
+                    <!-- Bio -->
+                    <div class="profile-form-group">
+                        <label class="profile-form-label" for="editBio">自己紹介</label>
+                        <textarea id="editBio" class="profile-form-input profile-form-textarea" placeholder="自己紹介を入力..." maxlength="160">ゲームクリエイター。AIでゲームを作ってます。</textarea>
+                        <div class="profile-form-hint"><span id="bioCharCount">28</span>/160文字</div>
+                    </div>
+
+                    <!-- Social Links -->
+                    <div class="profile-social-section">
+                        <div class="profile-social-title">SNSリンク</div>
+                        <div class="profile-social-grid" id="socialLinksGrid">
+                            <div class="profile-social-item">
+                                <div class="profile-social-icon">X</div>
+                                <input type="text" class="profile-social-input" id="social-x"
+                                       placeholder="x.com/username"
+                                       value="x.com/notf">
+                            </div>
+                            <div class="profile-social-item">
+                                <div class="profile-social-icon">YT</div>
+                                <input type="text" class="profile-social-input" id="social-youtube"
+                                       placeholder="youtube.com/@channel"
+                                       value="">
+                            </div>
+                            <div class="profile-social-item">
+                                <div class="profile-social-icon">GH</div>
+                                <input type="text" class="profile-social-input" id="social-github"
+                                       placeholder="github.com/username"
+                                       value="github.com/notef">
+                            </div>
+                            <div class="profile-social-item">
+                                <div class="profile-social-icon">TT</div>
+                                <input type="text" class="profile-social-input" id="social-tiktok"
+                                       placeholder="tiktok.com/@username"
+                                       value="">
+                            </div>
+                            <div class="profile-social-item">
+                                <div class="profile-social-icon">IG</div>
+                                <input type="text" class="profile-social-input" id="social-instagram"
+                                       placeholder="instagram.com/username"
+                                       value="">
+                            </div>
+                        </div>
+
+                        <!-- Custom Links -->
+                        <div class="profile-custom-links" id="customLinksContainer">
+                            <div class="profile-custom-link-item" data-index="0">
+                                <input type="text" class="profile-custom-link-label" placeholder="ラベル" value="Blog" maxlength="30">
+                                <input type="text" class="profile-custom-link-url" placeholder="https://..." value="https://example.com/blog">
+                                <button class="profile-custom-link-remove" data-index="0">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <button class="profile-add-custom-link" id="addCustomLinkBtn">+ カスタムリンクを追加</button>
+                    </div>
+                </div>
+
+                <div class="profile-modal-footer">
+                    <button class="profile-btn profile-btn-cancel" id="profileCancelBtn">キャンセル</button>
+                    <button class="profile-btn profile-btn-save" id="profileSaveBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Preview -->
+    <div id="mobilePreview" style="display: none;">
+        <div class="mobile-preview">
+            <div class="mobile-notch"></div>
+            <div class="profile-modal-backdrop preview-mode" style="padding: 0;">
+                <div class="profile-modal" style="border-radius: 0; max-height: 700px; height: 700px;">
+                    <div class="profile-modal-header">
+                        <h2 class="profile-modal-title">プロフィール編集</h2>
+                        <button class="profile-modal-close">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="profile-modal-body" style="flex: 1; overflow-y: auto;">
+                        <!-- Avatar Section -->
+                        <div class="profile-avatar-section">
+                            <div class="profile-avatar-preview">
+                                <img src="https://lh3.googleusercontent.com/a/ACg8ocLrrKjwk40jm-qOeNqH1xsXsqXr-Jk9ddVSmEeCeoJN8CJuLA=s96-c" alt="Avatar">
+                            </div>
+                            <button class="profile-avatar-upload-btn">画像を変更</button>
+                        </div>
+
+                        <!-- Display Name -->
+                        <div class="profile-form-group">
+                            <label class="profile-form-label">表示名</label>
+                            <input type="text" class="profile-form-input" placeholder="ユーザー名" value="notef">
+                            <div class="profile-form-hint">最大50文字</div>
+                        </div>
+
+                        <!-- Bio -->
+                        <div class="profile-form-group">
+                            <label class="profile-form-label">自己紹介</label>
+                            <textarea class="profile-form-input profile-form-textarea" placeholder="自己紹介を入力...">ゲームクリエイター</textarea>
+                            <div class="profile-form-hint">28/160文字</div>
+                        </div>
+
+                        <!-- Social Links -->
+                        <div class="profile-social-section">
+                            <div class="profile-social-title">SNSリンク</div>
+                            <div class="profile-social-grid">
+                                <div class="profile-social-item">
+                                    <div class="profile-social-icon">X</div>
+                                    <input type="text" class="profile-social-input" placeholder="x.com/username" value="x.com/notf">
+                                </div>
+                                <div class="profile-social-item">
+                                    <div class="profile-social-icon">GH</div>
+                                    <input type="text" class="profile-social-input" placeholder="github.com/username">
+                                </div>
+                            </div>
+                            <button class="profile-add-custom-link">+ カスタムリンクを追加</button>
+                        </div>
+                    </div>
+
+                    <div class="profile-modal-footer" style="border-radius: 0;">
+                        <button class="profile-btn profile-btn-cancel">キャンセル</button>
+                        <button class="profile-btn profile-btn-save">保存</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showDesktopPreview() {
+            document.getElementById('desktopPreview').style.display = 'block';
+            document.getElementById('mobilePreview').style.display = 'none';
+        }
+
+        function showMobilePreview() {
+            document.getElementById('desktopPreview').style.display = 'none';
+            document.getElementById('mobilePreview').style.display = 'block';
+        }
+
+        // Bio character count
+        document.getElementById('editBio')?.addEventListener('input', function() {
+            document.getElementById('bioCharCount').textContent = this.value.length;
+        });
+
+        // Show error message demo
+        function showError() {
+            const errorDiv = document.getElementById('profileError');
+            errorDiv.textContent = '表示名は50文字以内にしてください';
+            errorDiv.style.display = 'block';
+        }
+
+        // Loading state demo
+        function showLoading() {
+            const saveBtn = document.getElementById('profileSaveBtn');
+            saveBtn.classList.add('loading');
+            saveBtn.disabled = true;
+            setTimeout(() => {
+                saveBtn.classList.remove('loading');
+                saveBtn.disabled = false;
+            }, 2000);
+        }
+
+        document.getElementById('profileSaveBtn')?.addEventListener('click', showLoading);
+    </script>
+</body>
+</html>

@@ -19,7 +19,7 @@ const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 
 /**
  * GET /@:username - Profile page by username (e.g., /@notef)
- * Redirects to /u/{public_id} for canonical URL
+ * Serves profile page directly (no redirect)
  */
 router.get('/@:username', async (req, res) => {
   const { username } = req.params;
@@ -36,18 +36,17 @@ router.get('/@:username', async (req, res) => {
   }
 
   try {
-    // Look up user by username
+    // Verify user exists
     const user = await db.getUserByUsername(normalizedUsername);
 
     if (!user) {
       return res.status(404).send('User not found');
     }
 
-    // Redirect to canonical URL with public_id
-    const redirectUrl = `/u/${user.public_id}${req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''}`;
-    return res.redirect(301, redirectUrl);
+    // Serve user.html directly (frontend will fetch data via API)
+    return res.sendFile(path.join(__dirname, '../../../public/user.html'));
   } catch (err) {
-    console.error('GET /@/:username error:', err);
+    console.error('GET /@:username error:', err);
     return res.status(500).send('Internal server error');
   }
 });

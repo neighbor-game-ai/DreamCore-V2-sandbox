@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Information Panel - 任天堂 × 佐藤可士和</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Nintendo Red */
+            --red: #FF3B30;
+            --red-hover: #E53529;
+
+            /* Monochrome - 佐藤可士和の極限ミニマル */
+            --white: #FFFFFF;
+            --black: #000000;
+            --gray-50: #FAFAFA;
+            --gray-100: #F5F5F5;
+            --gray-200: #EEEEEE;
+            --gray-300: #E0E0E0;
+            --gray-400: #BDBDBD;
+            --gray-500: #9E9E9E;
+            --gray-600: #757575;
+            --gray-700: #616161;
+            --gray-800: #424242;
+            --gray-900: #212121;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #E8E8E8;
+            min-height: 100vh;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .sample-container {
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 16px;
+            padding-left: 4px;
+        }
+
+        /* ========================================
+           案1: Ultra Minimal（佐藤可士和スタイル）
+           余白で語る。最小限の要素。
+           ======================================== */
+
+        .panel-v1 {
+            background: var(--white);
+            border-radius: 24px;
+            overflow: hidden;
+            margin-bottom: 48px;
+        }
+
+        .panel-v1 .handle {
+            width: 36px;
+            height: 4px;
+            background: var(--gray-300);
+            border-radius: 2px;
+            margin: 14px auto 0;
+        }
+
+        .panel-v1 .content {
+            padding: 32px 28px 36px;
+        }
+
+        .panel-v1 .title {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--black);
+            letter-spacing: -0.02em;
+            line-height: 1.15;
+            margin-bottom: 8px;
+        }
+
+        .panel-v1 .plays {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-400);
+            margin-bottom: 28px;
+        }
+
+        .panel-v1 .description {
+            font-size: 15px;
+            color: var(--gray-600);
+            line-height: 1.7;
+            margin-bottom: 32px;
+        }
+
+        .panel-v1 .section-title {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 12px;
+        }
+
+        .panel-v1 .how-to-play {
+            font-size: 14px;
+            color: var(--gray-700);
+            line-height: 1.7;
+            padding: 20px;
+            background: var(--gray-50);
+            border-radius: 12px;
+            margin-bottom: 28px;
+        }
+
+        .panel-v1 .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 32px;
+        }
+
+        .panel-v1 .tag {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-600);
+            padding: 8px 14px;
+            background: var(--gray-100);
+            border-radius: 100px;
+        }
+
+        /* オーナーアクション */
+        .panel-v1 .owner-action {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: var(--black);
+            color: var(--white);
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .panel-v1 .owner-action:hover {
+            background: var(--gray-800);
+        }
+
+        .panel-v1 .owner-action svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .panel-v1 .link-action {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .panel-v1 .link-action:hover {
+            background: var(--gray-200);
+        }
+
+        .panel-v1 .link-action svg {
+            width: 20px;
+            height: 20px;
+            color: var(--gray-500);
+        }
+
+        .panel-v1 .link-action .badge {
+            margin-left: auto;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--gray-400);
+        }
+
+
+        /* ========================================
+           案2: Card Stack（任天堂の遊び心）
+           情報をカードで整理。視覚的階層。
+           ======================================== */
+
+        .panel-v2 {
+            background: var(--white);
+            border-radius: 24px;
+            overflow: hidden;
+            margin-bottom: 48px;
+        }
+
+        .panel-v2 .handle {
+            width: 36px;
+            height: 4px;
+            background: var(--gray-300);
+            border-radius: 2px;
+            margin: 14px auto 0;
+        }
+
+        .panel-v2 .content {
+            padding: 24px 20px 28px;
+        }
+
+        .panel-v2 .header-card {
+            background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-800) 100%);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 12px;
+            color: var(--white);
+        }
+
+        .panel-v2 .title {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            margin-bottom: 8px;
+        }
+
+        .panel-v2 .meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .panel-v2 .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .panel-v2 .meta-item svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .panel-v2 .info-card {
+            background: var(--gray-50);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 12px;
+        }
+
+        .panel-v2 .card-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 10px;
+        }
+
+        .panel-v2 .card-text {
+            font-size: 14px;
+            color: var(--gray-700);
+            line-height: 1.65;
+        }
+
+        .panel-v2 .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .panel-v2 .tag {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-600);
+            padding: 8px 14px;
+            background: var(--white);
+            border-radius: 100px;
+            border: 1px solid var(--gray-200);
+        }
+
+        .panel-v2 .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .panel-v2 .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            text-decoration: none;
+        }
+
+        .panel-v2 .action-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .panel-v2 .action-primary {
+            background: var(--black);
+            color: var(--white);
+        }
+
+        .panel-v2 .action-primary:hover {
+            background: var(--gray-800);
+        }
+
+        .panel-v2 .action-secondary {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        .panel-v2 .action-secondary:hover {
+            background: var(--gray-200);
+        }
+
+
+        /* ========================================
+           案3: Nintendo Switch インスパイア
+           赤いアクセント。Joy-Conを想起。
+           ======================================== */
+
+        .panel-v3 {
+            background: var(--white);
+            border-radius: 24px;
+            overflow: hidden;
+            margin-bottom: 48px;
+            border: 3px solid var(--gray-100);
+        }
+
+        .panel-v3 .handle {
+            width: 36px;
+            height: 4px;
+            background: var(--gray-300);
+            border-radius: 2px;
+            margin: 14px auto 0;
+        }
+
+        .panel-v3 .content {
+            padding: 28px 24px 32px;
+        }
+
+        .panel-v3 .accent-bar {
+            width: 4px;
+            height: 32px;
+            background: var(--red);
+            border-radius: 2px;
+            margin-bottom: 20px;
+        }
+
+        .panel-v3 .title {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--black);
+            letter-spacing: -0.02em;
+            line-height: 1.15;
+            margin-bottom: 6px;
+        }
+
+        .panel-v3 .plays {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-400);
+            margin-bottom: 20px;
+        }
+
+        .panel-v3 .description {
+            font-size: 15px;
+            color: var(--gray-600);
+            line-height: 1.7;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .panel-v3 .info-row {
+            margin-bottom: 20px;
+        }
+
+        .panel-v3 .row-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--red);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 10px;
+        }
+
+        .panel-v3 .how-to-play {
+            font-size: 14px;
+            color: var(--gray-700);
+            line-height: 1.7;
+        }
+
+        .panel-v3 .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .panel-v3 .tag {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-700);
+            padding: 8px 14px;
+            background: var(--gray-100);
+            border-radius: 8px;
+        }
+
+        .panel-v3 .divider {
+            height: 1px;
+            background: var(--gray-100);
+            margin: 24px 0;
+        }
+
+        .panel-v3 .owner-section {
+            background: var(--gray-50);
+            margin: 0 -24px -32px;
+            padding: 20px 24px 28px;
+        }
+
+        .panel-v3 .owner-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 12px;
+        }
+
+        .panel-v3 .owner-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .panel-v3 .owner-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .panel-v3 .owner-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .panel-v3 .btn-edit {
+            background: var(--red);
+            color: var(--white);
+        }
+
+        .panel-v3 .btn-edit:hover {
+            background: var(--red-hover);
+        }
+
+        .panel-v3 .btn-lineage {
+            background: var(--white);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-200);
+        }
+
+        .panel-v3 .btn-lineage:hover {
+            background: var(--gray-100);
+        }
+
+
+        /* ========================================
+           案4: Floating Labels（浮遊するラベル）
+           空間を活かした軽やかなデザイン
+           ======================================== */
+
+        .panel-v4 {
+            background: var(--white);
+            border-radius: 28px;
+            overflow: hidden;
+            margin-bottom: 48px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+        }
+
+        .panel-v4 .handle {
+            width: 40px;
+            height: 5px;
+            background: var(--gray-200);
+            border-radius: 3px;
+            margin: 16px auto 0;
+        }
+
+        .panel-v4 .content {
+            padding: 36px 28px 40px;
+        }
+
+        .panel-v4 .floating-label {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--white);
+            background: var(--black);
+            padding: 6px 12px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 16px;
+        }
+
+        .panel-v4 .title {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--black);
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            margin-bottom: 24px;
+        }
+
+        .panel-v4 .stats {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 28px;
+            padding-bottom: 28px;
+            border-bottom: 2px solid var(--gray-100);
+        }
+
+        .panel-v4 .stat {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-v4 .stat-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--black);
+            letter-spacing: -0.02em;
+        }
+
+        .panel-v4 .stat-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .panel-v4 .section {
+            margin-bottom: 28px;
+        }
+
+        .panel-v4 .section:last-of-type {
+            margin-bottom: 32px;
+        }
+
+        .panel-v4 .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--gray-400);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-v4 .section-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--gray-200);
+        }
+
+        .panel-v4 .description {
+            font-size: 15px;
+            color: var(--gray-600);
+            line-height: 1.75;
+        }
+
+        .panel-v4 .how-to-play {
+            font-size: 14px;
+            color: var(--gray-700);
+            line-height: 1.7;
+            padding: 20px 24px;
+            background: var(--gray-50);
+            border-radius: 16px;
+            border-left: 3px solid var(--black);
+        }
+
+        .panel-v4 .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .panel-v4 .tag {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--black);
+            padding: 10px 16px;
+            background: var(--gray-100);
+            border-radius: 10px;
+        }
+
+        .panel-v4 .action-area {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .panel-v4 .action-main {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 18px 24px;
+            background: var(--black);
+            color: var(--white);
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .panel-v4 .action-main:hover {
+            background: var(--gray-800);
+            transform: translateY(-1px);
+        }
+
+        .panel-v4 .action-main svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .panel-v4 .action-sub {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: var(--gray-50);
+            color: var(--gray-700);
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .panel-v4 .action-sub:hover {
+            background: var(--gray-100);
+        }
+
+        .panel-v4 .action-sub svg {
+            width: 18px;
+            height: 18px;
+            color: var(--gray-400);
+        }
+
+        .panel-v4 .action-sub-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="sample-container">
+
+        <!-- 案1: Ultra Minimal -->
+        <div class="section-label">案1: Ultra Minimal（佐藤可士和）</div>
+        <div class="panel-v1">
+            <div class="handle"></div>
+            <div class="content">
+                <h1 class="title">COMIC HERO BLAST</h1>
+                <div class="plays">45 plays</div>
+
+                <p class="description">アメコミの世界観そのままの縦スクロールシューティング。明るくダイナミックな都市上空を舞台に、敵キャラクターたちとの戦闘を繰り広げます。</p>
+
+                <div class="section-title">遊び方</div>
+                <div class="how-to-play">画面左下のジョイスティックでプレイヤーを操作し、敵を避けながら進みます。右下のFIREボタンで弾を発射して敵を撃破します。</div>
+
+                <div class="section-title">タグ</div>
+                <div class="tags">
+                    <span class="tag">シューティング</span>
+                    <span class="tag">縦スクロール</span>
+                    <span class="tag">アメコミ</span>
+                    <span class="tag">2D</span>
+                </div>
+
+                <!-- オーナーのみ表示 -->
+                <button class="owner-action">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    編集する
+                </button>
+
+                <a href="#" class="link-action">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                        <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                        <line x1="12" y1="14" x2="6" y2="16"/><line x1="12" y1="14" x2="18" y2="16"/>
+                    </svg>
+                    系譜を見る
+                    <span class="badge">3</span>
+                </a>
+            </div>
+        </div>
+
+
+        <!-- 案2: Card Stack -->
+        <div class="section-label">案2: Card Stack（情報カード整理）</div>
+        <div class="panel-v2">
+            <div class="handle"></div>
+            <div class="content">
+                <div class="header-card">
+                    <h1 class="title">COMIC HERO BLAST</h1>
+                    <div class="meta">
+                        <span class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            45 plays
+                        </span>
+                        <span class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                            128
+                        </span>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <div class="card-label">説明</div>
+                    <p class="card-text">アメコミの世界観そのままの縦スクロールシューティング。明るくダイナミックな都市上空を舞台に戦闘を繰り広げます。</p>
+                </div>
+
+                <div class="info-card">
+                    <div class="card-label">遊び方</div>
+                    <p class="card-text">画面左下のジョイスティックで操作。右下のFIREボタンで敵を撃破。</p>
+                </div>
+
+                <div class="info-card">
+                    <div class="card-label">タグ</div>
+                    <div class="tags">
+                        <span class="tag">シューティング</span>
+                        <span class="tag">縦スクロール</span>
+                        <span class="tag">アメコミ</span>
+                        <span class="tag">2D</span>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="action-btn action-primary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                        編集
+                    </button>
+                    <a href="#" class="action-btn action-secondary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                            <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                        </svg>
+                        系譜
+                    </a>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- 案3: Nintendo Switch インスパイア -->
+        <div class="section-label">案3: Nintendo Switch（赤いアクセント）</div>
+        <div class="panel-v3">
+            <div class="handle"></div>
+            <div class="content">
+                <div class="accent-bar"></div>
+                <h1 class="title">COMIC HERO BLAST</h1>
+                <div class="plays">45 plays</div>
+
+                <p class="description">アメコミの世界観そのままの縦スクロールシューティング。明るくダイナミックな都市上空を舞台に、敵キャラクターたちとの戦闘を繰り広げます。</p>
+
+                <div class="info-row">
+                    <div class="row-label">遊び方</div>
+                    <p class="how-to-play">画面左下のジョイスティックでプレイヤーを操作し、敵を避けながら進みます。右下のFIREボタンで弾を発射して敵を撃破します。</p>
+                </div>
+
+                <div class="info-row">
+                    <div class="row-label">タグ</div>
+                    <div class="tags">
+                        <span class="tag">シューティング</span>
+                        <span class="tag">縦スクロール</span>
+                        <span class="tag">アメコミ</span>
+                        <span class="tag">2D</span>
+                    </div>
+                </div>
+
+                <!-- オーナーセクション -->
+                <div class="owner-section">
+                    <div class="owner-label">あなたのゲーム</div>
+                    <div class="owner-actions">
+                        <button class="owner-btn btn-edit">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                            編集
+                        </button>
+                        <button class="owner-btn btn-lineage">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                                <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                            </svg>
+                            系譜
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- 案4: Floating Labels -->
+        <div class="section-label">案4: Floating Labels（軽やかな空間）</div>
+        <div class="panel-v4">
+            <div class="handle"></div>
+            <div class="content">
+                <span class="floating-label">Game</span>
+                <h1 class="title">COMIC HERO<br>BLAST</h1>
+
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-value">45</span>
+                        <span class="stat-label">Plays</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">128</span>
+                        <span class="stat-label">Likes</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">3</span>
+                        <span class="stat-label">Remixes</span>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-label">About</div>
+                    <p class="description">アメコミの世界観そのままの縦スクロールシューティング。明るくダイナミックな都市上空を舞台に戦闘を繰り広げます。</p>
+                </div>
+
+                <div class="section">
+                    <div class="section-label">How to Play</div>
+                    <div class="how-to-play">画面左下のジョイスティックで操作。右下のFIREボタンで敵を撃破。タッチ操作やキーボード操作に対応。</div>
+                </div>
+
+                <div class="section">
+                    <div class="section-label">Tags</div>
+                    <div class="tags">
+                        <span class="tag">シューティング</span>
+                        <span class="tag">縦スクロール</span>
+                        <span class="tag">アメコミ</span>
+                        <span class="tag">2D</span>
+                    </div>
+                </div>
+
+                <div class="action-area">
+                    <button class="action-main">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                        編集する
+                    </button>
+                    <a href="#" class="action-sub">
+                        <div class="action-sub-left">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="14"/>
+                                <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
+                            </svg>
+                            系譜を見る
+                        </div>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 18l6-6-6-6"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

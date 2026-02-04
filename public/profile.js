@@ -25,9 +25,28 @@ class ProfileApp {
   }
 
   async init() {
-    // 1. Get profileId from URL
-    const profileId = window.location.pathname.split('/')[2];
-    if (!profileId) {
+    // 1. Parse URL to determine profile lookup method
+    // Supports: /@username and /u/:id (public_id or UUID)
+    const pathname = window.location.pathname;
+    let profileLookup = null;
+    let isUsernameUrl = false;
+
+    if (pathname.startsWith('/@')) {
+      // /@username format
+      const username = pathname.slice(2); // Remove "/@"
+      if (!username) {
+        return this.showError('ユーザーが見つかりません');
+      }
+      profileLookup = { type: 'username', value: username };
+      isUsernameUrl = true;
+    } else if (pathname.startsWith('/u/')) {
+      // /u/:id format (public_id or UUID)
+      const profileId = pathname.split('/')[2];
+      if (!profileId) {
+        return this.showError('ユーザーが見つかりません');
+      }
+      profileLookup = { type: 'id', value: profileId };
+    } else {
       return this.showError('ユーザーが見つかりません');
     }
 
@@ -52,7 +71,14 @@ class ProfileApp {
 
     // 3. Fetch profile data
     try {
-      const res = await fetch(`/api/users/${profileId}/public`);
+      let res;
+      if (profileLookup.type === 'username') {
+        // Fetch by username
+        res = await fetch(`/api/users/username/${encodeURIComponent(profileLookup.value)}/public`);
+      } else {
+        // Fetch by id (public_id or UUID)
+        res = await fetch(`/api/users/${profileLookup.value}/public`);
+      }
       if (!res.ok) throw new Error('User not found');
       this.profileData = await res.json();
       this.profileUserId = this.profileData.id;
@@ -61,10 +87,20 @@ class ProfileApp {
       return this.showError('ユーザーが見つかりません');
     }
 
-    // 4. Normalize URL (UUID -> public_id) while preserving query/hash
-    if (this.profilePublicId && profileId !== this.profilePublicId) {
-      const newUrl = `/u/${this.profilePublicId}${window.location.search}${window.location.hash}`;
-      history.replaceState(null, '', newUrl);
+    // 4. Normalize URL
+    // - For /@username: keep as-is (this is the preferred format)
+    // - For /u/:id: redirect to /@username if available, otherwise keep /u/{public_id}
+    if (!isUsernameUrl) {
+      // Currently on /u/:id URL
+      if (this.profileData.username) {
+        // Redirect to /@username (preferred URL)
+        const newUrl = `/@${this.profileData.username}${window.location.search}${window.location.hash}`;
+        history.replaceState(null, '', newUrl);
+      } else if (this.profilePublicId && profileLookup.value !== this.profilePublicId) {
+        // Normalize UUID to public_id
+        const newUrl = `/u/${this.profilePublicId}${window.location.search}${window.location.hash}`;
+        history.replaceState(null, '', newUrl);
+      }
     }
 
     // 5. Check if owner

@@ -312,6 +312,32 @@ router.get('/:id/games', async (req, res) => {
 });
 
 /**
+ * GET /api/users/username/:username/public
+ * Get user's public profile by username
+ */
+router.get('/username/:username/public', async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    // Validate username format (no info leak - return 404 for invalid format)
+    const normalizedUsername = username?.toLowerCase();
+    if (!normalizedUsername || !USERNAME_REGEX.test(normalizedUsername)) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = await db.getUserByUsername(normalizedUsername);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (err) {
+    console.error('GET /api/users/username/:username/public error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * GET /api/users/:id/public
  * Get user's public profile
  * Supports both UUID and public_id (u_XXXXXXXXXX)
