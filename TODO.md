@@ -8,6 +8,36 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-04: @username プロフィールナビゲーション ✅
+
+**詳細:** `.claude/logs/2026-02-04-username-profile-navigation.md`
+
+TikTok/Instagram スタイルの `/@username` URL を実装:
+
+| 項目 | 内容 |
+|------|------|
+| **URL 形式** | `/u/{public_id}` → `/@{username}` に統一 |
+| **ナビ「マイ」** | `/@{username}` に直接遷移（Spec C） |
+| **mypage.html** | リダイレクトなし、直接表示 |
+| **予約語保護** | 共通モジュール `usernameValidator.js` |
+
+**変更ファイル:**
+- `server/modules/profile/usernameValidator.js` (新規) - 予約語バリデーション
+- `server/modules/profile/routes.js` - `/api/users/username/:username/public`
+- `server/modules/profile/publicRoutes.js` - `/@:username` ルート
+- `public/auth.js` - `getMyProfileUrl()`, キャッシュ機能
+- `public/profile.js` - `/@username` 対応、URL 正規化
+- `public/mypage.js` - リダイレクト削除
+- `public/app.js`, `notifications.js`, `discover.html`, `game.html` - ナビ更新
+
+**UX 改善:** 画面遷移が 3回 → 1回 に削減
+
+**CodeRabbit レビュー:** Warning 2件を修正（クライアント側バリデーション追加、CLI エラー meta 追加）
+
+**デプロイ:** GCE 本番反映済み ✅
+
+---
+
 ### 2026-02-04: Asset API モジュール化 (Phase 1) ✅
 
 **詳細:** `.claude/logs/2026-02-04-asset-api-modularization.md`
@@ -26,6 +56,26 @@ server/index.js (3,451行) からアセット関連ルートを抽出し、モ�
 **テスト:** Unit + E2E (本番) 全て PASS
 
 **E2E レポート:** `screenshots/e2e-test-prod/report.html`
+
+---
+
+### 2026-02-04: Publish API モジュール化 (Phase 2) ✅
+
+**詳細:** `.claude/logs/2026-02-04-publish-api-modularization.md`
+
+Phase 1 に続き、Publish API 関連ルートを抽出:
+
+| 新規ファイル | 内容 |
+|--------------|------|
+| `server/middleware/projectChecks.js` | checkProjectOwnership ミドルウェア |
+| `server/utils/git.js` | gitCommitAsync ユーティリティ |
+| `server/routes/publishApi.js` | Publish API (6エンドポイント) |
+
+**結果:** index.js から約500行削減（累計約1,160行削減、3,451→2,292行）
+
+**追加修正:**
+- gitCommitAsync のファイルスコープ明示化
+- CodeRabbit レビュー実施 → High 優先度 2件修正（try-catch, null チェック）
 
 ---
 
@@ -1463,4 +1513,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-04 (送信ボタン状態表示改善)
+最終更新: 2026-02-04 (@username プロフィールナビゲーション)
