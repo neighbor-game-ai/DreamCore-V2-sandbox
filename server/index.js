@@ -315,6 +315,32 @@ app.use('/api/analytics', analyticsRoutes);
 
 // ==================== Admin Analytics Dashboard ====================
 // Admin endpoint for analytics summary - requires authentication
+// Security layers: Basic Auth + JWT + Admin email check
+
+// Basic Auth middleware for admin routes
+const ADMIN_BASIC_USER = process.env.ADMIN_BASIC_USER || 'admin';
+const ADMIN_BASIC_PASS = process.env.ADMIN_BASIC_PASS || 'dreamcore-ops-2026';
+
+function basicAuthAdmin(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Basic ')) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+    return res.status(401).json({ error: 'Basic authentication required' });
+  }
+
+  const base64Credentials = authHeader.split(' ')[1];
+  const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
+  const [username, password] = credentials.split(':');
+
+  if (username !== ADMIN_BASIC_USER || password !== ADMIN_BASIC_PASS) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  next();
+}
+
 // Admin check: email must end with @neighbor.gg or be in admin list
 const ADMIN_EMAILS = [
   // Add specific admin emails here if needed
@@ -325,7 +351,8 @@ function isAdmin(email) {
   return email.endsWith('@neighbor.gg') || ADMIN_EMAILS.includes(email);
 }
 
-app.get('/api/admin/analytics/summary', authenticate, async (req, res) => {
+// Admin API with Basic Auth + JWT Auth + Admin email check
+app.get('/api/admin/analytics/summary', basicAuthAdmin, authenticate, async (req, res) => {
   try {
     // Admin check
     const userEmail = req.user?.email;

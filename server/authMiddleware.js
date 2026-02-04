@@ -11,7 +11,7 @@ const { verifyToken, createUserClient } = require('./supabaseClient');
  * Extract access token from request
  * Supports:
  * 1. Authorization header (Bearer token) - standard for API calls
- * 2. Query parameter (access_token) - for WebSocket connections
+ * 2. X-Auth-Token header - for admin routes with Basic Auth
  *
  * NOTE: Cookie authentication is not used. Supabase Auth uses localStorage
  * on the client side, and tokens are sent via Authorization header.
@@ -20,11 +20,16 @@ const { verifyToken, createUserClient } = require('./supabaseClient');
  * @returns {string|null} Access token or null
  */
 const extractToken = (req) => {
-  // Authorization header only (query parameter removed for security)
-  // WebSocket auth uses message-based token, not query params
+  // 1. Authorization header (Bearer token)
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7);
+  }
+
+  // 2. X-Auth-Token header (for admin routes with Basic Auth)
+  const xAuthToken = req.headers['x-auth-token'];
+  if (xAuthToken) {
+    return xAuthToken;
   }
 
   return null;
