@@ -103,9 +103,16 @@
     </div>
   </div>
 
-  <!-- Script loading order: supabase.min.js -> auth.js -> page init -->
+  <!-- Script loading order: supabase.min.js -> auth.js -> analytics -> page init -->
   <!-- All defer scripts execute in document order after HTML parsing -->
   <script src="/auth.js" defer></script>
+  <script src="/js/modules/analytics.js" defer></script>
+  <script defer>
+    // Initialize analytics
+    if (typeof DreamCoreAnalytics !== 'undefined') {
+      DreamCoreAnalytics.init();
+    }
+  </script>
   <script defer>
     document.addEventListener('DOMContentLoaded', () => {
       const errorEl = document.getElementById('loginError');

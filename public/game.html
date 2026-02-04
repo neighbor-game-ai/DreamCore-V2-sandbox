@@ -3386,5 +3386,12 @@
 
         loadGame();
     </script>
+    <script src="/js/modules/analytics.js"></script>
+    <script>
+        // Initialize analytics
+        if (typeof DreamCoreAnalytics !== 'undefined') {
+            DreamCoreAnalytics.init();
+        }
+    </script>
 </body>
 </html>

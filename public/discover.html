@@ -161,6 +161,13 @@
   </nav>
 
   <script src="/auth.js" defer></script>
+  <script src="/js/modules/analytics.js" defer></script>
+  <script defer>
+    // Initialize analytics
+    if (typeof DreamCoreAnalytics !== 'undefined') {
+      DreamCoreAnalytics.init();
+    }
+  </script>
   <script>
     // Simple navigation handler for coming soon page
     document.addEventListener('DOMContentLoaded', async function() {

@@ -1568,6 +1568,179 @@ BRIA RMBG 2.0 (Replicate API) で背景を除去。
 
 ---
 
+## Analytics API
+
+ユーザー行動の追跡・分析用 API。認証不要（匿名トラッキング対応）。
+
+### データ保持期間
+
+| データ種別 | 保持期間 |
+|-----------|---------|
+| イベント | 180日 |
+| セッション | 365日 |
+
+### POST /api/analytics/session
+
+新規セッションを作成。
+
+**認証**: 不要
+
+**Request Body:**
+
+```json
+{
+  "device_id": "dc_xxxxxx",
+  "user_agent": "Mozilla/5.0 ...",
+  "referrer": "https://google.com",
+  "utm": {
+    "source": "google",
+    "medium": "cpc",
+    "campaign": "spring2026"
+  },
+  "landing_page": "/create.html"
+}
+```
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| device_id | string | Yes | デバイス識別子（localStorage で管理） |
+| user_agent | string | No | User-Agent 文字列 |
+| referrer | string | No | リファラー URL |
+| utm | object | No | UTM パラメータ（source, medium, campaign, term, content） |
+| landing_page | string | No | ランディングページ |
+
+**Response:**
+
+```json
+{
+  "session_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+### POST /api/analytics/track
+
+イベントをバッチ送信。
+
+**認証**: 不要
+
+**Request Body:**
+
+```json
+{
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
+  "events": [
+    {
+      "event_type": "page_view",
+      "page_path": "/create.html",
+      "event_timestamp": "2026-02-04T10:30:00.000Z",
+      "properties": {}
+    }
+  ]
+}
+```
+
+**有効な event_type:**
+
+| イベント | 説明 |
+|----------|------|
+| page_view | ページ閲覧 |
+| login | ログイン |
+| logout | ログアウト |
+| game_play | ゲームプレイ開始 |
+| game_create | ゲーム作成 |
+| game_publish | ゲーム公開 |
+| error | エラー発生 |
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "inserted": 1
+}
+```
+
+**Error (400):**
+
+```json
+{
+  "error": "Invalid event_type: xxx"
+}
+```
+
+### POST /api/analytics/link
+
+ログイン後にセッションとユーザーを紐付け。
+
+**認証**: 必須（Bearer token）
+
+**Request Body:**
+
+```json
+{
+  "session_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+### POST /api/analytics/session/:id/end
+
+セッションを終了。
+
+**認証**: 不要
+
+**URL Parameters:**
+
+| パラメータ | 説明 |
+|-----------|------|
+| id | セッション ID |
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+### フロントエンド統合
+
+`public/js/modules/analytics.js` を読み込み、`DreamCoreAnalytics.init()` を呼び出す。
+
+```html
+<script src="/js/modules/analytics.js" defer></script>
+<script defer>
+  if (typeof DreamCoreAnalytics !== 'undefined') {
+    DreamCoreAnalytics.init();
+  }
+</script>
+```
+
+**自動追跡されるイベント:**
+
+- `page_view` - ページ表示時
+- `error` - JavaScript エラー発生時
+- History API によるページ遷移
+
+**手動追跡:**
+
+```javascript
+// カスタムイベント
+DreamCoreAnalytics.track('game_play', { game_id: 'xxx' });
+
+// ログイン後のユーザー紐付け（auth.js が自動処理）
+DreamCoreAnalytics.linkUser(userId);
+```
+
+---
+
 ## WebSocket API
 
 ### 接続

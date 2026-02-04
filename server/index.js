@@ -35,6 +35,7 @@ const quotaService = require('./quotaService');
 const remixService = require('./remixService');
 const profileRoutes = require('./modules/profile/routes');
 const publicProfileRoutes = require('./modules/profile/publicRoutes');
+const analyticsRoutes = require('./modules/analytics');
 // Asset routes (modularized)
 const assetsApiRouter = require('./routes/assetsApi');
 const assetsPublicRouter = require('./routes/assetsPublic');
@@ -308,6 +309,9 @@ waitlist.setupRoutes(app);
 // ==================== Profile Module ====================
 app.use('/api/users', profileRoutes);
 app.use('/', publicProfileRoutes);  // /u/:id public profile pages
+
+// ==================== Analytics Module ====================
+app.use('/api/analytics', analyticsRoutes);
 
 // ==================== Remix API ====================
 remixService.setupRoutes(app);
