@@ -962,13 +962,7 @@ app.get('/api/my-published-games', authenticate, async (req, res) => {
 
 // NOTE: GET /u/:id moved to modules/profile/publicRoutes.js
 
-// GET /@/:username - Reserved for future custom username feature
-// When implemented: lookup users.username -> redirect to /u/{public_id} or serve profile
-app.get('/@/:username', async (req, res) => {
-  // Reserved path - not yet implemented
-  // Future: lookup username in DB, serve profile or 404
-  return res.status(404).send('Not found');
-});
+// NOTE: GET /@/:username moved to modules/profile/publicRoutes.js
 
 // NOTE: GET /api/users/:id/public moved to modules/profile/routes.js
 
