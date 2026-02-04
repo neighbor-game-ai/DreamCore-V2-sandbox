@@ -36,6 +36,8 @@ interface UserAccessRecord {
   note: string | null;
   welcome_email_sent_at: string | null;
   approved_email_sent_at: string | null;
+  language: string | null;
+  country: string | null;
 }
 
 // Brevo API でメール送信
@@ -111,8 +113,34 @@ async function updateEmailSentAt(
   }
 }
 
-// ウェルカムメール HTML
-function getWelcomeEmailHtml(displayName: string | null): string {
+/**
+ * 言語判定
+ * @param language - navigator.language の値 (例: "ja", "ja-JP", "en-US")
+ * @param country - IP から取得した国コード (例: "JP", "US")
+ * @returns "ja" または "en"
+ */
+function detectLanguage(language: string | null, country: string | null): "ja" | "en" {
+  // 1. language フィールドを優先（ブラウザの言語設定）
+  if (language) {
+    const lang = language.toLowerCase();
+    if (lang.startsWith("ja")) {
+      return "ja";
+    }
+  }
+
+  // 2. country フィールドで判定
+  if (country) {
+    if (country.toUpperCase() === "JP") {
+      return "ja";
+    }
+  }
+
+  // 3. デフォルトは英語
+  return "en";
+}
+
+// ウェルカムメール HTML（日本語）
+function getWelcomeEmailHtmlJa(displayName: string | null): string {
   const name = displayName || "ユーザー";
   return `
 <!DOCTYPE html>
@@ -147,8 +175,44 @@ function getWelcomeEmailHtml(displayName: string | null): string {
   `.trim();
 }
 
-// 承認メール HTML
-function getApprovedEmailHtml(displayName: string | null): string {
+// ウェルカムメール HTML（英語）
+function getWelcomeEmailHtmlEn(displayName: string | null): string {
+  const name = displayName || "there";
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thank you for joining the waitlist</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #FF3B30; margin: 0;">DreamCore</h1>
+  </div>
+
+  <h2 style="color: #1a1a1a;">Hi ${name}!</h2>
+
+  <p>Thank you for joining the DreamCore waitlist.</p>
+
+  <p>We're working hard to prepare the service.<br>
+  We'll send you another email as soon as you can start using it.</p>
+
+  <p>Thank you for your patience!</p>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+  <p style="color: #666; font-size: 14px;">
+    The DreamCore Team<br>
+    <a href="${APP_URL}" style="color: #FF3B30;">${APP_URL}</a>
+  </p>
+</body>
+</html>
+  `.trim();
+}
+
+// 承認メール HTML（日本語）
+function getApprovedEmailHtmlJa(displayName: string | null): string {
   const name = displayName || "ユーザー";
   return `
 <!DOCTYPE html>
@@ -183,6 +247,49 @@ function getApprovedEmailHtml(displayName: string | null): string {
 
   <p style="color: #666; font-size: 14px;">
     DreamCore チーム<br>
+    <a href="${APP_URL}" style="color: #FF3B30;">${APP_URL}</a>
+  </p>
+</body>
+</html>
+  `.trim();
+}
+
+// 承認メール HTML（英語）
+function getApprovedEmailHtmlEn(displayName: string | null): string {
+  const name = displayName || "there";
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're in! Welcome to DreamCore</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #FF3B30; margin: 0;">DreamCore</h1>
+  </div>
+
+  <h2 style="color: #1a1a1a;">Hi ${name}!</h2>
+
+  <p>Great news!</p>
+
+  <p><strong>Your access to DreamCore has been approved.</strong></p>
+
+  <p>Click the button below to log in and start creating games with AI.</p>
+
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${APP_URL}" style="display: inline-block; background: #FF3B30; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+      Get Started with DreamCore
+    </a>
+  </div>
+
+  <p>If you have any questions, feel free to reach out.</p>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+  <p style="color: #666; font-size: 14px;">
+    The DreamCore Team<br>
     <a href="${APP_URL}" style="color: #FF3B30;">${APP_URL}</a>
   </p>
 </body>
@@ -228,18 +335,30 @@ serve(async (req) => {
         });
       }
 
+      // 言語判定
+      const lang = detectLanguage(record.language, record.country);
+      console.log(`[waitlist-email] Detected language: ${lang} (language=${record.language}, country=${record.country})`);
+
+      const subject = lang === "ja"
+        ? "DreamCoreウェイトリストへのご登録ありがとうございます"
+        : "Thank you for joining the DreamCore waitlist";
+
+      const html = lang === "ja"
+        ? getWelcomeEmailHtmlJa(record.display_name)
+        : getWelcomeEmailHtmlEn(record.display_name);
+
       const success = await sendEmail(
         record.email,
         record.display_name,
-        "DreamCoreウェイトリストへのご登録ありがとうございます",
-        getWelcomeEmailHtml(record.display_name)
+        subject,
+        html
       );
 
       if (success) {
         await updateEmailSentAt(record.email, "welcome_email_sent_at");
       }
 
-      return new Response(JSON.stringify({ message: "Welcome email processed", success }), {
+      return new Response(JSON.stringify({ message: "Welcome email processed", success, lang }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
@@ -267,18 +386,30 @@ serve(async (req) => {
         });
       }
 
+      // 言語判定
+      const lang = detectLanguage(record.language, record.country);
+      console.log(`[waitlist-email] Detected language: ${lang} (language=${record.language}, country=${record.country})`);
+
+      const subject = lang === "ja"
+        ? "DreamCoreをご利用いただけるようになりました"
+        : "You're in! Welcome to DreamCore";
+
+      const html = lang === "ja"
+        ? getApprovedEmailHtmlJa(record.display_name)
+        : getApprovedEmailHtmlEn(record.display_name);
+
       const success = await sendEmail(
         record.email,
         record.display_name,
-        "DreamCoreをご利用いただけるようになりました",
-        getApprovedEmailHtml(record.display_name)
+        subject,
+        html
       );
 
       if (success) {
         await updateEmailSentAt(record.email, "approved_email_sent_at");
       }
 
-      return new Response(JSON.stringify({ message: "Approved email processed", success }), {
+      return new Response(JSON.stringify({ message: "Approved email processed", success, lang }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
