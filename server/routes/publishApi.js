@@ -12,7 +12,7 @@ const { spawn } = require('child_process');
 
 const db = require('../database-supabase');
 const config = require('../config');
-const { isValidUUID, getProjectPath } = require('../config');
+const { isValidUUID, getProjectPath } = config;
 const { authenticate } = require('../authMiddleware');
 const { checkProjectOwnership } = require('../middleware/projectChecks');
 const { gitCommitAsync } = require('../utils/git');

@@ -43,22 +43,8 @@ class MyPageApp {
       return;
     }
 
-    // Redirect to /@username if username is set
-    try {
-      const res = await DreamCoreAuth.authFetch('/api/users/me');
-      if (res.ok) {
-        const profile = await res.json();
-        if (profile.username) {
-          window.location.replace(`/@${profile.username}`);
-          return;
-        }
-      }
-    } catch (e) {
-      console.error('[MyPage] Failed to fetch profile for redirect:', e);
-    }
-
-    // Fallback: Continue with mypage if no username set
-    console.log('[MyPage] No username set, using mypage view');
+    // No redirect - display profile directly on /mypage.html
+    // Share button will generate /@username URL for sharing
     this.currentUser = session.user;
     this.userId = session.user.id;
     this.accessToken = session.access_token;
