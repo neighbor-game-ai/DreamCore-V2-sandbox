@@ -436,6 +436,12 @@ app.get('/api/admin/analytics/summary', basicAuthAdmin, authenticate, async (req
 
       // Top games
       topGamesResult,
+
+      // Totals
+      totalUsersResult,
+      totalGamesResult,
+      todayNewUsersResult,
+      todayNewGamesResult,
     ] = await Promise.all([
       // Total sessions in period
       supabaseAdmin
@@ -589,6 +595,28 @@ app.get('/api/admin/analytics/summary', basicAuthAdmin, authenticate, async (req
         .eq('event_type', 'game_play')
         .gte('event_ts', periodStartISO)
         .lte('event_ts', periodEndISO),
+
+      // Total registered users
+      supabaseAdmin
+        .from('users')
+        .select('id', { count: 'exact', head: true }),
+
+      // Total published games
+      supabaseAdmin
+        .from('published_games')
+        .select('id', { count: 'exact', head: true }),
+
+      // Today's new users
+      supabaseAdmin
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()),
+
+      // Today's new games
+      supabaseAdmin
+        .from('published_games')
+        .select('id', { count: 'exact', head: true })
+        .gte('published_at', new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()),
     ]);
 
     // ========== Process KPIs ==========
@@ -773,6 +801,11 @@ app.get('/api/admin/analytics/summary', basicAuthAdmin, authenticate, async (req
         mau,
         totalSessions,
         avgSessionDuration,
+        // Total counts
+        totalUsers: totalUsersResult.count || 0,
+        totalGames: totalGamesResult.count || 0,
+        todayNewUsers: todayNewUsersResult.count || 0,
+        todayNewGames: todayNewGamesResult.count || 0,
       },
       eventCounts,
       funnel,

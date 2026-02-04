@@ -846,7 +846,31 @@
 
     <!-- Main Content (hidden until loaded) -->
     <div id="dashboardContent" style="display: none;">
-      <!-- KPI Cards -->
+      <!-- Overview Cards (Total counts) -->
+      <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: var(--s-32);">
+        <div class="kpi-card" style="background: linear-gradient(135deg, #FF3B30 0%, #FF6B5B 100%); border: none;">
+          <div class="kpi-label" style="color: rgba(255,255,255,0.8);">登録ユーザー数</div>
+          <div class="kpi-value" id="kpiTotalUsers" style="color: white;">-</div>
+          <div class="kpi-subtitle" style="color: rgba(255,255,255,0.7);">累計</div>
+        </div>
+        <div class="kpi-card" style="background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%); border: none;">
+          <div class="kpi-label" style="color: rgba(255,255,255,0.8);">投稿ゲーム数</div>
+          <div class="kpi-value" id="kpiTotalGames" style="color: white;">-</div>
+          <div class="kpi-subtitle" style="color: rgba(255,255,255,0.7);">累計</div>
+        </div>
+        <div class="kpi-card" style="background: linear-gradient(135deg, #10B981 0%, #34D399 100%); border: none;">
+          <div class="kpi-label" style="color: rgba(255,255,255,0.8);">本日の新規ユーザー</div>
+          <div class="kpi-value" id="kpiTodayUsers" style="color: white;">-</div>
+          <div class="kpi-subtitle" style="color: rgba(255,255,255,0.7);">今日</div>
+        </div>
+        <div class="kpi-card" style="background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%); border: none;">
+          <div class="kpi-label" style="color: rgba(255,255,255,0.8);">本日の投稿ゲーム</div>
+          <div class="kpi-value" id="kpiTodayGames" style="color: white;">-</div>
+          <div class="kpi-subtitle" style="color: rgba(255,255,255,0.7);">今日</div>
+        </div>
+      </div>
+
+      <!-- Activity KPI Cards -->
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-label">
@@ -1270,7 +1294,14 @@
     }
 
     function renderDashboard(data) {
-      // KPIs
+      // Total KPIs (from kpis object)
+      const kpis = data.kpis || {};
+      document.getElementById('kpiTotalUsers').textContent = formatNumber(kpis.totalUsers || 0);
+      document.getElementById('kpiTotalGames').textContent = formatNumber(kpis.totalGames || 0);
+      document.getElementById('kpiTodayUsers').textContent = formatNumber(kpis.todayNewUsers || 0);
+      document.getElementById('kpiTodayGames').textContent = formatNumber(kpis.todayNewGames || 0);
+
+      // Activity KPIs
       document.getElementById('kpiDau').textContent = formatNumber(data.dau || 0);
       document.getElementById('kpiWau').textContent = formatNumber(data.wau || 0);
       document.getElementById('kpiMau').textContent = formatNumber(data.mau || 0);
