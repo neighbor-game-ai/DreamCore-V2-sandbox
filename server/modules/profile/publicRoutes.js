@@ -9,13 +9,11 @@ const express = require('express');
 const path = require('path');
 const router = express.Router();
 const db = require('../../database-supabase');
+const { USERNAME_REGEX, isReservedUsername } = require('./usernameValidator');
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isValidUUID = (str) => UUID_REGEX.test(str);
-
-// Username validation regex
-const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 
 /**
  * GET /@:username - Profile page by username (e.g., /@notef)
@@ -29,9 +27,9 @@ router.get('/@:username', async (req, res) => {
     return res.status(404).send('Not found');
   }
 
-  // Validate username format (return 404 for invalid format - no info leak)
+  // Validate username format and reserved words (return 404 - no info leak)
   const normalizedUsername = username.toLowerCase();
-  if (!USERNAME_REGEX.test(normalizedUsername)) {
+  if (!USERNAME_REGEX.test(normalizedUsername) || isReservedUsername(normalizedUsername)) {
     return res.status(404).send('User not found');
   }
 

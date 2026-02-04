@@ -13,6 +13,7 @@ const { authenticate } = require('../../authMiddleware');
 const db = require('../../database-supabase');
 const { validateSocialLinks, normalizeSocialLinks } = require('./validators');
 const { processAvatar } = require('./service');
+const { validateUsername, USERNAME_REGEX, isReservedUsername } = require('./usernameValidator');
 const r2Client = require('../../r2Client');
 
 // Temp file storage in os.tmpdir()
@@ -23,48 +24,6 @@ const upload = multer({
 
 // JSON body size limit (64KB)
 const jsonLimit = express.json({ limit: '64kb' });
-
-// Username validation
-const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
-const RESERVED_USERNAMES = new Set([
-  // System routes
-  'api', 'admin', 'game', 'create', 'discover', 'notifications',
-  'play', 'project', 'u', 'g', 'p', 'assets', 'login', 'signup',
-  'settings', 'auth', 'callback', 'waitlist', 'mypage', 'profile',
-  // Common reserved
-  'help', 'support', 'about', 'terms', 'privacy', 'contact',
-  'blog', 'news', 'status', 'docs', 'developer', 'developers',
-  'app', 'apps', 'games', 'user', 'users', 'home', 'index',
-  // Brand protection
-  'dreamcore', 'official', 'system', 'mod', 'moderator', 'staff',
-  'null', 'undefined', 'anonymous', 'guest', 'test', 'demo'
-]);
-
-/**
- * Validate username format and availability
- * @param {string} username - Raw username input
- * @returns {{ valid: boolean, error?: string, normalized?: string }}
- */
-const validateUsername = (username) => {
-  if (!username || typeof username !== 'string') {
-    return { valid: false, error: 'Username is required' };
-  }
-
-  // Normalize to lowercase
-  const normalized = username.toLowerCase().trim();
-
-  // Check format
-  if (!USERNAME_REGEX.test(normalized)) {
-    return { valid: false, error: 'Username must be 3-20 characters, lowercase letters, numbers, and underscores only' };
-  }
-
-  // Check reserved words
-  if (RESERVED_USERNAMES.has(normalized)) {
-    return { valid: false, error: 'This username is reserved' };
-  }
-
-  return { valid: true, normalized };
-};
 
 /**
  * GET /api/users/username-available
@@ -319,9 +278,9 @@ router.get('/username/:username/public', async (req, res) => {
   try {
     const { username } = req.params;
 
-    // Validate username format (no info leak - return 404 for invalid format)
+    // Validate username format and reserved words (no info leak - return 404)
     const normalizedUsername = username?.toLowerCase();
-    if (!normalizedUsername || !USERNAME_REGEX.test(normalizedUsername)) {
+    if (!normalizedUsername || !USERNAME_REGEX.test(normalizedUsername) || isReservedUsername(normalizedUsername)) {
       return res.status(404).json({ error: 'User not found' });
     }
 
