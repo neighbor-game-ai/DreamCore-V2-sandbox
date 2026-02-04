@@ -1603,6 +1603,27 @@ const getPublishedGamesByUserId = async (client, userId) => {
   return data || [];
 };
 
+/**
+ * Get user's public games (for public profile page)
+ * CRITICAL: Returns only visibility='public' games
+ * @param {string} userId - User ID
+ * @returns {Promise<Array>} List of public games
+ */
+const getPublishedGamesByUserIdPublic = async (userId) => {
+  const { data, error } = await supabaseAdmin
+    .from('published_games')
+    .select('id, public_id, project_id, title, description, thumbnail_url, published_at, play_count, like_count')
+    .eq('user_id', userId)
+    .eq('visibility', 'public')
+    .order('published_at', { ascending: false });
+
+  if (error) {
+    console.error('[DB] getPublishedGamesByUserIdPublic error:', error.message);
+    return [];
+  }
+  return data || [];
+};
+
 // ==================== V2 Asset Functions ====================
 
 /**
@@ -1807,6 +1828,7 @@ module.exports = {
   getPublicGames,
   incrementPlayCount,
   getPublishedGamesByUserId,
+  getPublishedGamesByUserIdPublic,
 
   // Admin client for special cases
   supabaseAdmin

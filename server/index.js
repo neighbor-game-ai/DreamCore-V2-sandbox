@@ -10,7 +10,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const fs = require('fs');
-const multer = require('multer');
+// multer is now used via ./middleware/uploads
 const sharp = require('sharp');
 const userManager = require('./userManager');
 const { claudeRunner, jobManager, spawnClaudeAsync } = require('./claudeRunner');
@@ -35,7 +35,11 @@ const waitlist = require('./waitlist');
 const quotaService = require('./quotaService');
 const remixService = require('./remixService');
 const profileRoutes = require('./modules/profile/routes');
-const rateLimit = require('express-rate-limit');
+const publicProfileRoutes = require('./modules/profile/publicRoutes');
+// Asset routes (modularized)
+const assetsApiRouter = require('./routes/assetsApi');
+const assetsPublicRouter = require('./routes/assetsPublic');
+const { aiRateLimiter, apiRateLimiter, publicRateLimiter } = require('./rateLimiter');
 const helmet = require('helmet');
 const { JSDOM } = require('jsdom');
 const createDOMPurify = require('dompurify');
@@ -62,38 +66,6 @@ SVG_PURIFY.setConfig({
 function sanitizeSVG(svgContent) {
   return SVG_PURIFY.sanitize(svgContent);
 }
-
-// レート制限ミドルウェア（DoS/ブルートフォース対策）
-const createRateLimiter = (windowMs, max, message) => rateLimit({
-  windowMs,
-  max,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: message },
-  keyGenerator: (req) => req.user?.id || req.ip,  // 認証済みはuserIdで、未認証はIPでレート制限
-  validate: false,  // カスタムkeyGeneratorのバリデーション警告を抑制
-});
-
-// AI系API用（高コスト）: 5 req/min
-const aiRateLimiter = createRateLimiter(
-  60 * 1000,  // 1分
-  5,
-  'Too many AI requests. Please wait a minute before trying again.'
-);
-
-// 一般API用（認証済み）: 60 req/min
-const apiRateLimiter = createRateLimiter(
-  60 * 1000,  // 1分
-  config.RATE_LIMIT.api.authenticated,
-  'Too many requests. Please slow down.'
-);
-
-// 一般API用（未認証）: 10 req/min
-const publicRateLimiter = createRateLimiter(
-  60 * 1000,  // 1分
-  config.RATE_LIMIT.api.anonymous,
-  'Too many requests. Please slow down.'
-);
 
 /**
  * Get next quota reset time (00:00 UTC = 09:00 JST)
@@ -240,39 +212,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Temporary upload directory (files are moved to user-specific directories after processing)
-const UPLOAD_TEMP_DIR = path.join(__dirname, '..', 'uploads_temp');
-if (!fs.existsSync(UPLOAD_TEMP_DIR)) {
-  fs.mkdirSync(UPLOAD_TEMP_DIR, { recursive: true });
-}
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, UPLOAD_TEMP_DIR);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, uniqueSuffix + ext);
-  }
-});
-
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 1 * 1024 * 1024 }, // 1MB limit
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp|svg|mp3|wav|ogg|json/;
-    const ext = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mime = allowedTypes.test(file.mimetype.split('/')[1]);
-    // 拡張子とMIMEタイプの両方が一致する場合のみ許可（偽装防止）
-    if (ext && mime) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type'));
-    }
-  }
-});
+// Upload middleware (shared with routes/assetsApi.js)
+const upload = require('./middleware/uploads');
 
 // JSON body parser with increased limit for base64 images
 app.use(express.json({ limit: '50mb' }));
@@ -407,6 +348,7 @@ waitlist.setupRoutes(app);
 
 // ==================== Profile Module ====================
 app.use('/api/users', profileRoutes);
+app.use('/', publicProfileRoutes);  // /u/:id public profile pages
 
 // ==================== Remix API ====================
 remixService.setupRoutes(app);
@@ -418,6 +360,12 @@ if (cliDeploy) {
   app.use('/cli-auth', express.static(path.join(__dirname, '../cli-deploy/public')));
   console.log('[CLI Deploy] Mounted at /api/cli');
 }
+
+// ==================== Asset Routes ====================
+// /api/assets/* - API endpoints for asset management
+app.use('/api/assets', assetsApiRouter);
+// /user-assets/*, /global-assets/* - Public asset serving (CDN redirect)
+app.use('/', assetsPublicRouter);
 
 // ==================== Skills 配信 ====================
 // Claude Code Skills の配信（自動更新用）
@@ -578,550 +526,7 @@ app.post('/api/generate-image', authenticate, aiRateLimiter, async (req, res) =>
   }
 });
 
-// ==================== Background Removal API ====================
-
-// Remove background using Replicate API (BRIA RMBG 2.0)
-// Helper: check asset ownership and attach to req (requires authentication)
-const checkAssetOwnership = async (req, res, next) => {
-  const assetId = req.params.id;
-  if (!isValidUUID(assetId)) {
-    return res.status(400).json({ error: 'Invalid asset ID' });
-  }
-  const asset = await db.getAssetById(req.supabase, assetId);
-  if (!asset) {
-    return res.status(404).json({ error: 'Asset not found' });
-  }
-  if (asset.owner_id !== req.user.id) {
-    return res.status(403).json({ error: 'Access denied' });
-  }
-  req.asset = asset;
-  next();
-};
-
-// Helper: check asset access for public/owner (optional auth)
-const checkAssetAccess = async (req, res, next) => {
-  const assetId = req.params.id;
-  if (!isValidUUID(assetId)) {
-    return res.status(400).json({ error: 'Invalid asset ID' });
-  }
-  // Use admin client to bypass RLS for public asset check
-  const asset = await db.getAssetByIdAdmin(assetId);
-  if (!asset || asset.is_deleted) {
-    return res.status(404).json({ error: 'Asset not found' });
-  }
-  // Allow access if: owner OR public
-  const isOwner = req.user?.id === asset.owner_id;
-  const isPublic = asset.is_public || asset.is_global;
-  if (!isOwner && !isPublic) {
-    return res.status(404).json({ error: 'Asset not found' });
-  }
-  req.asset = asset;
-  next();
-};
-
-app.post('/api/assets/remove-background', authenticate, async (req, res) => {
-  try {
-    const { image } = req.body;
-
-    if (!image) {
-      return res.status(400).json({ error: 'image is required' });
-    }
-
-    const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
-    if (!REPLICATE_API_TOKEN) {
-      return res.status(503).json({ error: 'Background removal service not configured' });
-    }
-
-    console.log('Background removal request received (BRIA RMBG 2.0)');
-
-    // BRIA RMBG 2.0 - High accuracy background removal, trained on licensed data
-    // Outperforms BiRefNet (90% vs 85%) and Adobe Photoshop (90% vs 46%)
-    const MODEL_VERSION = '4ed060b3587b7c3912353dd7d59000c883a6e1c5c9181ed7415c2624c2e8e392';
-
-    // Create prediction with BRIA RMBG 2.0 parameters
-    const createResponse = await fetch('https://api.replicate.com/v1/predictions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${REPLICATE_API_TOKEN}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'wait'
-      },
-      body: JSON.stringify({
-        version: MODEL_VERSION,
-        input: {
-          image: image,
-          preserve_alpha: true
-        }
-      })
-    });
-
-    if (!createResponse.ok) {
-      const errorText = await createResponse.text();
-      console.error('Replicate API error:', createResponse.status, errorText);
-
-      // Parse error for better message
-      let errorMessage = 'Background removal service error';
-      try {
-        const errorJson = JSON.parse(errorText);
-        if (errorJson.detail) errorMessage = errorJson.detail;
-        else if (errorJson.error) errorMessage = errorJson.error;
-      } catch (e) {
-        // Use generic message
-      }
-      throw new Error(errorMessage);
-    }
-
-    let prediction = await createResponse.json();
-    console.log('Prediction created:', prediction.id, 'status:', prediction.status);
-
-    // Poll for completion if not using "wait" mode or still processing
-    let pollCount = 0;
-    const maxPolls = 60; // 60 seconds timeout
-    while (prediction.status === 'starting' || prediction.status === 'processing') {
-      if (pollCount++ > maxPolls) {
-        throw new Error('Background removal timed out');
-      }
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const pollResponse = await fetch(prediction.urls.get, {
-        headers: {
-          'Authorization': `Bearer ${REPLICATE_API_TOKEN}`
-        }
-      });
-      prediction = await pollResponse.json();
-      console.log('Poll', pollCount, '- status:', prediction.status);
-    }
-
-    if (prediction.status === 'failed') {
-      console.error('Prediction failed:', prediction.error);
-      throw new Error(prediction.error || 'Background removal failed');
-    }
-
-    if (prediction.status === 'canceled') {
-      throw new Error('Background removal was canceled');
-    }
-
-    // Get the output image URL and fetch it as base64
-    const outputUrl = prediction.output;
-    if (!outputUrl) {
-      console.error('No output URL in prediction:', prediction);
-      throw new Error('No output from background removal');
-    }
-
-    console.log('Fetching result image from:', outputUrl);
-
-    // Fetch the result image and convert to base64
-    const imageResponse = await fetch(outputUrl);
-    if (!imageResponse.ok) {
-      throw new Error('Failed to fetch result image');
-    }
-    const imageBuffer = await imageResponse.arrayBuffer();
-    const base64Image = `data:image/png;base64,${Buffer.from(imageBuffer).toString('base64')}`;
-
-    console.log('Background removal completed successfully');
-    res.json({ success: true, image: base64Image });
-
-  } catch (error) {
-    console.error('Background removal error:', error);
-    res.status(500).json({
-      error: error.message || 'Background removal failed',
-      success: false
-    });
-  }
-});
-
-// ==================== Asset API Endpoints ====================
-
-// Upload asset (V2: alias + hash)
-app.post('/api/assets/upload', authenticate, upload.single('file'), async (req, res) => {
-  try {
-    const { projectId, originalName } = req.body;
-    const userId = req.user.id;
-
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    // Verify project ownership if projectId provided
-    if (projectId) {
-      if (!isValidUUID(projectId)) {
-        return res.status(400).json({ error: 'Invalid project ID' });
-      }
-      const project = await db.getProjectById(req.supabase, projectId);
-      if (!project || project.user_id !== userId) {
-        return res.status(403).json({ error: 'Access denied to project' });
-      }
-    }
-
-    // Use originalName from body if provided (preserves UTF-8 encoding)
-    const displayName = originalName || req.file.originalname;
-
-    // V2: Calculate hash
-    let fileBuffer = fs.readFileSync(req.file.path);
-
-    // SVG ファイルのサニタイズ（XSS 攻撃防止）
-    const uploadExt = path.extname(req.file.originalname).toLowerCase();
-    if (uploadExt === '.svg') {
-      console.log('[assets] Sanitizing SVG file:', req.file.originalname);
-      const svgContent = fileBuffer.toString('utf-8');
-      const sanitized = sanitizeSVG(svgContent);
-      fileBuffer = Buffer.from(sanitized, 'utf-8');
-      // サニタイズ後のファイルを一時ファイルに書き戻す
-      fs.writeFileSync(req.file.path, fileBuffer);
-    }
-
-    const hash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
-    const hashShort = hash.slice(0, 8);
-
-    // V2: Generate unique alias (collision avoidance)
-    const ext = path.extname(displayName).toLowerCase();
-    const baseName = path.basename(displayName, ext)
-      .replace(/[^a-zA-Z0-9_-]/g, '_')
-      .slice(0, 32);
-
-    let alias = `${baseName}${ext}`;
-    let counter = 2;
-    let hadCollision = false;
-    while (await db.aliasExists(userId, alias)) {
-      if (!hadCollision) {
-        console.log(`[assets] alias collision: user=${userId.slice(0, 8)}... base=${baseName} tried=${alias}`);
-        hadCollision = true;
-      }
-      alias = `${baseName}_${counter}${ext}`;
-      counter++;
-    }
-    if (hadCollision) {
-      console.log(`[assets] alias resolved: user=${userId.slice(0, 8)}... final=${alias}`);
-    }
-
-    // V2: Generate physical filename with hash
-    const aliasBase = path.basename(alias, ext);
-    const filename = `${aliasBase}_${hashShort}${ext}`;
-
-    // Move to user assets directory
-    const userAssetsDir = getUserAssetsPath(userId);
-    if (!fs.existsSync(userAssetsDir)) {
-      fs.mkdirSync(userAssetsDir, { recursive: true });
-    }
-    const storagePath = path.join(userAssetsDir, filename);
-
-    // Move file (or skip if same hash exists)
-    if (!fs.existsSync(storagePath)) {
-      fs.renameSync(req.file.path, storagePath);
-    } else {
-      fs.unlinkSync(req.file.path);  // Remove temp file
-    }
-
-    // V2: Create asset with new fields
-    // Note: is_public=true by default for simplicity (can be restricted later)
-    const asset = await db.createAssetV2(req.supabase, {
-      owner_id: userId,
-      alias,
-      filename,
-      original_name: displayName,
-      storage_path: storagePath,
-      mime_type: req.file.mimetype,
-      size: req.file.size,
-      hash,
-      created_in_project_id: projectId || null,
-      is_public: true,  // V2: Public by default (game assets are meant to be published)
-      tags: req.body.tags || null,
-      description: req.body.description || null
-    });
-
-    // Link asset to current project if projectId provided
-    if (projectId) {
-      await db.linkAssetToProject(req.supabase, projectId, asset.id, 'image');
-    }
-
-    // Fire-and-forget: upload to R2 for CDN (don't block response)
-    if (r2Client.isR2Enabled()) {
-      setImmediate(async () => {
-        try {
-          await assetPublisher.uploadUserAssetToR2(userId, asset.alias, storagePath);
-          console.log(`[assets] Uploaded to R2: ${userId}/${asset.alias}`);
-        } catch (err) {
-          console.error(`[assets] R2 upload failed: ${err.message}`);
-          // Not critical - on-demand upload will handle it later
-        }
-      });
-    }
-
-    res.json({
-      success: true,
-      asset: {
-        id: asset.id,
-        alias: asset.alias,
-        filename: asset.original_name,
-        mimeType: asset.mime_type,
-        size: asset.size,
-        url: `/user-assets/${userId}/${asset.alias}`
-      }
-    });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Search assets (must be before /:id to avoid route collision)
-app.get('/api/assets/search', authenticate, async (req, res) => {
-  const { q } = req.query;
-
-  let assets;
-  if (q) {
-    assets = await db.searchAssets(req.supabase, req.user.id, q);
-  } else {
-    assets = await db.getAccessibleAssets(req.supabase, req.user.id);
-  }
-
-  // Phase 1: Only show owner's assets
-  res.json({
-    assets: assets
-      .filter(a => a.owner_id === req.user.id)
-      .map(a => ({
-        id: a.id,
-        filename: a.original_name,
-        alias: a.alias,
-        mimeType: a.mime_type,
-        size: a.size,
-        isPublic: !!a.is_public,
-        isOwner: true,
-        tags: a.tags,
-        description: a.description,
-        url: `/user-assets/${a.owner_id}/${a.alias}`  // V2: alias-based URL
-      }))
-  });
-});
-
-// Get asset file (public or owner access)
-app.get('/api/assets/:id', optionalAuth, checkAssetAccess, (req, res) => {
-  // req.asset is already verified by checkAssetAccess (including is_deleted check)
-
-  // Check if file exists
-  if (!fs.existsSync(req.asset.storage_path)) {
-    return res.status(404).json({ error: 'Asset file not found' });
-  }
-
-  res.type(req.asset.mime_type || 'application/octet-stream');
-  res.sendFile(req.asset.storage_path);
-});
-
-// Get asset metadata (Phase 1: owner-only)
-app.get('/api/assets/:id/meta', authenticate, checkAssetOwnership, (req, res) => {
-  res.json({
-    id: req.asset.id,
-    filename: req.asset.original_name,
-    alias: req.asset.alias,
-    mimeType: req.asset.mime_type,
-    size: req.asset.size,
-    isPublic: !!req.asset.is_public,
-    tags: req.asset.tags,
-    description: req.asset.description,
-    createdAt: req.asset.created_at,
-    url: `/user-assets/${req.asset.owner_id}/${req.asset.alias}`  // V2: alias-based URL
-  });
-});
-
-// List user's assets
-app.get('/api/assets', authenticate, async (req, res) => {
-  const { currentProjectId } = req.query;
-
-  const assets = await db.getAssetsWithProjectsByOwnerId(req.supabase, req.user.id);
-
-  // Parse project info and group assets
-  const assetsWithProjects = assets.map(a => {
-    const projectIds = a.project_ids ? a.project_ids.split(',') : [];
-    const projectNames = a.project_names ? a.project_names.split(',') : [];
-    const projects = projectIds.map((id, index) => ({
-      id,
-      name: projectNames[index] || 'Unknown'
-    }));
-
-    return {
-      id: a.id,
-      filename: a.original_name,
-      alias: a.alias,
-      mimeType: a.mime_type,
-      size: a.size,
-      isPublic: !!a.is_public,
-      tags: a.tags,
-      description: a.description,
-      url: `/user-assets/${a.owner_id}/${a.alias}`,  // V2: alias-based URL
-      projects,
-      createdAt: a.created_at
-    };
-  });
-
-  res.json({
-    assets: assetsWithProjects,
-    currentProjectId
-  });
-});
-
-// Update asset publish status
-app.put('/api/assets/:id/publish', authenticate, checkAssetOwnership, async (req, res) => {
-  const { isPublic } = req.body;
-
-  const updated = await db.setAssetPublic(req.supabase, req.params.id, isPublic);
-  res.json({
-    success: true,
-    asset: {
-      id: updated.id,
-      isPublic: !!updated.is_public
-    }
-  });
-});
-
-// Update asset metadata
-app.put('/api/assets/:id', authenticate, checkAssetOwnership, async (req, res) => {
-  const { tags, description } = req.body;
-
-  const updated = await db.updateAssetMeta(req.supabase, req.params.id, tags, description);
-  res.json({
-    success: true,
-    asset: {
-      id: updated.id,
-      tags: updated.tags,
-      description: updated.description
-    }
-  });
-});
-
-// Delete asset (soft delete - file remains but asset becomes inaccessible)
-app.delete('/api/assets/:id', authenticate, checkAssetOwnership, async (req, res) => {
-  // Soft delete (logical deletion - asset becomes inaccessible but data remains)
-  // This ensures that all projects referencing this asset will see it as "deleted"
-  // NOTE: Use service_role client because RLS WITH CHECK blocks user from setting is_deleted=true
-  const deleted = await db.deleteAsset(supabaseAdmin, req.params.id);
-
-  if (deleted === false) {
-    return res.status(500).json({ error: 'Failed to delete asset' });
-  }
-
-  if (deleted === null) {
-    // No rows affected - asset was already deleted (race condition)
-    return res.status(404).json({ error: 'Asset not found or already deleted' });
-  }
-
-  // Return usage count so owner knows impact (use admin client since asset is now hidden by RLS)
-  const usageCount = await db.getAssetUsageCount(supabaseAdmin, req.params.id);
-  res.json({
-    success: true,
-    message: usageCount > 0
-      ? `Asset deleted. It was used in ${usageCount} project(s) - they will now see a placeholder.`
-      : 'Asset deleted.'
-  });
-});
-
-// ==================== V2 Asset Endpoints ====================
-
-// Serve user assets by alias
-// GET /user-assets/:userId/:alias
-// With R2 enabled: 302 redirect to CDN (on-demand upload if needed)
-app.get('/user-assets/:userId/:alias', optionalAuth, async (req, res) => {
-  const { userId, alias } = req.params;
-
-  // Validate userId format
-  if (!isValidUUID(userId)) {
-    return res.status(404).send('Not found');
-  }
-
-  // Get asset by alias (service_role, bypasses RLS)
-  const asset = await db.getAssetByAliasAdmin(userId, alias);
-
-  // Check: exists and not deleted
-  if (!asset || asset.is_deleted) {
-    return res.status(404).send('Not found');
-  }
-
-  // Check: availability period (for global assets)
-  const now = new Date();
-  if (asset.available_from && new Date(asset.available_from) > now) {
-    return res.status(404).send('Not found');
-  }
-  if (asset.available_until && new Date(asset.available_until) < now) {
-    return res.status(404).send('Not found');
-  }
-
-  // Check: authorization
-  const isOwner = req.user?.id === userId;
-  const isPublic = asset.is_public || asset.is_global;
-
-  if (!isOwner && !isPublic) {
-    return res.status(404).send('Not found');
-  }
-
-  // R2 redirect path: check/upload to R2, then 302
-  if (r2Client.isR2Enabled()) {
-    try {
-      const cdnUrl = await assetPublisher.ensureUserAssetOnR2(userId, alias, asset.storage_path);
-      if (cdnUrl) {
-        return res.redirect(302, cdnUrl);
-      }
-      // Fall through to local serving if R2 upload failed
-    } catch (err) {
-      console.error(`[user-assets] R2 redirect failed for ${userId}/${alias}:`, err.message);
-      // Fall through to local serving
-    }
-  }
-
-  // Fallback: serve file locally
-  const filePath = asset.storage_path;
-  if (!fs.existsSync(filePath)) {
-    console.error(`[user-assets] File not found: ${filePath}`);
-    return res.status(404).send('Not found');
-  }
-
-  res.sendFile(filePath);
-});
-
-// Serve global assets by category and alias
-// GET /global-assets/:category/:alias
-// With R2 enabled: 302 redirect to CDN (on-demand upload if needed)
-app.get('/global-assets/:category/:alias', async (req, res) => {
-  const { category, alias } = req.params;
-
-  // Get global asset (service_role)
-  const asset = await db.getGlobalAssetAdmin(category, alias);
-
-  // Check: exists and not deleted
-  if (!asset || asset.is_deleted) {
-    return res.status(404).send('Not found');
-  }
-
-  // Check: availability period
-  const now = new Date();
-  if (asset.available_from && new Date(asset.available_from) > now) {
-    return res.status(404).send('Not found');
-  }
-  if (asset.available_until && new Date(asset.available_until) < now) {
-    return res.status(404).send('Not found');
-  }
-
-  // R2 redirect path: check/upload to R2, then 302
-  if (r2Client.isR2Enabled()) {
-    try {
-      const cdnUrl = await assetPublisher.ensureGlobalAssetOnR2(category, alias, asset.storage_path);
-      if (cdnUrl) {
-        return res.redirect(302, cdnUrl);
-      }
-      // Fall through to local serving if R2 upload failed
-    } catch (err) {
-      console.error(`[global-assets] R2 redirect failed for ${category}/${alias}:`, err.message);
-      // Fall through to local serving
-    }
-  }
-
-  // Fallback: serve file locally
-  const filePath = asset.storage_path;
-  if (!fs.existsSync(filePath)) {
-    console.error(`[global-assets] File not found: ${filePath}`);
-    return res.status(404).send('Not found');
-  }
-
-  res.sendFile(filePath);
-});
+// Asset routes moved to routes/assetsApi.js and routes/assetsPublic.js
 
 // ==================== Public Games API ====================
 
@@ -1576,26 +981,7 @@ app.get('/api/my-published-games', authenticate, async (req, res) => {
 
 // ==================== Public ID Routes ====================
 
-// GET /u/:publicId - User profile page (public)
-// Supports both UUID and public_id (e.g., u_abc123XYZ0)
-app.get('/u/:id', async (req, res) => {
-  const { id } = req.params;
-
-  // Only serve on v2 domain
-  if (req.isPlayDomain) {
-    return res.status(404).send('Not found');
-  }
-
-  const isUUID = isValidUUID(id);
-  const isPublicId = /^u_[A-Za-z0-9]{10}$/.test(id);
-  if (!isUUID && !isPublicId) {
-    return res.status(400).send('Invalid user ID');
-  }
-
-  // Get user - for now just serve the profile page, frontend will fetch data
-  // TODO: Add user.html page or serve with SSR
-  return res.sendFile(path.join(__dirname, '..', 'public', 'user.html'));
-});
+// NOTE: GET /u/:id moved to modules/profile/publicRoutes.js
 
 // GET /@/:username - Reserved for future custom username feature
 // When implemented: lookup users.username -> redirect to /u/{public_id} or serve profile
@@ -2911,7 +2297,7 @@ ${limitedAssetPaths.length > 0 ? `- 参照画像が${limitedAssetPaths.length}�
 });
 
 // Upload thumbnail image
-app.post('/api/projects/:projectId/upload-thumbnail', authenticate, checkProjectOwnership, upload.single('thumbnail'), async (req, res) => {
+app.post('/api/projects/:projectId/upload-thumbnail', authenticate, checkProjectOwnership, upload.thumbnail.single('thumbnail'), async (req, res) => {
   try {
     const { projectId } = req.params;
 

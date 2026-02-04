@@ -132,6 +132,85 @@ router.post('/me/avatar', authenticate, upload.single('avatar'), async (req, res
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isValidUUID = (str) => UUID_REGEX.test(str);
 
+// CLI Deploy (conditional load)
+const cliDeploy = process.env.SUPABASE_CLI_URL ? require('../../../cli-deploy/server') : null;
+
+/**
+ * GET /api/users/:id/games
+ * Get user's public games for profile page
+ * CRITICAL: Returns only visibility='public' games
+ * Note: Rate limiting is handled by /api middleware (publicRateLimiter)
+ */
+router.get('/:id/games', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const isUUID = isValidUUID(id);
+    const isPublicId = /^u_[A-Za-z0-9]{10}$/.test(id);
+
+    if (!isUUID && !isPublicId) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    // Resolve public_id to UUID if needed
+    let userId = id;
+    if (isPublicId) {
+      const user = await db.getUserByPublicId(id);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      userId = user.id;
+    }
+
+    // Get Play games (visibility='public' enforced in DB function)
+    const playGames = await db.getPublishedGamesByUserIdPublic(userId);
+
+    // Get CLI games (filter visibility='public')
+    let cliGames = [];
+    if (cliDeploy) {
+      try {
+        const allCliGames = await cliDeploy.getCliPublishedGamesByUserId(userId);
+        // CRITICAL: Filter visibility='public' for CLI games
+        cliGames = (allCliGames || []).filter(g => g.visibility === 'public');
+      } catch (e) {
+        console.error('[Profile] CLI games fetch error:', e.message);
+        // Continue with Play games only
+      }
+    }
+
+    // Merge and sort by published_at
+    const games = [
+      ...playGames.map(g => ({
+        id: g.id,
+        public_id: g.public_id,
+        project_id: g.project_id,
+        title: g.title,
+        description: g.description,
+        thumbnail_url: g.thumbnail_url,
+        published_at: g.published_at,
+        play_count: g.play_count || 0,
+        like_count: g.like_count || 0,
+        is_cli_game: false,
+      })),
+      ...cliGames.map(g => ({
+        id: g.id,
+        public_id: g.public_id,
+        project_id: g.project_id,
+        title: g.title,
+        description: g.description,
+        thumbnail_url: g.thumbnail_url,
+        published_at: g.published_at,
+        play_count: g.play_count || 0,
+        like_count: g.like_count || 0,
+        is_cli_game: true,
+      })),
+    ].sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+
+    res.json({ games });
+  } catch (err) {
+    console.error('GET /api/users/:id/games error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 /**
  * GET /api/users/:id/public
  * Get user's public profile

@@ -42,6 +42,22 @@ class MyPageApp {
       return;
     }
 
+    // Redirect to unified profile page (/u/:public_id) if available
+    try {
+      const res = await DreamCoreAuth.authFetch('/api/users/me');
+      if (res.ok) {
+        const profile = await res.json();
+        if (profile.public_id) {
+          window.location.replace(`/u/${profile.public_id}`);
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('[MyPage] Failed to fetch profile for redirect:', e);
+    }
+
+    // Fallback: Continue with legacy mypage if no public_id
+    console.log('[MyPage] No public_id, using legacy view');
     this.currentUser = session.user;
     this.userId = session.user.id;
     this.accessToken = session.access_token;

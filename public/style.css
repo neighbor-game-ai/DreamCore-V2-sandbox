@@ -6988,6 +6988,15 @@ body::before {
   color: var(--gray-900);
 }
 
+/* Empty games message (for other's profile with no public games) */
+.mypage-games-empty {
+  width: 100%;
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--gray-500);
+  font-size: 0.875rem;
+}
+
 /* ========================================
    Game Showcase - Miyamoto Style
    "触って楽しい、見て嬉しい"
