@@ -82,7 +82,7 @@ async function main() {
 
       // 冪等性チェック: マッピングテーブルに既存か確認
       const { data: existing } = await v2Supabase
-                .from('private.user_migration_map')
+                .from('user_migration_map')
         .select('v1_user_id')
         .eq('v1_user_id', user.id)
         .single();
@@ -124,7 +124,7 @@ async function main() {
 
           // マッピング登録
           const { error: mapError } = await v2Supabase
-            .from('private.user_migration_map')
+            .from('user_migration_map')
             .insert({
               v1_user_id: user.id,
               v2_user_id: newUser.user.id,
@@ -132,7 +132,7 @@ async function main() {
               migration_status: 'completed',
               migrated_at: new Date().toISOString()
             })
-            .schema('private');
+;
 
           if (mapError) {
             console.error(`  Warning: Mapping insert failed for ${user.email}:`, mapError.message);
@@ -156,15 +156,14 @@ async function main() {
 
         // 失敗を記録
         await v2Supabase
-          .from('private.user_migration_map')
+          .from('user_migration_map')
           .insert({
             v1_user_id: user.id,
             v2_user_id: '00000000-0000-0000-0000-000000000000',
             email: user.email,
             migration_status: 'failed',
             error_message: lastError.message
-          })
-          .schema('private');
+          });
 
         stats.failed++;
       }
@@ -206,7 +205,7 @@ async function main() {
     }
 
     const { error } = await v2Supabase
-      .from('private.user_migration_map')
+      .from('user_migration_map')
       .upsert({
         v1_user_id: dup.v1_id,
         v2_user_id: v2User.id,
@@ -214,8 +213,7 @@ async function main() {
         migration_status: 'completed',
         migrated_at: new Date().toISOString(),
         notes: 'duplicate - v2 uuid preserved'
-      })
-      .schema('private');
+      });
 
     if (error) {
       console.error(`  Error mapping ${dup.email}:`, error.message);

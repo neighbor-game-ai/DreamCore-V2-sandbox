@@ -1,15 +1,16 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>つくる - ゲームクリエイター</title>
+  <title>Create - Game Creator</title>
+  <script src="/i18n.js?v=20260205"></script>
   <!-- Preconnect for faster font loading -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- Non-blocking font loading -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style.css?v=20260205">
   <!-- Skeleton styles (inline for instant display) -->
   <style>
     .skeleton .skeleton-shimmer {
@@ -30,7 +31,7 @@
   <style id="access-check-style">
     body { visibility: hidden; }
   </style>
-  <meta name="description" content="チャットで会話するだけで、オリジナルのゲームが作れます。">
+  <meta name="description" content="Create original games just by chatting.">
   <!-- Early auth check + Supabase lazy loader -->
   <script>
     (function() {
@@ -108,8 +109,21 @@
       </div>
       <div class="list-header-right">
         <div class="quota-display hidden" id="quotaDisplay"></div>
+        <div class="lang-selector" id="langSelector">
+          <button class="lang-selector-btn" id="langSelectorBtn">
+            <span id="currentLang">EN</span>
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 4.5L6 7.5L9 4.5"/>
+            </svg>
+          </button>
+          <div class="lang-selector-dropdown">
+            <button class="lang-option" data-lang="en">English</button>
+            <button class="lang-option" data-lang="ja">日本語</button>
+            <button class="lang-option" data-lang="zh">中文</button>
+          </div>
+        </div>
         <span class="connection-dot" id="listStatusIndicator"></span>
-        <button class="notifications-btn" id="notificationsButton" title="通知">
+        <button class="notifications-btn" id="notificationsButton" data-i18n-title="nav.notifications" title="Notifications">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
@@ -135,7 +149,7 @@
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
         </span>
-        <span class="create-btn-text">つくる</span>
+        <span class="create-btn-text" data-i18n="button.create">Create</span>
       </button>
     </div>
 
@@ -145,15 +159,15 @@
         <div class="filter-slider" id="filterSlider"></div>
         <button class="filter-tab active" data-filter="all" data-index="0">
           <span class="filter-count" id="filterCountAll">0</span>
-          ALL
+          <span data-i18n="filter.all">ALL</span>
         </button>
         <button class="filter-tab" data-filter="published" data-index="1">
           <span class="filter-count" id="filterCountPublished">0</span>
-          公開
+          <span data-i18n="filter.published">Published</span>
         </button>
         <button class="filter-tab" data-filter="draft" data-index="2">
           <span class="filter-count" id="filterCountDraft">0</span>
-          下書き
+          <span data-i18n="filter.draft">Draft</span>
         </button>
       </div>
       <div class="project-grid" id="projectGrid">
@@ -199,23 +213,24 @@
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
         </div>
-        <h2>新しいゲーム</h2>
+        <h2 data-i18n="modal.newGame.title">New Game</h2>
       </div>
       <div class="new-game-body">
-        <label class="new-game-label" for="newGameName">ゲームの名前</label>
+        <label class="new-game-label" for="newGameName" data-i18n="modal.newGame.nameLabel">Game Name</label>
         <input
           type="text"
           id="newGameName"
           class="new-game-input"
-          placeholder="例：宇宙シューティング"
+          data-i18n-placeholder="modal.newGame.namePlaceholder"
+          placeholder="e.g., Space Shooter"
           maxlength="50"
           autocomplete="off"
         >
-        <div class="new-game-hint">後から変更できます</div>
+        <div class="new-game-hint" data-i18n="modal.newGame.nameHint">You can change this later</div>
       </div>
       <div class="new-game-actions">
-        <button id="cancelNewGame" class="new-game-cancel">キャンセル</button>
-        <button id="confirmNewGame" class="new-game-confirm">つくる</button>
+        <button id="cancelNewGame" class="new-game-cancel" data-i18n="button.cancel">Cancel</button>
+        <button id="confirmNewGame" class="new-game-confirm" data-i18n="button.create">Create</button>
       </div>
     </div>
   </div>
@@ -230,22 +245,23 @@
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
           </svg>
         </div>
-        <h2>名前を変更</h2>
+        <h2 data-i18n="modal.rename.title">Rename</h2>
       </div>
       <div class="new-game-body">
-        <label class="new-game-label" for="renameInput">新しい名前</label>
+        <label class="new-game-label" for="renameInput" data-i18n="modal.rename.nameLabel">New Name</label>
         <input
           type="text"
           id="renameInput"
           class="new-game-input"
-          placeholder="ゲームの名前"
+          data-i18n-placeholder="modal.rename.namePlaceholder"
+          placeholder="Game name"
           maxlength="50"
           autocomplete="off"
         >
       </div>
       <div class="new-game-actions">
-        <button id="cancelRename" class="new-game-cancel">キャンセル</button>
-        <button id="confirmRename" class="new-game-confirm">変更</button>
+        <button id="cancelRename" class="new-game-cancel" data-i18n="button.cancel">Cancel</button>
+        <button id="confirmRename" class="new-game-confirm" data-i18n="button.change">Save</button>
       </div>
     </div>
   </div>
@@ -260,15 +276,15 @@
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
           </svg>
         </div>
-        <h2>削除の確認</h2>
+        <h2 data-i18n="modal.delete.title">Confirm Delete</h2>
       </div>
       <div class="new-game-body">
-        <p class="delete-message">「<span id="deleteProjectName"></span>」を削除しますか？</p>
-        <p class="delete-warning">この操作は取り消せません</p>
+        <p class="delete-message"><span data-i18n="modal.delete.messagePrefix">Delete</span> "<span id="deleteProjectName"></span>"?</p>
+        <p class="delete-warning" data-i18n="modal.delete.warning">This action cannot be undone</p>
       </div>
       <div class="new-game-actions">
-        <button id="cancelDelete" class="new-game-cancel">キャンセル</button>
-        <button id="confirmDelete" class="new-game-confirm delete-confirm">削除</button>
+        <button id="cancelDelete" class="new-game-cancel" data-i18n="button.cancel">Cancel</button>
+        <button id="confirmDelete" class="new-game-confirm delete-confirm" data-i18n="button.delete">Delete</button>
       </div>
     </div>
   </div>
@@ -284,14 +300,14 @@
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
         </div>
-        <h2 id="quotaLimitTitle">本日の上限に達しました</h2>
+        <h2 id="quotaLimitTitle" data-i18n="modal.quotaLimit.title">Daily limit reached</h2>
       </div>
       <div class="new-game-body">
         <p id="quotaLimitMessage" class="quota-limit-message"></p>
         <p id="quotaLimitReset" class="quota-limit-reset"></p>
       </div>
       <div class="new-game-actions">
-        <button id="closeQuotaLimit" class="new-game-confirm">OK</button>
+        <button id="closeQuotaLimit" class="new-game-confirm" data-i18n="button.ok">OK</button>
       </div>
     </div>
   </div>
@@ -303,34 +319,34 @@
         <circle cx="11" cy="11" r="8"></circle>
         <path d="m21 21-4.35-4.35"></path>
       </svg>
-      <span>発見</span>
+      <span data-i18n="nav.discover">Discover</span>
     </button>
     <button class="nav-item active" data-tab="create">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="12" y1="5" x2="12" y2="19"></line>
         <line x1="5" y1="12" x2="19" y2="12"></line>
       </svg>
-      <span>作る</span>
+      <span data-i18n="nav.create">Create</span>
     </button>
     <button class="nav-item nav-zapping" id="navZappingBtn">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="9 18 15 12 9 6"></polyline>
       </svg>
-      <span>次へ</span>
+      <span data-i18n="nav.next">Next</span>
     </button>
     <button class="nav-item" data-tab="notifications">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
         <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
       </svg>
-      <span>通知</span>
+      <span data-i18n="nav.notifications">Notifications</span>
     </button>
     <button class="nav-item" data-tab="profile">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
         <circle cx="12" cy="7" r="4"></circle>
       </svg>
-      <span>マイ</span>
+      <span data-i18n="nav.myPage">My Page</span>
     </button>
   </nav>
 
@@ -343,5 +359,60 @@
     }
   </script>
   <script src="/app.js" defer></script>
+  <script defer>
+    // Language selector initialization
+    document.addEventListener('DOMContentLoaded', async () => {
+      await DreamCoreI18n.init();
+
+      const selector = document.getElementById('langSelector');
+      const btn = document.getElementById('langSelectorBtn');
+      const currentLangEl = document.getElementById('currentLang');
+      const options = selector.querySelectorAll('.lang-option');
+
+      // Set current language display
+      const langLabels = { en: 'EN', ja: 'JA', zh: 'ZH' };
+      const currentLang = DreamCoreI18n.getLanguage();
+      currentLangEl.textContent = langLabels[currentLang] || 'EN';
+
+      // Mark active option
+      options.forEach(opt => {
+        if (opt.dataset.lang === currentLang) {
+          opt.classList.add('active');
+        }
+      });
+
+      // Toggle dropdown
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selector.classList.toggle('open');
+      });
+
+      // Select language
+      options.forEach(opt => {
+        opt.addEventListener('click', () => {
+          const lang = opt.dataset.lang;
+          DreamCoreI18n.setLanguage(lang, false);
+          currentLangEl.textContent = langLabels[lang];
+
+          // Update active state
+          options.forEach(o => o.classList.remove('active'));
+          opt.classList.add('active');
+
+          selector.classList.remove('open');
+
+          // Update DOM
+          DreamCoreI18n.updateDOM();
+
+          // Update page title
+          document.title = DreamCoreI18n.t('page.create.title');
+        });
+      });
+
+      // Close on outside click
+      document.addEventListener('click', () => {
+        selector.classList.remove('open');
+      });
+    });
+  </script>
 </body>
 </html>

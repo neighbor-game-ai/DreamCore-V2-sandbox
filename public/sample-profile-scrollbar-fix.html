@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>プロフィール編集 - スクロールバー修正サンプル</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 40px;
+      padding: 40px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #525252;
+    }
+
+    .demo-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Modal Backdrop */
+    .profile-modal-backdrop {
+      position: relative;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 16px;
+      padding: 16px;
+      width: 400px;
+      height: 600px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Modal Container - 修正前 */
+    .profile-modal {
+      background: #fff;
+      border-radius: 24px;
+      width: 100%;
+      max-height: 100%;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    /* Modal Container - 修正後 */
+    .profile-modal.fixed {
+      scrollbar-width: none;        /* Firefox */
+      -ms-overflow-style: none;     /* IE/Edge */
+    }
+
+    .profile-modal.fixed::-webkit-scrollbar {
+      display: none;                /* Chrome/Safari */
+    }
+
+    /* Modal Header */
+    .profile-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid #E5E5E5;
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 1;
+      border-radius: 24px 24px 0 0;
+    }
+
+    .profile-modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #171717;
+    }
+
+    .profile-modal-close {
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: #F5F5F5;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #525252;
+    }
+
+    /* Modal Body */
+    .profile-modal-body {
+      padding: 24px;
+    }
+
+    /* Avatar Section */
+    .profile-avatar-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    .profile-avatar-preview {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #FF6B35, #FF8C42);
+      overflow: hidden;
+      border: 3px solid #E5E5E5;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+    }
+
+    .profile-avatar-upload-btn {
+      padding: 10px 20px;
+      background: #171717;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    /* Form Groups */
+    .profile-form-group {
+      margin-bottom: 20px;
+    }
+
+    .profile-form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #525252;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .profile-form-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #E5E5E5;
+      border-radius: 12px;
+      font-size: 16px;
+      color: #171717;
+      background: #FAFAFA;
+    }
+
+    .profile-form-textarea {
+      resize: vertical;
+      min-height: 100px;
+      font-family: inherit;
+    }
+
+    .profile-form-hint {
+      font-size: 12px;
+      color: #A3A3A3;
+      margin-top: 6px;
+    }
+
+    /* Username wrapper */
+    .profile-username-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .profile-username-prefix {
+      position: absolute;
+      left: 16px;
+      font-size: 16px;
+      font-weight: 500;
+      color: #525252;
+    }
+
+    .profile-username-input {
+      padding-left: 32px !important;
+      padding-right: 100px !important;
+    }
+
+    .profile-username-status {
+      position: absolute;
+      right: 16px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #3B82F6;
+    }
+
+    .profile-username-url {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 8px;
+      padding: 4px 8px;
+      background: #F5F5F5;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #525252;
+    }
+
+    /* Modal Footer */
+    .profile-modal-footer {
+      display: flex;
+      gap: 12px;
+      padding: 20px 24px;
+      border-top: 1px solid #E5E5E5;
+      background: #FAFAFA;
+      border-radius: 0 0 24px 24px;
+    }
+
+    .profile-btn {
+      flex: 1;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .profile-btn-cancel {
+      background: #E5E5E5;
+      color: #525252;
+    }
+
+    .profile-btn-save {
+      background: #FF3B30;
+      color: #fff;
+    }
+
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    .badge-before {
+      background: #FEE2E2;
+      color: #DC2626;
+    }
+
+    .badge-after {
+      background: #D1FAE5;
+      color: #059669;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 修正前 -->
+  <div class="demo-container">
+    <h2>修正前（スクロールバーあり）</h2>
+    <div class="profile-modal-backdrop">
+      <div class="profile-modal">
+        <div class="profile-modal-header">
+          <span class="profile-modal-title">プロフィール編集</span>
+          <button class="profile-modal-close">✕</button>
+        </div>
+        <div class="profile-modal-body">
+          <div class="profile-avatar-section">
+            <div class="profile-avatar-preview">🎮</div>
+            <button class="profile-avatar-upload-btn">画像を変更</button>
+          </div>
+
+          <div class="profile-form-group">
+            <label class="profile-form-label">ユーザー名</label>
+            <div class="profile-username-input-wrapper">
+              <span class="profile-username-prefix">@</span>
+              <input type="text" class="profile-form-input profile-username-input" value="notef">
+              <span class="profile-username-status">現在使用中</span>
+            </div>
+            <div class="profile-form-hint">
+              3〜20文字、英小文字・数字・アンダースコアのみ
+              <span class="profile-username-url">v2.dreamcore.gg/@notef</span>
+            </div>
+          </div>
+
+          <div class="profile-form-group">
+            <label class="profile-form-label">表示名</label>
+            <input type="text" class="profile-form-input" value="notef">
+            <div class="profile-form-hint">最大50文字</div>
+          </div>
+
+          <div class="profile-form-group">
+            <label class="profile-form-label">自己紹介</label>
+            <textarea class="profile-form-input profile-form-textarea">あああああああああああああああ寿限無樹あああああああああああああああああ寿限無樹あああああああああああああああああ寿限無樹</textarea>
+            <div class="profile-form-hint">54/160文字</div>
+          </div>
+        </div>
+        <div class="profile-modal-footer">
+          <button class="profile-btn profile-btn-cancel">キャンセル</button>
+          <button class="profile-btn profile-btn-save">保存</button>
+        </div>
+      </div>
+    </div>
+    <span class="badge badge-before">スクロールバー表示</span>
+  </div>
+
+  <!-- 修正後 -->
+  <div class="demo-container">
+    <h2>修正後（スクロールバー非表示）</h2>
+    <div class="profile-modal-backdrop">
+      <div class="profile-modal fixed">
+        <div class="profile-modal-header">
+          <span class="profile-modal-title">プロフィール編集</span>
+          <button class="profile-modal-close">✕</button>
+        </div>
+        <div class="profile-modal-body">
+          <div class="profile-avatar-section">
+            <div class="profile-avatar-preview">🎮</div>
+            <button class="profile-avatar-upload-btn">画像を変更</button>
+          </div>
+
+          <div class="profile-form-group">
+            <label class="profile-form-label">ユーザー名</label>
+            <div class="profile-username-input-wrapper">
+              <span class="profile-username-prefix">@</span>
+              <input type="text" class="profile-form-input profile-username-input" value="notef">
+              <span class="profile-username-status">現在使用中</span>
+            </div>
+            <div class="profile-form-hint">
+              3〜20文字、英小文字・数字・アンダースコアのみ
+              <span class="profile-username-url">v2.dreamcore.gg/@notef</span>
+            </div>
+          </div>
+
+          <div class="profile-form-group">
+            <label class="profile-form-label">表示名</label>
+            <input type="text" class="profile-form-input" value="notef">
+            <div class="profile-form-hint">最大50文字</div>
+          </div>
+
+          <div class="profile-form-group">
+            <label class="profile-form-label">自己紹介</label>
+            <textarea class="profile-form-input profile-form-textarea">あああああああああああああああ寿限無樹あああああああああああああああああ寿限無樹あああああああああああああああああ寿限無樹</textarea>
+            <div class="profile-form-hint">54/160文字</div>
+          </div>
+        </div>
+        <div class="profile-modal-footer">
+          <button class="profile-btn profile-btn-cancel">キャンセル</button>
+          <button class="profile-btn profile-btn-save">保存</button>
+        </div>
+      </div>
+    </div>
+    <span class="badge badge-after">スクロールバー非表示</span>
+  </div>
+
+</body>
+</html>

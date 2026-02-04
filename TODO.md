@@ -8,6 +8,85 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-05: 認証機能改善 ✅
+
+**詳細:** `.claude/logs/2026-02-05-auth-improvements.md`
+
+認証オプションの拡充と多言語メール対応を実施:
+
+| 機能 | 内容 |
+|------|------|
+| **ウェイトリストメール言語対応** | 日本人ユーザーにも英語メールが届いていた問題を修正 |
+| **Apple Sign-In** | V1 から移行した Apple ID ユーザーのログイン対応 |
+| **メール認証（マジックリンク）** | 中国など Google/Apple がブロックされている地域向け |
+| **多言語メール** | 日本語/英語/中国語の3言語対応（Brevo API） |
+
+**変更ファイル:**
+- `server/routes/authApi.js` (新規) - マジックリンク API
+- `public/auth.js` - signInWithApple, signInWithMagicLink 追加
+- `public/index.html` - Apple/メールログインボタン追加
+- `public/i18n.js` - git に追加（以前は untracked で 404）
+- `supabase/functions/waitlist-email/index.ts` - 言語判定追加
+
+**設定変更:**
+- Apple Developer Console: `auth.dreamcore.gg` を Return URL に追加
+- Edge Function: VERSION 11 にデプロイ
+
+---
+
+### 2026-02-04: 送信ボタン状態表示をリバート ✅
+
+**コミット:** `4780f82 Revert "feat(ui): add visual state feedback to send button"`
+
+UX の観点から、送信ボタンの動的状態表示（empty/ready/processing/quota）を元のシンプルな実装に戻した。
+
+| 変更前 | 変更後 |
+|--------|--------|
+| 状態に応じてラベル・アイコン・色が変化 | 「送信」固定ラベル + disabled 制御のみ |
+
+**理由:** UX は "分かりやすさ" と "一貫性" が最優先（CTO 判断）
+
+**方法:** `git revert 672c37d` で安全にリバート（コンフリクトなし）
+
+**デプロイ:** GCE 本番反映済み ✅
+
+---
+
+### 2026-02-04: V1→V2 ユーザー移行 ✅
+
+**詳細:** `.claude/logs/2026-02-04-v1-to-v2-user-migration.md`
+
+DreamCore V1（7,299ユーザー）から V2 への完全移行を実施:
+
+| フェーズ | 内容 | 結果 |
+|---------|------|------|
+| Phase 1 | マッピングテーブル作成 | ✅ 7,297件 |
+| Phase 2 | auth.users 移行 | ✅ 7,174作成 + 108スキップ |
+| Phase 3 | display_name 移行 | ✅ 7,296更新 |
+| Fix | public.users 作成 | ✅ 7,286作成 |
+
+**最終結果:**
+- V2 auth.users: **7,309**
+- V2 public.users: **7,309**
+
+**認証方法の内訳（移行元）:**
+- Google OAuth: 5,821
+- Email/Password: 896（パスワードリセット必要）
+- Apple: 565
+
+**方針決定:**
+- bio / social_links / avatar は移行せず、ユーザー手動更新とする
+- 理由: 移行コスト vs 価値のバランス、最新情報をユーザーに入力してもらう
+
+**学び:**
+- Admin API でユーザー作成時、`public.users` トリガーは発火しない
+- Supabase 連続リクエストで 500 エラー発生 → リトライ＋指数バックオフで対応
+- PostgREST は public スキーマのみアクセス可能
+
+**スクリプト:** `scripts/migration-*.js`（6ファイル）
+
+---
+
 ### 2026-02-04: @username プロフィールナビゲーション ✅
 
 **詳細:** `.claude/logs/2026-02-04-username-profile-navigation.md`
@@ -1513,4 +1592,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-04 (@username プロフィールナビゲーション)
+最終更新: 2026-02-05 (認証機能改善)

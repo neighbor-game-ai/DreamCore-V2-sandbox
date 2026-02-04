@@ -112,3 +112,30 @@ curl -I "https://cdn.dreamcore.gg/user-assets/..." -H "Origin: https://v2.dreamc
 - P5.js の `loadImage`/`loadSound` は Canvas 描画のため CORS が必要（単純な `<img>` タグとは異なる）
 - wrangler の CORS 設定 JSON は `rules` キーでラップし、フィールド名は小文字 (`allowed.origins` など)
 - モバイルではホバーが使えないため、ツールチップではなくボタン内テキストで状態を表示
+
+---
+
+## 2026-02-04 追記: 送信ボタン状態表示をリバート
+
+**コミット:** `4780f82 Revert "feat(ui): add visual state feedback to send button"`
+
+### 経緯
+
+UX の観点から、送信ボタンの動的状態表示を元のシンプルな実装に戻すことを決定。
+
+### リバート方法
+
+```bash
+git revert 672c37d --no-commit  # 事前確認
+git revert --continue           # コンフリクトなし → コミット
+```
+
+### 結果
+
+- 193行削除、13行復元
+- 送信ボタンは「送信」固定ラベル + `disabled` 属性のみに戻った
+
+### CTO 判断
+
+> UX は "分かりやすさ" と "一貫性" が最優先。
+> 表示のみの変更で機能要件ではないため、安全に後戻りできるカテゴリ。

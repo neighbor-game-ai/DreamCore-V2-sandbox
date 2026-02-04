@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>アップロードUI比較テスト</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+    }
+
+    .tab-bar {
+      display: flex;
+      background: #fff;
+      border-bottom: 1px solid #E5E5E5;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px 4px;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 600;
+      color: #737373;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab.active {
+      color: #FF3B30;
+      border-bottom-color: #FF3B30;
+    }
+
+    .content {
+      padding: 16px;
+      padding-bottom: 180px;
+    }
+
+    .description {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .description h3 {
+      font-size: 15px;
+      color: #171717;
+      margin-bottom: 8px;
+    }
+
+    .description p {
+      font-size: 14px;
+      color: #525252;
+      line-height: 1.6;
+    }
+
+    .test-panel {
+      display: none;
+    }
+    .test-panel.active {
+      display: block;
+    }
+
+    .bottom-area {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-top: 1px solid #E5E5E5;
+      padding: 12px 16px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      z-index: 50;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .icon-btn.red { background: #FF3B30; color: #fff; }
+    .icon-btn.purple { background: #F3E8FF; color: #9333EA; }
+
+    .text-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #E5E5E5;
+      border-radius: 24px;
+      font-size: 16px;
+      background: #FAFAFA;
+      min-width: 0;
+    }
+
+    .send-btn {
+      width: 100%;
+      padding: 14px;
+      background: #FF3B30;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .popup-menu {
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      margin-bottom: 8px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      min-width: 160px;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(10px) scale(0.95);
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .popup-menu.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .popup-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+    }
+
+    .popup-menu-item:active {
+      background: #F5F5F5;
+    }
+
+    .popup-menu-item:not(:last-child) {
+      border-bottom: 1px solid #F0F0F0;
+    }
+
+    .popup-menu-icon {
+      font-size: 18px;
+    }
+
+    .popup-menu-label {
+      font-size: 15px;
+      color: #171717;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .debug {
+      position: fixed;
+      top: 50px;
+      right: 10px;
+      background: rgba(0,0,0,0.8);
+      color: #0f0;
+      padding: 8px;
+      font-size: 10px;
+      font-family: monospace;
+      border-radius: 4px;
+      z-index: 9999;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="debug" id="debug"></div>
+
+  <div class="tab-bar">
+    <button class="tab active" data-tab="keep">メニュー維持</button>
+    <button class="tab" data-tab="split">写真/カメラ分離</button>
+  </div>
+
+  <!-- メニュー維持 -->
+  <div class="test-panel active" id="panel-keep">
+    <div class="content">
+      <div class="description">
+        <h3>メニュー維持</h3>
+        <p>アップロード中はメニューを維持。選択完了またはキャンセル時に閉じる。</p>
+      </div>
+    </div>
+    <div class="bottom-area">
+      <div class="input-row">
+        <button class="icon-btn red">+</button>
+        <button class="icon-btn purple" id="menuBtn1">🖼</button>
+        <input type="text" class="text-input" placeholder="自由に話しかけてください">
+        <div class="popup-menu" id="menu1">
+          <div class="popup-menu-item" data-action="upload">
+            <span class="popup-menu-icon">⬆️</span>
+            <span class="popup-menu-label">アップロード</span>
+          </div>
+        </div>
+      </div>
+      <button class="send-btn">✈ 送信</button>
+    </div>
+  </div>
+
+  <!-- 写真/カメラ分離 -->
+  <div class="test-panel" id="panel-split">
+    <div class="content">
+      <div class="description">
+        <h3>写真/カメラ分離</h3>
+        <p>カメラは直接起動。写真はOSメニューが出るが、それは許容。</p>
+      </div>
+    </div>
+    <div class="bottom-area">
+      <div class="input-row">
+        <button class="icon-btn red">+</button>
+        <button class="icon-btn purple" id="menuBtn2">🖼</button>
+        <input type="text" class="text-input" placeholder="自由に話しかけてください">
+        <div class="popup-menu" id="menu2">
+          <div class="popup-menu-item" data-action="photo">
+            <span class="popup-menu-icon">🖼</span>
+            <span class="popup-menu-label">写真を選択</span>
+          </div>
+          <div class="popup-menu-item" data-action="camera">
+            <span class="popup-menu-icon">📷</span>
+            <span class="popup-menu-label">カメラで撮影</span>
+          </div>
+        </div>
+      </div>
+      <button class="send-btn">✈ 送信</button>
+    </div>
+  </div>
+
+  <input type="file" id="fileInput1" accept="image/*,audio/*" multiple>
+  <input type="file" id="fileInputPhoto" accept="image/*" multiple>
+  <input type="file" id="fileInputCamera" accept="image/*" capture="environment">
+
+  <script>
+    const debug = document.getElementById('debug');
+    function log(msg) {
+      // debug.style.display = 'block';
+      // debug.textContent = msg + '\n' + debug.textContent.slice(0, 200);
+      console.log(msg);
+    }
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.test-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // ========== メニュー維持 ==========
+    const menu1 = document.getElementById('menu1');
+    const menuBtn1 = document.getElementById('menuBtn1');
+    const fileInput1 = document.getElementById('fileInput1');
+    let isUploading = false;
+
+    menuBtn1.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menu1.classList.toggle('visible');
+    });
+
+    menu1.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    document.querySelector('#menu1 .popup-menu-item').addEventListener('click', (e) => {
+      e.stopPropagation();
+      isUploading = true;
+      log('upload clicked, isUploading=true');
+      fileInput1.click();
+    });
+
+    fileInput1.addEventListener('change', (e) => {
+      log('change event');
+      isUploading = false;
+      menu1.classList.remove('visible');
+      const files = Array.from(e.target.files);
+      if (files.length > 0) {
+        alert('選択: ' + files.map(f => f.name).join(', '));
+      }
+      e.target.value = '';
+    });
+
+    // キャンセル検出: 複数のイベントを組み合わせ
+    // iOS Safari では focus イベントが発火する
+    function handlePickerDismiss() {
+      if (isUploading) {
+        log('picker dismissed (cancel)');
+        // 少し待ってからメニューを閉じる（change イベントより後に実行）
+        setTimeout(() => {
+          if (isUploading) {
+            isUploading = false;
+            menu1.classList.remove('visible');
+            log('menu closed by dismiss');
+          }
+        }, 100);
+      }
+    }
+
+    // iOS: ピッカーが閉じると focus が発火
+    window.addEventListener('focus', () => {
+      log('window focus');
+      handlePickerDismiss();
+    });
+
+    // iOS: visibilitychange も試す
+    document.addEventListener('visibilitychange', () => {
+      log('visibility: ' + document.visibilityState);
+      if (document.visibilityState === 'visible') {
+        handlePickerDismiss();
+      }
+    });
+
+    // 外部クリック
+    document.addEventListener('click', () => {
+      if (!isUploading) {
+        menu1.classList.remove('visible');
+        menu2.classList.remove('visible');
+      }
+    });
+
+    // ========== 写真/カメラ分離 ==========
+    const menu2 = document.getElementById('menu2');
+    const menuBtn2 = document.getElementById('menuBtn2');
+
+    menuBtn2.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menu2.classList.toggle('visible');
+    });
+
+    menu2.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    document.querySelectorAll('#menu2 .popup-menu-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = item.dataset.action;
+        menu2.classList.remove('visible');
+
+        if (action === 'photo') {
+          document.getElementById('fileInputPhoto').click();
+        } else if (action === 'camera') {
+          document.getElementById('fileInputCamera').click();
+        }
+      });
+    });
+
+    document.getElementById('fileInputPhoto').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length > 0) {
+        alert('選択: ' + files.map(f => f.name).join(', '));
+      }
+      e.target.value = '';
+    });
+
+    document.getElementById('fileInputCamera').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length > 0) {
+        alert('選択: ' + files.map(f => f.name).join(', '));
+      }
+      e.target.value = '';
+    });
+  </script>
+
+</body>
+</html>

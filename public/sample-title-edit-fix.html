@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>プロジェクトタイトル編集 - モバイル修正テスト</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    h2 {
+      font-size: 14px;
+      color: #525252;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .demo-container {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    /* Header simulation */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 16px;
+      background: #FAFAFA;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    .back-btn {
+      font-size: 20px;
+      color: #525252;
+      cursor: pointer;
+    }
+
+    .project-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #171717;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+      min-width: 100px;
+      outline: none;
+      transition: background 0.2s;
+    }
+
+    .project-title:hover {
+      background: #F0F0F0;
+    }
+
+    .project-title.editing {
+      background: #fff;
+      box-shadow: 0 0 0 2px #171717;
+    }
+
+    .action-btns {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: #FF3B30;
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: #E5E5E5;
+      color: #525252;
+    }
+
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-before {
+      background: #FEE2E2;
+      color: #DC2626;
+    }
+
+    .badge-after {
+      background: #D1FAE5;
+      color: #059669;
+    }
+
+    .description {
+      font-size: 14px;
+      color: #525252;
+      line-height: 1.6;
+      margin-top: 12px;
+    }
+
+    .instructions {
+      background: #FEF3C7;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+    }
+
+    .instructions h3 {
+      font-size: 14px;
+      color: #92400E;
+      margin-bottom: 8px;
+    }
+
+    .instructions ol {
+      font-size: 14px;
+      color: #78350F;
+      padding-left: 20px;
+    }
+
+    .instructions li {
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="instructions">
+    <h3>テスト方法（モバイルで確認）</h3>
+    <ol>
+      <li>タイトルをタップして編集モードに入る</li>
+      <li>文字の途中をタップしてカーソルを移動しようとする</li>
+      <li>「修正前」は毎回全選択される</li>
+      <li>「修正後」は2回目以降のタップではカーソル移動のみ</li>
+    </ol>
+  </div>
+
+  <!-- 修正前 -->
+  <div class="demo-container">
+    <h2>修正前（毎回全選択）</h2>
+    <div class="header">
+      <span class="back-btn">←</span>
+      <div class="project-title" id="title-before">Cartoon Dash</div>
+      <div class="action-btns">
+        <button class="btn btn-primary">▷ 遊ぶ</button>
+        <button class="btn btn-secondary">↑ 登録</button>
+      </div>
+    </div>
+    <span class="badge badge-before">問題あり</span>
+    <p class="description">
+      タップするたびに全選択されるため、文字の途中にカーソルを置けません。
+      PCなら矢印キーで解除できますが、モバイルでは不可能です。
+    </p>
+  </div>
+
+  <!-- 修正後 -->
+  <div class="demo-container">
+    <h2>修正後（初回のみ全選択）</h2>
+    <div class="header">
+      <span class="back-btn">←</span>
+      <div class="project-title" id="title-after">Cartoon Dash</div>
+      <div class="action-btns">
+        <button class="btn btn-primary">▷ 遊ぶ</button>
+        <button class="btn btn-secondary">↑ 登録</button>
+      </div>
+    </div>
+    <span class="badge badge-after">修正済み</span>
+    <p class="description">
+      初回タップで全選択 → 2回目以降はカーソル位置を自由に移動可能。
+      編集モード中は再度全選択しない。
+    </p>
+  </div>
+
+  <script>
+    // =============================================
+    // 修正前: 毎回全選択（現在の実装）
+    // =============================================
+    const titleBefore = document.getElementById('title-before');
+
+    titleBefore.addEventListener('click', () => {
+      const currentName = titleBefore.textContent;
+      titleBefore.contentEditable = true;
+      titleBefore.classList.add('editing');
+      titleBefore.focus();
+
+      // 毎回全選択（問題の原因）
+      const range = document.createRange();
+      range.selectNodeContents(titleBefore);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      const finishEditing = () => {
+        titleBefore.contentEditable = false;
+        titleBefore.classList.remove('editing');
+      };
+
+      titleBefore.addEventListener('blur', finishEditing, { once: true });
+    });
+
+    // =============================================
+    // 修正後: 編集中は全選択しない
+    // =============================================
+    const titleAfter = document.getElementById('title-after');
+
+    titleAfter.addEventListener('click', () => {
+      // 既に編集中なら何もしない（カーソル移動を妨げない）
+      if (titleAfter.contentEditable === 'true') {
+        return;
+      }
+
+      const currentName = titleAfter.textContent;
+      titleAfter.contentEditable = true;
+      titleAfter.classList.add('editing');
+      titleAfter.focus();
+
+      // 初回のみ全選択
+      const range = document.createRange();
+      range.selectNodeContents(titleAfter);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      const finishEditing = () => {
+        titleAfter.contentEditable = false;
+        titleAfter.classList.remove('editing');
+      };
+
+      titleAfter.addEventListener('blur', finishEditing, { once: true });
+    });
+  </script>
+
+</body>
+</html>
