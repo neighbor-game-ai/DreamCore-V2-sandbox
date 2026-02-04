@@ -109,6 +109,10 @@ router.post('/:projectId/generate-publish-info', authenticate, checkProjectOwner
     // Use Modal when enabled
     if (config.USE_MODAL) {
       const modal = getModalClient();
+      if (!modal) {
+        console.error('[generate-publish-info] Modal client not available');
+        return res.status(503).json({ error: 'AI service temporarily unavailable' });
+      }
       const result = await modal.generatePublishInfo({
         user_id: req.user.id,
         project_id: projectId,

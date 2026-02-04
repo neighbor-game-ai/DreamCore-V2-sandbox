@@ -14,19 +14,24 @@ const db = require('../database-supabase');
  * - Attaches project to req.project on success
  */
 const checkProjectOwnership = async (req, res, next) => {
-  const { projectId } = req.params;
-  if (!isValidUUID(projectId)) {
-    return res.status(400).json({ error: 'Invalid project ID' });
+  try {
+    const { projectId } = req.params;
+    if (!isValidUUID(projectId)) {
+      return res.status(400).json({ error: 'Invalid project ID' });
+    }
+    const project = await db.getProjectById(req.supabase, projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    if (project.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    req.project = project;
+    next();
+  } catch (error) {
+    console.error('[checkProjectOwnership] Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-  const project = await db.getProjectById(req.supabase, projectId);
-  if (!project) {
-    return res.status(404).json({ error: 'Project not found' });
-  }
-  if (project.user_id !== req.user.id) {
-    return res.status(403).json({ error: 'Access denied' });
-  }
-  req.project = project;
-  next();
 };
 
 module.exports = { checkProjectOwnership };
