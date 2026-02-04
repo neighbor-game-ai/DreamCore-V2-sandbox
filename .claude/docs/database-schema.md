@@ -428,10 +428,24 @@ CREATE TRIGGER on_auth_user_created
 
 ---
 
+## 運用上の注意
+
+### ユーザー削除時の処理
+
+`published_games.user_id` は `users.id` を参照する FK（`ON DELETE SET NULL`）だが、現在 `user_id` カラムは **NOT NULL** 制約あり。
+
+**ユーザー削除を実装する際は、以下のいずれかの対応が必要:**
+
+1. `user_id` を NULL 許可に変更し、削除後は「作者不明」表示
+2. ユーザー削除前に `published_games` を先に処理（削除 or 別ユーザーに移管）
+
+---
+
 ## 変更履歴
 
 | 日付 | 変更内容 |
 |------|----------|
+| 2026-02-04 | published_games.user_id FK を auth.users → public.users に変更 |
 | 2026-01-23 | 初版作成（Phase 1完了時点のスキーマを文書化） |
 | 2026-01-23 | 004_schema_improvements.sql追加（PostgreSQLベストプラクティス対応） |
 | 2026-02-03 | users テーブルに bio, social_links, public_id 追加（プロフィール機能） |
