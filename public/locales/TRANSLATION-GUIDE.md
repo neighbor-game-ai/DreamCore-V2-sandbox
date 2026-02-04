@@ -1,177 +1,86 @@
 # DreamCore 翻訳ガイド
 
-## プロダクトの理解
+## ターゲットユーザー
 
-### ビジョン
-DreamCoreは「AIと対話しながらゲームを作る」プラットフォーム。
-バイブコーディング（Vibe Coding）の体験を提供する。
+**ITリテラシーが低い一般ユーザー**
 
-### ターゲットユーザー
-- AIコーディングツール（Claude Code, Cursor, Codex等）を使う開発者
-- プログラミング初心者でゲームを作りたい人
-- アイデアをすぐ形にしたいクリエイター
+- プログラミング経験なし
+- 技術用語に馴染みがない
+- スマホでSNSを使う程度のITスキル
+- 「ゲームを作りたい」という夢を持つ人
 
-### トーンとスタイル
-- **フレンドリー**: 堅苦しくない、親しみやすい表現
-- **ワクワク感**: ゲーム作りの楽しさを伝える
-- **シンプル**: 専門用語を避け、誰でもわかる言葉を使う
-- **アクション志向**: ユーザーに行動を促す表現
+## 翻訳の原則
 
----
+### 1. やさしい言葉を使う
 
-## 用語集（Glossary）
+| ❌ 避ける | ✅ 使う |
+|-----------|---------|
+| デプロイ | 公開 |
+| オーセンティケーション | ログイン |
+| コンパイル | （使わない） |
+| プラットフォーム | サービス / アプリ |
+| インターフェース | 画面 |
 
-### コア用語
+### 2. 短く、具体的に
 
-| 日本語 | English | 中文 | 備考 |
-|--------|---------|------|------|
-| DreamCore | DreamCore | DreamCore | ブランド名（翻訳しない） |
-| ゲームクリエイター | Game Creator | 游戏创作者 | アプリ名として使用 |
-| バイブコーディング | Vibe Coding | Vibe编程 | そのまま使用、カタカナ/英語で |
+| ❌ 長い | ✅ 短い |
+|---------|---------|
+| 認証に失敗しました | ログインできませんでした |
+| システムエラーが発生しました | うまくいきませんでした |
+| 再試行してください | もう一度 |
 
-### ナビゲーション
+### 3. 親しみやすいトーン
 
-| 日本語 | English | 中文 | 備考 |
-|--------|---------|------|------|
-| つくる / 作る | Create | 创作 | メインアクション |
-| 発見 | Discover | 探索 | 他のゲームを見つける |
-| 通知 | Notifications | 通知 | |
-| マイ / マイページ | My Page | 我的 | プロフィールページ |
-| 次へ | Next | 下一个 | ザッピング機能 |
+| ❌ 堅い | ✅ やわらかい |
+|---------|---------------|
+| 本日の上限に達しました | 今日はここまで！ |
+| 削除を確認 | このゲームを削除する？ |
+| 後から変更可能です | あとから変えられます |
 
-### アクション
+### 4. 行動を促す言葉
 
-| 日本語 | English | 中文 | 備考 |
-|--------|---------|------|------|
-| ログイン | Sign in | 登录 | |
-| ログアウト | Sign out | 退出登录 | |
-| キャンセル | Cancel | 取消 | |
-| 変更 | Change / Save | 保存 | 文脈による |
-| 削除 | Delete | 删除 | |
-| 公開 | Publish | 发布 | ゲームを公開 |
-| 編集 | Edit | 编辑 | |
+| ❌ 説明的 | ✅ 行動的 |
+|----------|----------|
+| Googleでサインイン | Googleではじめる |
+| メールを送信しました | メールを送りました！リンクをクリックしてください |
 
-### ゲーム関連
+## 言語別の注意点
 
-| 日本語 | English | 中文 | 備考 |
-|--------|---------|------|------|
-| 新しいゲーム | New Game | 新游戏 | |
-| ゲームの名前 | Game Name | 游戏名称 | |
-| 下書き | Draft | 草稿 | 未公開のゲーム |
-| 公開中 | Published | 已发布 | 公開済みのゲーム |
+### 英語 (en)
 
-### 統計
+- シンプルな単語を選ぶ（make > create > develop）
+- 短い文を心がける
+- "you" を積極的に使う（親しみやすさ）
 
-| 日本語 | English | 中文 | 備考 |
-|--------|---------|------|------|
-| games | games | 游戏 | 作品数 |
-| plays | plays | 播放 | プレイ数 |
-| likes | likes | 喜欢 | いいね数 |
+### 日本語 (ja)
 
-### エラー・ステータス
+- ひらがなを多めに（むずかしい > 難しい）
+- 「〜しましょう」「〜できます」で励ます
+- カタカナ語は最小限（ログイン、OK は許容）
 
-| 日本語 | English | 中文 | 備考 |
-|--------|---------|------|------|
-| 読み込み中... | Loading... | 加载中... | |
-| 接続中 | Connecting | 连接中 | |
-| エラーが発生しました | An error occurred | 发生错误 | |
-| ログインに失敗しました | Sign in failed | 登录失败 | |
-| 再試行 | Retry | 重试 | |
+### 中国語 (zh)
 
----
-
-## スタイルガイド
-
-### 日本語
-- **敬語レベル**: です・ます調（丁寧すぎない）
-- **カタカナ**: 外来語は適度に使用（ログイン、ゲーム等）
-- **長さ**: 簡潔に。長い説明は避ける
-- **例**: 「チャットでゲームを作ろう」（命令形でなく提案形）
-
-### English
-- **Person**: 2nd person (you, your)
-- **Voice**: Active voice preferred
-- **Tone**: Casual but professional
-- **Capitalization**: Title Case for headings, Sentence case for descriptions
-- **Example**: "Create games by chatting" (simple, direct)
-
-### 中文（简体）
-- **语气**: 口语化，亲切
-- **人称**: 第二人称（你）
-- **长度**: 简洁明了
-- **例子**: "用聊天创作游戏"（动词开头，行动导向）
-
----
-
-## 翻訳時の注意点
-
-### やること
-- プロダクトの文脈を理解してから翻訳する
-- 各言語のネイティブ表現を使う
-- UIの長さを考慮する（ボタンは短く）
-- 用語集の一貫性を保つ
-
-### やらないこと
-- 機械翻訳をそのまま使わない
-- 直訳しない（意味が通じる自然な表現に）
-- 専門用語を多用しない
-- 文化的に不適切な表現を使わない
-
----
+- 口語的な表現を使う（聊着天 > 通过聊天）
+- 「啦」「吧」などの語気助詞で親しみやすく
+- 簡体字を使用
 
 ## キー命名規則
 
 ```
-page.{pageName}.{element}   ページ固有テキスト
-common.{element}            共通テキスト
-nav.{item}                  ナビゲーション
-button.{action}             ボタンラベル
-error.{type}                エラーメッセージ
-status.{state}              ステータス表示
-modal.{modalName}.{element} モーダル内テキスト
+page.{pageName}.{element}  - ページ固有のテキスト
+common.{element}           - 共通テキスト
+nav.{item}                 - ナビゲーション
+button.{action}            - ボタン
+modal.{name}.{element}     - モーダル内
+error.{type}               - エラーメッセージ
+message.{type}             - 成功メッセージ等
+placeholder.{field}        - 入力欄のプレースホルダー
 ```
 
-### 例
-```json
-{
-  "common": {
-    "appName": "DreamCore",
-    "loading": "Loading..."
-  },
-  "nav": {
-    "create": "Create",
-    "discover": "Discover",
-    "notifications": "Notifications",
-    "myPage": "My Page",
-    "next": "Next"
-  },
-  "button": {
-    "signIn": "Sign in with Google",
-    "signOut": "Sign out",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "create": "Create"
-  },
-  "page": {
-    "index": {
-      "title": "DreamCore - Create games by chatting",
-      "subtitle": "Create games by chatting"
-    },
-    "create": {
-      "title": "Create - Game Creator"
-    }
-  },
-  "modal": {
-    "newGame": {
-      "title": "New Game",
-      "nameLabel": "Game Name",
-      "namePlaceholder": "e.g., Space Shooter",
-      "nameHint": "You can change this later"
-    }
-  },
-  "error": {
-    "signInFailed": "Sign in failed",
-    "systemError": "A system error occurred"
-  }
-}
-```
+## 翻訳チェックリスト
+
+- [ ] 技術用語を使っていないか
+- [ ] 小学生でも理解できるか
+- [ ] 文が短いか（20文字以内が理想）
+- [ ] 行動が明確か
+- [ ] 親しみやすいトーンか

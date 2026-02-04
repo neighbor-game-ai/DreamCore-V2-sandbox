@@ -2,91 +2,91 @@
   "common": {
     "appName": "DreamCore",
     "loading": "読み込み中...",
-    "retry": "再試行",
+    "retry": "もう一度",
     "or": "または"
   },
   "nav": {
-    "create": "作る",
-    "discover": "発見",
-    "notifications": "通知",
-    "myPage": "マイ",
-    "next": "次へ"
+    "create": "つくる",
+    "discover": "さがす",
+    "notifications": "おしらせ",
+    "myPage": "マイページ",
+    "next": "つぎへ"
   },
   "button": {
-    "signInWithGoogle": "Googleでログイン",
-    "signInWithApple": "Appleでログイン",
-    "signInWithEmail": "メールでログイン",
+    "signInWithGoogle": "Googleではじめる",
+    "signInWithApple": "Appleではじめる",
+    "signInWithEmail": "メールではじめる",
     "signOut": "ログアウト",
-    "cancel": "キャンセル",
+    "cancel": "やめる",
     "delete": "削除",
     "create": "つくる",
-    "change": "変更",
+    "change": "保存",
     "ok": "OK",
     "editProfile": "プロフィールを編集",
     "logout": "ログアウト"
   },
   "filter": {
-    "all": "ALL",
-    "published": "公開",
+    "all": "すべて",
+    "published": "公開中",
     "draft": "下書き"
   },
   "page": {
     "index": {
-      "title": "DreamCore - チャットでゲームを作ろう",
-      "subtitle": "チャットでゲームを作ろう",
-      "ogTitle": "DreamCore V2 - AIでゲームを作ろう",
-      "ogDescription": "AIと会話するだけでオリジナルゲームが作れる新時代のゲーム開発プラットフォーム。プログラミング不要、アイデアだけでOK。",
-      "description": "チャットで会話するだけで、オリジナルのゲームが作れます。プログラミング知識は不要です。"
+      "title": "DreamCore - おしゃべりでゲームをつくろう",
+      "subtitle": "おしゃべりでゲームをつくろう",
+      "ogTitle": "DreamCore - AIとおしゃべりでゲームをつくろう",
+      "ogDescription": "つくりたいゲームをAIに話すだけ。プログラミングなんて関係なし！だれでもゲームがつくれます。",
+      "description": "おしゃべりするだけでゲームがつくれます。むずかしい知識はいりません。"
     },
     "create": {
-      "title": "つくる - ゲームクリエイター",
-      "description": "チャットで会話するだけで、オリジナルのゲームが作れます。"
+      "title": "つくる - DreamCore",
+      "description": "おしゃべりするだけでゲームがつくれます。"
     },
     "mypage": {
-      "title": "マイページ - ゲームクリエイター",
+      "title": "マイページ - DreamCore",
       "header": "マイページ",
-      "description": "ゲームクリエイター - マイページ"
+      "description": "あなたのゲームとプロフィール"
     }
   },
   "modal": {
     "newGame": {
-      "title": "新しいゲーム",
+      "title": "あたらしいゲーム",
       "nameLabel": "ゲームの名前",
-      "namePlaceholder": "例：宇宙シューティング",
-      "nameHint": "後から変更できます"
+      "namePlaceholder": "例：宇宙たんけん",
+      "nameHint": "あとから変えられます"
     },
     "rename": {
-      "title": "名前を変更",
-      "nameLabel": "新しい名前",
+      "title": "名前を変える",
+      "nameLabel": "あたらしい名前",
       "namePlaceholder": "ゲームの名前"
     },
     "delete": {
-      "title": "削除の確認",
+      "title": "このゲームを削除する？",
       "message": "「{name}」を削除しますか？",
-      "warning": "この操作は取り消せません"
+      "warning": "削除すると元にもどせません"
     },
     "quotaLimit": {
-      "title": "本日の上限に達しました"
+      "title": "今日はここまで！"
     }
   },
   "stats": {
-    "games": "games",
-    "plays": "plays",
-    "likes": "likes"
+    "games": "ゲーム",
+    "plays": "プレイ",
+    "likes": "いいね"
   },
   "error": {
-    "signInFailed": "ログインに失敗しました",
-    "systemError": "システムエラーが発生しました",
-    "emailRequired": "メールアドレスを入力してください"
+    "signInFailed": "ログインできませんでした。もう一度お試しください。",
+    "systemError": "うまくいきませんでした。もう一度お試しください。",
+    "emailRequired": "メールアドレスを入れてください"
   },
   "placeholder": {
     "email": "メールアドレス"
   },
   "message": {
-    "magicLinkSent": "ログインリンクをメールで送信しました"
+    "magicLinkSent": "メールを送りました！届いたリンクをクリックしてください。"
   },
   "status": {
-    "connecting": "接続中",
-    "reconnecting": "再接続中..."
+    "connecting": "つなげています...",
+    "reconnecting": "つなぎなおしています..."
   }
 }

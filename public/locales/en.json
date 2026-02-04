@@ -2,20 +2,20 @@
   "common": {
     "appName": "DreamCore",
     "loading": "Loading...",
-    "retry": "Retry",
+    "retry": "Try again",
     "or": "or"
   },
   "nav": {
     "create": "Create",
-    "discover": "Discover",
+    "discover": "Explore",
     "notifications": "Notifications",
     "myPage": "My Page",
     "next": "Next"
   },
   "button": {
-    "signInWithGoogle": "Sign in with Google",
-    "signInWithApple": "Sign in with Apple",
-    "signInWithEmail": "Sign in with Email",
+    "signInWithGoogle": "Continue with Google",
+    "signInWithApple": "Continue with Apple",
+    "signInWithEmail": "Continue with Email",
     "signOut": "Sign out",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -26,47 +26,47 @@
     "logout": "Log out"
   },
   "filter": {
-    "all": "ALL",
+    "all": "All",
     "published": "Published",
     "draft": "Draft"
   },
   "page": {
     "index": {
-      "title": "DreamCore - Create games by chatting",
-      "subtitle": "Create games by chatting",
-      "ogTitle": "DreamCore V2 - Create games with AI",
-      "ogDescription": "A next-generation game development platform where you can create original games just by chatting with AI. No programming required.",
-      "description": "Create original games just by chatting. No programming knowledge needed."
+      "title": "DreamCore - Make games just by chatting",
+      "subtitle": "Make games just by chatting",
+      "ogTitle": "DreamCore - Make your own games with AI",
+      "ogDescription": "Just tell AI what kind of game you want, and it makes it for you. No coding needed - anyone can do it!",
+      "description": "Make your own games just by chatting. No coding skills needed."
     },
     "create": {
-      "title": "Create - Game Creator",
-      "description": "Create original games just by chatting."
+      "title": "Create - DreamCore",
+      "description": "Make your own games just by chatting."
     },
     "mypage": {
-      "title": "My Page - Game Creator",
+      "title": "My Page - DreamCore",
       "header": "My Page",
-      "description": "Game Creator - My Page"
+      "description": "Your games and profile"
     }
   },
   "modal": {
     "newGame": {
       "title": "New Game",
-      "nameLabel": "Game Name",
-      "namePlaceholder": "e.g., Space Shooter",
-      "nameHint": "You can change this later"
+      "nameLabel": "What do you want to call it?",
+      "namePlaceholder": "e.g., Space Adventure",
+      "nameHint": "You can change this anytime"
     },
     "rename": {
-      "title": "Rename",
-      "nameLabel": "New Name",
+      "title": "Change Name",
+      "nameLabel": "New name",
       "namePlaceholder": "Game name"
     },
     "delete": {
-      "title": "Confirm Delete",
+      "title": "Delete this game?",
       "message": "Delete \"{name}\"?",
-      "warning": "This action cannot be undone"
+      "warning": "This cannot be undone"
     },
     "quotaLimit": {
-      "title": "Daily limit reached"
+      "title": "You've reached today's limit"
     }
   },
   "stats": {
@@ -75,18 +75,18 @@
     "likes": "likes"
   },
   "error": {
-    "signInFailed": "Sign in failed",
-    "systemError": "A system error occurred",
+    "signInFailed": "Couldn't sign in. Please try again.",
+    "systemError": "Something went wrong. Please try again.",
     "emailRequired": "Please enter your email"
   },
   "placeholder": {
-    "email": "Email"
+    "email": "Your email"
   },
   "message": {
-    "magicLinkSent": "Check your email for the login link!"
+    "magicLinkSent": "Check your email! We sent you a login link."
   },
   "status": {
-    "connecting": "Connecting",
+    "connecting": "Connecting...",
     "reconnecting": "Reconnecting..."
   }
 }
