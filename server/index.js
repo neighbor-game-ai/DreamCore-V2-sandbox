@@ -20,7 +20,7 @@ const { getStyleById } = require('./stylePresets');
 const { getStyleOptionsWithImages } = require('./styleImageCache');
 const { generateVisualGuide, formatGuideForCodeGeneration } = require('./visualGuideGenerator');
 const { authenticate, optionalAuth, verifyWebSocketAuth } = require('./authMiddleware');
-const { isValidUUID, isPathSafe, isValidGitHash, getProjectPath, getUserAssetsPath, getGlobalAssetsPath, USERS_DIR, GLOBAL_ASSETS_DIR, SUPABASE_URL, SUPABASE_ANON_KEY } = require('./config');
+const { isValidUUID, isPathSafe, isValidGitHash, getProjectPath, USERS_DIR, GLOBAL_ASSETS_DIR, SUPABASE_URL, SUPABASE_ANON_KEY } = require('./config');
 const crypto = require('crypto');
 const { execFile } = require('child_process');
 const { supabaseAdmin } = require('./supabaseClient');
@@ -41,31 +41,10 @@ const assetsApiRouter = require('./routes/assetsApi');
 const assetsPublicRouter = require('./routes/assetsPublic');
 const { aiRateLimiter, apiRateLimiter, publicRateLimiter } = require('./rateLimiter');
 const helmet = require('helmet');
-const { JSDOM } = require('jsdom');
-const createDOMPurify = require('dompurify');
+// JSDOM/DOMPurify moved to routes/assetsApi.js (SVG sanitization)
 
 // CLI Deploy（条件付きロード）
 const cliDeploy = process.env.SUPABASE_CLI_URL ? require('../cli-deploy/server') : null;
-
-// SVG サニタイズ（XSS 攻撃防止）
-const SVG_WINDOW = new JSDOM('').window;
-const SVG_PURIFY = createDOMPurify(SVG_WINDOW);
-// SVG 専用の設定: スクリプト、イベントハンドラ、外部リソースを除去
-SVG_PURIFY.setConfig({
-  USE_PROFILES: { svg: true, svgFilters: true },
-  ADD_TAGS: ['use'],  // SVG の use タグは許可
-  FORBID_TAGS: ['script', 'foreignObject'],
-  FORBID_ATTR: ['onload', 'onerror', 'onclick', 'onmouseover', 'xlink:href'],
-});
-
-/**
- * SVG コンテンツをサニタイズ
- * @param {string} svgContent - 元の SVG コンテンツ
- * @returns {string} サニタイズ済み SVG
- */
-function sanitizeSVG(svgContent) {
-  return SVG_PURIFY.sanitize(svgContent);
-}
 
 /**
  * Get next quota reset time (00:00 UTC = 09:00 JST)
