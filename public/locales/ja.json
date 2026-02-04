@@ -1,0 +1,83 @@
+{
+  "common": {
+    "appName": "DreamCore",
+    "loading": "読み込み中...",
+    "retry": "再試行"
+  },
+  "nav": {
+    "create": "作る",
+    "discover": "発見",
+    "notifications": "通知",
+    "myPage": "マイ",
+    "next": "次へ"
+  },
+  "button": {
+    "signInWithGoogle": "Googleでログイン",
+    "signInWithApple": "Appleでログイン",
+    "signOut": "ログアウト",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "create": "つくる",
+    "change": "変更",
+    "ok": "OK",
+    "editProfile": "プロフィールを編集",
+    "logout": "ログアウト"
+  },
+  "filter": {
+    "all": "ALL",
+    "published": "公開",
+    "draft": "下書き"
+  },
+  "page": {
+    "index": {
+      "title": "DreamCore - チャットでゲームを作ろう",
+      "subtitle": "チャットでゲームを作ろう",
+      "ogTitle": "DreamCore V2 - AIでゲームを作ろう",
+      "ogDescription": "AIと会話するだけでオリジナルゲームが作れる新時代のゲーム開発プラットフォーム。プログラミング不要、アイデアだけでOK。",
+      "description": "チャットで会話するだけで、オリジナルのゲームが作れます。プログラミング知識は不要です。"
+    },
+    "create": {
+      "title": "つくる - ゲームクリエイター",
+      "description": "チャットで会話するだけで、オリジナルのゲームが作れます。"
+    },
+    "mypage": {
+      "title": "マイページ - ゲームクリエイター",
+      "header": "マイページ",
+      "description": "ゲームクリエイター - マイページ"
+    }
+  },
+  "modal": {
+    "newGame": {
+      "title": "新しいゲーム",
+      "nameLabel": "ゲームの名前",
+      "namePlaceholder": "例：宇宙シューティング",
+      "nameHint": "後から変更できます"
+    },
+    "rename": {
+      "title": "名前を変更",
+      "nameLabel": "新しい名前",
+      "namePlaceholder": "ゲームの名前"
+    },
+    "delete": {
+      "title": "削除の確認",
+      "message": "「{name}」を削除しますか？",
+      "warning": "この操作は取り消せません"
+    },
+    "quotaLimit": {
+      "title": "本日の上限に達しました"
+    }
+  },
+  "stats": {
+    "games": "games",
+    "plays": "plays",
+    "likes": "likes"
+  },
+  "error": {
+    "signInFailed": "ログインに失敗しました",
+    "systemError": "システムエラーが発生しました"
+  },
+  "status": {
+    "connecting": "接続中",
+    "reconnecting": "再接続中..."
+  }
+}

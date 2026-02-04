@@ -201,6 +201,27 @@ async function signInWithGoogle() {
 }
 
 /**
+ * Sign in with Apple OAuth
+ */
+async function signInWithApple() {
+  if (!supabaseClient) await initAuth();
+
+  const { data, error } = await supabaseClient.auth.signInWithOAuth({
+    provider: 'apple',
+    options: {
+      redirectTo: window.location.origin + '/create.html'
+    }
+  });
+
+  if (error) {
+    console.error('[Auth] Apple sign-in error:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
  * Sign out
  */
 async function signOut() {
@@ -546,6 +567,7 @@ async function setupBottomNav() {
 window.DreamCoreAuth = {
   initAuth,
   signInWithGoogle,
+  signInWithApple,
   signOut,
   getSession,
   getFreshSession,   // For reconnection: always returns fresh token

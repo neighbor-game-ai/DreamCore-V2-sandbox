@@ -1,31 +1,32 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DreamCore - チャットでゲームを作ろう</title>
+  <title>DreamCore - Create games by chatting</title>
+  <script src="/i18n.js"></script>
   <!-- Preconnect for faster font loading -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
   <link rel="stylesheet" href="/style.css">
-  <meta name="description" content="チャットで会話するだけで、オリジナルのゲームが作れます。プログラミング知識は不要です。">
+  <meta name="description" content="Create original games just by chatting. No programming knowledge needed.">
 
   <!-- OGP -->
-  <meta property="og:title" content="DreamCore V2 - AIでゲームを作ろう">
-  <meta property="og:description" content="AIと会話するだけでオリジナルゲームが作れる新時代のゲーム開発プラットフォーム。プログラミング不要、アイデアだけでOK。">
+  <meta property="og:title" content="DreamCore V2 - Create games with AI">
+  <meta property="og:description" content="A next-generation game development platform where you can create original games just by chatting with AI. No programming required.">
   <meta property="og:image" content="https://v2.dreamcore.gg/ogp.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:url" content="https://v2.dreamcore.gg">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="DreamCore">
-  <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale" content="en_US">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="DreamCore V2 - AIでゲームを作ろう">
-  <meta name="twitter:description" content="AIと会話するだけでオリジナルゲームが作れる新時代のゲーム開発プラットフォーム。">
+  <meta name="twitter:title" content="DreamCore V2 - Create games with AI">
+  <meta name="twitter:description" content="A next-generation game development platform where you can create original games just by chatting with AI.">
   <meta name="twitter:image" content="https://v2.dreamcore.gg/ogp.png">
 
   <!-- Supabase SDK (static load) -->
@@ -69,6 +70,35 @@
       width: 20px;
       height: 20px;
     }
+    .apple-signin-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      padding: 14px 24px;
+      background: #000;
+      border: 1px solid #000;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      color: #fff;
+      cursor: pointer;
+      transition: background-color 0.2s, box-shadow 0.2s;
+      margin-top: 12px;
+    }
+    .apple-signin-btn:hover {
+      background: #333;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .apple-signin-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .apple-signin-btn svg {
+      width: 20px;
+      height: 20px;
+    }
     .login-error {
       color: #d93025;
       font-size: 14px;
@@ -78,15 +108,35 @@
     .login-error.hidden {
       display: none;
     }
+    .login-lang-selector {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+    }
   </style>
 </head>
 <body data-page="login">
   <!-- Login View -->
   <div class="login-view" id="loginView">
     <div class="login-container">
+      <div class="login-lang-selector">
+        <div class="lang-selector" id="langSelector">
+          <button class="lang-selector-btn" id="langSelectorBtn">
+            <span id="currentLang">EN</span>
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 4.5L6 7.5L9 4.5"/>
+            </svg>
+          </button>
+          <div class="lang-selector-dropdown">
+            <button class="lang-option" data-lang="en">English</button>
+            <button class="lang-option" data-lang="ja">日本語</button>
+            <button class="lang-option" data-lang="zh">中文</button>
+          </div>
+        </div>
+      </div>
       <div class="login-header">
         <h1>DreamCore</h1>
-        <p class="login-subtitle">チャットでゲームを作ろう</p>
+        <p class="login-subtitle" data-i18n="page.index.subtitle">Create games by chatting</p>
       </div>
       <div class="login-form">
         <button type="button" class="google-signin-btn" id="googleSignInButton">
@@ -96,7 +146,13 @@
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
           </svg>
-          Googleでログイン
+          <span data-i18n="button.signInWithGoogle">Sign in with Google</span>
+        </button>
+        <button type="button" class="apple-signin-btn" id="appleSignInButton">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+          </svg>
+          <span data-i18n="button.signInWithApple">Sign in with Apple</span>
         </button>
         <div class="login-error hidden" id="loginError"></div>
       </div>
@@ -114,26 +170,82 @@
     }
   </script>
   <script defer>
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Initialize i18n
+      await DreamCoreI18n.init();
+
+      // Language selector setup
+      const selector = document.getElementById('langSelector');
+      const btn = document.getElementById('langSelectorBtn');
+      const currentLangEl = document.getElementById('currentLang');
+      const options = selector.querySelectorAll('.lang-option');
+
+      const langLabels = { en: 'EN', ja: 'JA', zh: 'ZH' };
+      const currentLang = DreamCoreI18n.getLanguage();
+      currentLangEl.textContent = langLabels[currentLang] || 'EN';
+
+      options.forEach(opt => {
+        if (opt.dataset.lang === currentLang) opt.classList.add('active');
+      });
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selector.classList.toggle('open');
+      });
+
+      options.forEach(opt => {
+        opt.addEventListener('click', () => {
+          const lang = opt.dataset.lang;
+          DreamCoreI18n.setLanguage(lang, false);
+          currentLangEl.textContent = langLabels[lang];
+          options.forEach(o => o.classList.remove('active'));
+          opt.classList.add('active');
+          selector.classList.remove('open');
+          DreamCoreI18n.updateDOM();
+          document.title = DreamCoreI18n.t('page.index.title');
+        });
+      });
+
+      document.addEventListener('click', () => selector.classList.remove('open'));
       const errorEl = document.getElementById('loginError');
-      const signInBtn = document.getElementById('googleSignInButton');
+      const googleSignInBtn = document.getElementById('googleSignInButton');
+      const appleSignInBtn = document.getElementById('appleSignInButton');
 
-      // 1. Show UI immediately (button disabled until auth check completes)
-      signInBtn.disabled = true;
-      signInBtn.textContent = '読み込み中...';
+      // 1. Show UI immediately (buttons disabled until auth check completes)
+      googleSignInBtn.disabled = true;
+      googleSignInBtn.textContent = DreamCoreI18n ? DreamCoreI18n.t('common.loading') : 'Loading...';
+      appleSignInBtn.disabled = true;
 
-      // 2. Setup click handler now (will work once enabled)
-      signInBtn.addEventListener('click', async () => {
-        signInBtn.disabled = true;
+      // 2. Setup click handlers now (will work once enabled)
+      googleSignInBtn.addEventListener('click', async () => {
+        googleSignInBtn.disabled = true;
+        appleSignInBtn.disabled = true;
         errorEl.classList.add('hidden');
 
         try {
           await DreamCoreAuth.signInWithGoogle();
           // Redirect happens automatically via OAuth flow
         } catch (err) {
-          errorEl.textContent = err.message || 'ログインに失敗しました';
+          errorEl.textContent = err.message || (DreamCoreI18n ? DreamCoreI18n.t('error.signInFailed') : 'Sign in failed');
           errorEl.classList.remove('hidden');
-          signInBtn.disabled = false;
+          googleSignInBtn.disabled = false;
+          appleSignInBtn.disabled = false;
+        }
+      });
+
+      appleSignInBtn.addEventListener('click', async () => {
+        googleSignInBtn.disabled = true;
+        appleSignInBtn.disabled = true;
+        errorEl.classList.add('hidden');
+
+        try {
+          await DreamCoreAuth.signInWithApple();
+          // Redirect happens automatically via OAuth flow
+        } catch (err) {
+          errorEl.textContent = err.message || (DreamCoreI18n ? DreamCoreI18n.t('error.signInFailed') : 'Sign in failed');
+          errorEl.classList.remove('hidden');
+          googleSignInBtn.disabled = false;
+          appleSignInBtn.disabled = false;
         }
       });
 
@@ -148,24 +260,26 @@
             // Already logged in - redirect
             window.location.href = '/create.html';
           } else {
-            // Not logged in - enable button
-            signInBtn.disabled = false;
-            signInBtn.innerHTML = `
+            // Not logged in - enable buttons
+            googleSignInBtn.disabled = false;
+            googleSignInBtn.innerHTML = `
               <svg viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              Googleでログイン
+              ${DreamCoreI18n ? DreamCoreI18n.t('button.signInWithGoogle') : 'Sign in with Google'}
             `;
+            appleSignInBtn.disabled = false;
           }
         } catch (err) {
           console.error('[Auth] Init error:', err);
-          errorEl.textContent = 'システムエラーが発生しました';
+          errorEl.textContent = DreamCoreI18n ? DreamCoreI18n.t('error.systemError') : 'A system error occurred';
           errorEl.classList.remove('hidden');
-          signInBtn.disabled = false;
-          signInBtn.textContent = '再試行';
+          googleSignInBtn.disabled = false;
+          googleSignInBtn.textContent = DreamCoreI18n ? DreamCoreI18n.t('common.retry') : 'Retry';
+          appleSignInBtn.disabled = false;
         }
       })();
     });

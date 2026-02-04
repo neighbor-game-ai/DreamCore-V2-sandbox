@@ -1,0 +1,83 @@
+{
+  "common": {
+    "appName": "DreamCore",
+    "loading": "Loading...",
+    "retry": "Retry"
+  },
+  "nav": {
+    "create": "Create",
+    "discover": "Discover",
+    "notifications": "Notifications",
+    "myPage": "My Page",
+    "next": "Next"
+  },
+  "button": {
+    "signInWithGoogle": "Sign in with Google",
+    "signInWithApple": "Sign in with Apple",
+    "signOut": "Sign out",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "create": "Create",
+    "change": "Save",
+    "ok": "OK",
+    "editProfile": "Edit Profile",
+    "logout": "Log out"
+  },
+  "filter": {
+    "all": "ALL",
+    "published": "Published",
+    "draft": "Draft"
+  },
+  "page": {
+    "index": {
+      "title": "DreamCore - Create games by chatting",
+      "subtitle": "Create games by chatting",
+      "ogTitle": "DreamCore V2 - Create games with AI",
+      "ogDescription": "A next-generation game development platform where you can create original games just by chatting with AI. No programming required.",
+      "description": "Create original games just by chatting. No programming knowledge needed."
+    },
+    "create": {
+      "title": "Create - Game Creator",
+      "description": "Create original games just by chatting."
+    },
+    "mypage": {
+      "title": "My Page - Game Creator",
+      "header": "My Page",
+      "description": "Game Creator - My Page"
+    }
+  },
+  "modal": {
+    "newGame": {
+      "title": "New Game",
+      "nameLabel": "Game Name",
+      "namePlaceholder": "e.g., Space Shooter",
+      "nameHint": "You can change this later"
+    },
+    "rename": {
+      "title": "Rename",
+      "nameLabel": "New Name",
+      "namePlaceholder": "Game name"
+    },
+    "delete": {
+      "title": "Confirm Delete",
+      "message": "Delete \"{name}\"?",
+      "warning": "This action cannot be undone"
+    },
+    "quotaLimit": {
+      "title": "Daily limit reached"
+    }
+  },
+  "stats": {
+    "games": "games",
+    "plays": "plays",
+    "likes": "likes"
+  },
+  "error": {
+    "signInFailed": "Sign in failed",
+    "systemError": "A system error occurred"
+  },
+  "status": {
+    "connecting": "Connecting",
+    "reconnecting": "Reconnecting..."
+  }
+}
