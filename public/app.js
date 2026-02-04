@@ -1378,9 +1378,14 @@ class GameCreatorApp {
     // Enter key now inserts newline (no auto-send)
     // Users must click send button to send message
 
-    // Auto-resize textarea as content grows
+    // Auto-resize textarea as content grows and update send button state
     this.chatInput?.addEventListener('input', () => {
       this.autoResizeTextarea(this.chatInput);
+      // Update send button state based on input (unless processing)
+      if (!this.isProcessing) {
+        const hasInput = this.chatInput.value.trim().length > 0;
+        this.updateSendButtonState(hasInput ? 'ready' : 'empty', hasInput ? '' : '入力してください');
+      }
     });
 
     // Chat fullscreen mode
@@ -1388,6 +1393,14 @@ class GameCreatorApp {
     this.closeChatFullscreen?.addEventListener('click', () => this.closeChatFullscreenMode());
     this.cancelChatFullscreen?.addEventListener('click', () => this.closeChatFullscreenMode());
     this.sendChatFullscreen?.addEventListener('click', () => this.sendFromFullscreen());
+
+    // Fullscreen chat input state tracking
+    this.chatFullscreenInput?.addEventListener('input', () => {
+      if (!this.isProcessing) {
+        const hasInput = this.chatFullscreenInput.value.trim().length > 0;
+        this.updateSendButtonState(hasInput ? 'ready' : 'empty', hasInput ? '' : '入力してください');
+      }
+    });
 
     // Mobile keyboard visibility handling (iOS/Android)
     if (this.chatInput) {
@@ -1463,6 +1476,11 @@ class GameCreatorApp {
 
     // Mobile tab switching
     this.setupMobileTabListeners();
+
+    // Initialize send button state
+    if (this.sendButton) {
+      this.updateSendButtonState('empty', '入力してください');
+    }
   }
 
   // ==================== Bottom Navigation ====================
@@ -2006,7 +2024,7 @@ class GameCreatorApp {
       case 'status':
         this.updateStatus('processing', data.message);
         this.isProcessing = true;
-        this.sendButton.disabled = true;
+        this.updateSendButtonState('processing', 'AIが処理中です');
         this.stopButton.classList.remove('hidden');
         this.showStreaming();
         break;
@@ -2028,7 +2046,9 @@ class GameCreatorApp {
         this.updateStatus('connected', '接続中');
         this.isProcessing = false;
         this.currentJobId = null;
-        this.sendButton.disabled = false;
+        // Reset button state based on input
+        const hasInputComplete = this.chatInput && this.chatInput.value.trim().length > 0;
+        this.updateSendButtonState(hasInputComplete ? 'ready' : 'empty', hasInputComplete ? '' : '入力してください');
         this.stopButton.classList.add('hidden');
         break;
 
@@ -2088,6 +2108,8 @@ class GameCreatorApp {
         } else if (data.error && (data.error.code === 'DAILY_PROJECT_LIMIT_EXCEEDED' || data.error.code === 'DAILY_MESSAGE_LIMIT_EXCEEDED')) {
           // Handle quota exceeded errors
           this.showQuotaExceededError(data.error);
+          // Set button to quota state
+          this.updateSendButtonState('quota', '本日の利用制限に達しました');
         } else {
           this.addMessage(errorMessage || 'エラーが発生しました', 'error');
         }
@@ -2095,7 +2117,11 @@ class GameCreatorApp {
         this.updateStatus('connected', '接続中');
         this.isProcessing = false;
         this.currentJobId = null;
-        this.sendButton.disabled = false;
+        // Reset button state (unless quota exceeded)
+        if (!data.error || (data.error.code !== 'DAILY_PROJECT_LIMIT_EXCEEDED' && data.error.code !== 'DAILY_MESSAGE_LIMIT_EXCEEDED')) {
+          const hasInput = this.chatInput && this.chatInput.value.trim().length > 0;
+          this.updateSendButtonState(hasInput ? 'ready' : 'empty', hasInput ? '' : '入力してください');
+        }
         this.stopButton.classList.add('hidden');
         break;
 
@@ -2105,7 +2131,8 @@ class GameCreatorApp {
         this.updateStatus('connected', '接続中');
         this.isProcessing = false;
         this.currentJobId = null;
-        this.sendButton.disabled = false;
+        const hasInputCancelled = this.chatInput && this.chatInput.value.trim().length > 0;
+        this.updateSendButtonState(hasInputCancelled ? 'ready' : 'empty', hasInputCancelled ? '' : '入力してください');
         this.stopButton.classList.add('hidden');
         break;
 
@@ -2592,10 +2619,54 @@ class GameCreatorApp {
   }
 
   updateUIForProcessing(processing) {
-    if (this.sendButton) {
-      this.sendButton.disabled = processing;
+    if (processing) {
+      this.updateSendButtonState('processing', 'AIが処理中です');
+    } else {
+      // Check if there's input to determine ready/empty state
+      const hasInput = this.chatInput && this.chatInput.value.trim().length > 0;
+      this.updateSendButtonState(hasInput ? 'ready' : 'empty', hasInput ? '' : '入力してください');
     }
     // Note: chatInput remains enabled so user can type while AI is processing
+  }
+
+  /**
+   * Update send button state with visual feedback
+   * @param {'ready'|'empty'|'processing'|'quota'} state - Button state
+   * @param {string} reason - Reason for the state (for accessibility/tooltip)
+   */
+  updateSendButtonState(state, reason = '') {
+    const buttons = [this.sendButton, document.getElementById('sendChatFullscreen')];
+
+    const labels = {
+      ready: '送信',
+      empty: '入力してください',
+      processing: '処理中…',
+      quota: '制限中'
+    };
+
+    buttons.forEach(button => {
+      if (!button) return;
+
+      button.dataset.state = state;
+      button.dataset.reason = reason;
+      button.disabled = state !== 'ready';
+      button.setAttribute('aria-busy', state === 'processing' ? 'true' : 'false');
+
+      // Update label
+      const label = button.querySelector('.send-label');
+      if (label) {
+        label.textContent = labels[state] || '送信';
+      }
+
+      // Update icon visibility
+      const sendIcon = button.querySelector('.send-icon');
+      const spinnerIcon = button.querySelector('.spinner-icon');
+      const warningIcon = button.querySelector('.warning-icon');
+
+      if (sendIcon) sendIcon.classList.toggle('hidden', state === 'processing' || state === 'quota');
+      if (spinnerIcon) spinnerIcon.classList.toggle('hidden', state !== 'processing');
+      if (warningIcon) warningIcon.classList.toggle('hidden', state !== 'quota');
+    });
   }
 
   stopGeneration() {
