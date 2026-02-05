@@ -1,26 +1,28 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>登録完了 - DreamCore</title>
-  <meta name="description" content="DreamCore V2 - AIと会話するだけでオリジナルゲームが作れる。プログラミング不要、アイデアだけでOK。">
+  <title data-i18n="waitlist.title">Registration Complete - DreamCore</title>
+  <meta name="description" data-i18n-content="page.index.description" content="Make your own games just by chatting. No coding skills needed.">
+  <!-- i18n support -->
+  <script src="/i18n.js?v=20260205"></script>
 
   <!-- OGP -->
-  <meta property="og:title" content="DreamCore V2 - AIでゲームを作ろう">
-  <meta property="og:description" content="AIと会話するだけでオリジナルゲームが作れる新時代のゲーム開発プラットフォーム。プログラミング不要、アイデアだけでOK。">
+  <meta property="og:title" data-i18n-content="page.index.ogTitle" content="DreamCore - Make your own games with AI">
+  <meta property="og:description" data-i18n-content="page.index.ogDescription" content="Just tell AI what kind of game you want, and it makes it for you. No coding needed - anyone can do it!">
   <meta property="og:image" content="https://v2.dreamcore.gg/ogp.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:url" content="https://v2.dreamcore.gg">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="DreamCore">
-  <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale" content="en">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="DreamCore V2 - AIでゲームを作ろう">
-  <meta name="twitter:description" content="AIと会話するだけでオリジナルゲームが作れる新時代のゲーム開発プラットフォーム。">
+  <meta name="twitter:title" data-i18n-content="page.index.ogTitle" content="DreamCore - Make your own games with AI">
+  <meta name="twitter:description" data-i18n-content="page.index.ogDescription" content="Just tell AI what kind of game you want, and it makes it for you. No coding needed - anyone can do it!">
   <meta name="twitter:image" content="https://v2.dreamcore.gg/ogp.png">
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -130,7 +132,7 @@
       background: var(--gray-200);
     }
 
-    /* 招待コード入力セクション */
+    /* Invite code input section */
     .invite-code-section {
       margin-top: 24px;
       margin-bottom: 24px;
@@ -310,11 +312,11 @@
   <div class="waitlist-container">
     <div class="waitlist-card">
       <div class="waitlist-icon">🎉</div>
-      <h1>登録ありがとうございます！</h1>
-      <p>
-        DreamCore へのご登録ありがとうございます。<br>
-        現在、アクセスを順次開放しています。<br>
-        承認され次第、ご利用いただけるようになります。
+      <h1 data-i18n="waitlist.thankYou">Thanks for signing up!</h1>
+      <p data-i18n="waitlist.message">
+        Thanks for registering with DreamCore.<br>
+        We're gradually opening access.<br>
+        You'll be able to use it once approved.
       </p>
 
       <div class="user-info" id="userInfo" style="display: none;">
@@ -331,30 +333,31 @@
         </div>
       </div>
 
-      <!-- 招待コード入力セクション -->
+      <!-- Invite code section -->
       <div class="invite-code-section">
-        <p class="invite-code-label">招待コードをお持ちですか？</p>
+        <p class="invite-code-label" data-i18n="waitlist.haveInviteCode">Have an invite code?</p>
         <div class="invite-code-form">
           <input
             type="text"
             id="inviteCodeInput"
-            placeholder="招待コードを入力"
+            data-i18n-placeholder="waitlist.enterInviteCode"
+            placeholder="Enter invite code"
             maxlength="32"
             autocomplete="off"
           >
-          <button id="redeemCodeBtn">適用</button>
+          <button id="redeemCodeBtn" data-i18n="waitlist.apply">Apply</button>
         </div>
         <p id="inviteCodeError" class="invite-code-error hidden"></p>
         <p id="inviteCodeSuccess" class="invite-code-success hidden"></p>
       </div>
 
-      <button class="logout-btn" id="logoutBtn">別のアカウントでログイン</button>
+      <button class="logout-btn" id="logoutBtn" data-i18n="waitlist.loginWithDifferentAccount">Login with different account</button>
 
       <div class="share-section">
-        <div class="share-label">友達にシェアする</div>
+        <div class="share-label" data-i18n="waitlist.shareWithFriends">Share with friends</div>
         <div class="share-buttons">
           <!-- Native Share (mobile) -->
-          <button id="shareNative" class="share-btn native" title="シェア" style="display: none;">
+          <button id="shareNative" class="share-btn native" data-i18n-title="waitlist.share" title="Share" style="display: none;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="18" cy="5" r="3"></circle>
               <circle cx="6" cy="12" r="3"></circle>
@@ -389,21 +392,28 @@
   <script src="/auth.js"></script>
   <script>
     (async function() {
-      // DreamCoreAuth を使用してセッション取得
+      // Initialize i18n
+      if (typeof DreamCoreI18n !== 'undefined') {
+        await DreamCoreI18n.init();
+        document.documentElement.lang = DreamCoreI18n.currentLang;
+        document.title = DreamCoreI18n.t('waitlist.title');
+      }
+
+      // Get session using DreamCoreAuth
       await DreamCoreAuth.initAuth();
       const session = await DreamCoreAuth.getSession();
 
       if (!session) {
-        // 未ログインならトップへ
+        // Not logged in - redirect to top
         window.location.href = '/';
         return;
       }
 
       const user = session.user;
 
-      // ユーザー情報を表示
+      // Display user info
       document.getElementById('userInfo').style.display = 'flex';
-      document.getElementById('userName').textContent = user.user_metadata?.full_name || user.user_metadata?.name || 'ユーザー';
+      document.getElementById('userName').textContent = user.user_metadata?.full_name || user.user_metadata?.name || (typeof DreamCoreI18n !== 'undefined' ? DreamCoreI18n.t('page.mypage.defaultUser') : 'User');
       document.getElementById('userEmail').textContent = user.email;
 
       if (user.user_metadata?.avatar_url || user.user_metadata?.picture) {
@@ -413,16 +423,16 @@
         document.getElementById('avatarPlaceholder').style.display = 'none';
       }
 
-      // 分析データを収集
+      // Collect analytics data
       function collectAnalytics() {
-        // デバイスタイプ判定
+        // Device type detection
         const ua = navigator.userAgent;
         let deviceType = 'desktop';
         if (/Mobi|Android/i.test(ua)) {
           deviceType = /Tablet|iPad/i.test(ua) ? 'tablet' : 'mobile';
         }
 
-        // UTMパラメータ取得
+        // Get UTM parameters
         const urlParams = new URLSearchParams(window.location.search);
 
         return {
@@ -436,7 +446,7 @@
         };
       }
 
-      // ウェイトリストに登録
+      // Register to waitlist
       try {
         const analytics = collectAnalytics();
         console.log('[Waitlist] Analytics:', analytics);
@@ -454,13 +464,13 @@
         console.error('[Waitlist] Registration error:', e);
       }
 
-      // ログアウトボタン
+      // Logout button
       document.getElementById('logoutBtn').addEventListener('click', async () => {
         await DreamCoreAuth.signOut();
       });
 
-      // シェアボタンの設定
-      const shareText = '🎮 DreamCore V2 のウェイトリストに登録した！\n\nAIと会話するだけでゲームが作れる時代が来た。プログラミング不要、アイデアだけでOK\n\n#DreamCore #AI #ゲーム開発 #NoCode';
+      // Share button setup
+      const shareText = typeof DreamCoreI18n !== 'undefined' ? DreamCoreI18n.t('waitlist.shareText') : 'I signed up for the DreamCore V2 waitlist!\n\nAn era where you can make games just by chatting with AI has arrived. No coding needed, just your ideas.\n\n#DreamCore #AI #GameDev #NoCode';
       const shareUrl = 'https://v2.dreamcore.gg';
 
       // Native Share API (mobile)
@@ -492,7 +502,7 @@
       document.getElementById('shareFacebook').href =
         `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
 
-      // 招待コード適用
+      // Apply invite code
       const redeemBtn = document.getElementById('redeemCodeBtn');
       const inviteInput = document.getElementById('inviteCodeInput');
       const errorEl = document.getElementById('inviteCodeError');
@@ -501,14 +511,14 @@
       redeemBtn.addEventListener('click', async () => {
         const code = inviteInput.value.trim();
         if (!code) {
-          errorEl.textContent = '招待コードを入力してください';
+          errorEl.textContent = typeof DreamCoreI18n !== 'undefined' ? DreamCoreI18n.t('waitlist.pleaseEnterCode') : 'Please enter an invite code';
           errorEl.classList.remove('hidden');
           successEl.classList.add('hidden');
           return;
         }
 
         redeemBtn.disabled = true;
-        redeemBtn.textContent = '確認中...';
+        redeemBtn.textContent = typeof DreamCoreI18n !== 'undefined' ? DreamCoreI18n.t('waitlist.checking') : 'Checking...';
         errorEl.classList.add('hidden');
         successEl.classList.add('hidden');
 
@@ -525,27 +535,27 @@
           const result = await response.json();
 
           if (response.ok && result.success) {
-            successEl.textContent = 'アクセスが承認されました！リダイレクト中...';
+            successEl.textContent = typeof DreamCoreI18n !== 'undefined' ? DreamCoreI18n.t('waitlist.accessApproved') : 'Access approved! Redirecting...';
             successEl.classList.remove('hidden');
-            // 成功 → create.html へリダイレクト
+            // Success - redirect to create.html
             setTimeout(() => {
               window.location.href = '/create.html';
             }, 1000);
           } else {
-            errorEl.textContent = result.error || 'エラーが発生しました';
+            errorEl.textContent = result.error || (typeof DreamCoreI18n !== 'undefined' ? DreamCoreI18n.t('waitlist.errorOccurred') : 'An error occurred');
             errorEl.classList.remove('hidden');
             redeemBtn.disabled = false;
-            redeemBtn.textContent = '適用';
+            redeemBtn.textContent = typeof DreamCoreI18n !== 'undefined' ? DreamCoreI18n.t('waitlist.apply') : 'Apply';
           }
         } catch (error) {
-          errorEl.textContent = 'ネットワークエラーが発生しました';
+          errorEl.textContent = typeof DreamCoreI18n !== 'undefined' ? DreamCoreI18n.t('waitlist.networkError') : 'A network error occurred';
           errorEl.classList.remove('hidden');
           redeemBtn.disabled = false;
-          redeemBtn.textContent = '適用';
+          redeemBtn.textContent = typeof DreamCoreI18n !== 'undefined' ? DreamCoreI18n.t('waitlist.apply') : 'Apply';
         }
       });
 
-      // Enter キーで送信
+      // Submit on Enter key
       inviteInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
           redeemBtn.click();

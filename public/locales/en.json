@@ -4,7 +4,8 @@
     "gameCreator": "Game Creator",
     "loading": "Loading...",
     "retry": "Try again",
-    "or": "or"
+    "or": "or",
+    "comingSoon": "Coming soon"
   },
   "nav": {
     "create": "Create",
@@ -27,12 +28,39 @@
     "logout": "Log out",
     "more": "more",
     "less": "less",
-    "reconnect": "Reconnect"
+    "reconnect": "Reconnect",
+    "follow": "Follow"
   },
   "filter": {
     "all": "All",
     "published": "Published",
     "draft": "Draft"
+  },
+  "notifications": {
+    "sample": {
+      "releaseTitle": "Game Creator v2.0 Released",
+      "releaseMessage": "New features have been added! AI image generation, sprite sheet support, and more creative game creation is now possible.",
+      "publishedTitle": "Game Published",
+      "publishedMessage": "\"{name}\" has been published successfully. Copy the share link and share it with your friends!",
+      "maintenanceTitle": "Maintenance Notice",
+      "maintenanceMessage": "System maintenance will be performed on January 20th from 2:00 AM to 5:00 AM. The service will be unavailable during this time.",
+      "commentTitle": "New Comment",
+      "commentMessage": "You received a comment on \"{name}\".",
+      "welcomeTitle": "Welcome to Game Creator",
+      "welcomeMessage": "Your account has been created. Just chat to create your own original games."
+    },
+    "date": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "thisWeek": "This Week",
+      "earlier": "Earlier"
+    },
+    "time": {
+      "justNow": "Just now",
+      "minutesAgo": "{minutes}m ago",
+      "hoursAgo": "{hours}h ago",
+      "daysAgo": "{days}d ago"
+    }
   },
   "page": {
     "index": {
@@ -91,6 +119,7 @@
     "delete": {
       "title": "Delete this game?",
       "message": "Delete \"{name}\"?",
+      "messagePrefix": "Delete",
       "warning": "This cannot be undone"
     },
     "quotaLimit": {
@@ -268,7 +297,8 @@
     "skip": "Skip",
     "stylePrefix": "Style: {name}",
     "moreStyles": "More",
-    "usingImage": "{index}: Using image \"{name}\": {url}"
+    "usingImage": "{index}: Using image \"{name}\": {url}",
+    "imageData": "Image data"
   },
   "publish": {
     "title": "Publish Game - Game Creator",
@@ -308,7 +338,25 @@
     "thumbnailCropInfo": "Cropping to 9:16 thumbnail ratio",
     "qrCode": "QR Code",
     "copyUrl": "Copy URL",
-    "other": "Other"
+    "other": "Other",
+    "noProjectSpecified": "No project specified",
+    "loginRequired": "Login required",
+    "projectLoadFailed": "Failed to load project",
+    "thumbnailGenerationFailed": "Failed to generate thumbnail",
+    "regeneratingThumbnail": "Regenerating thumbnail...",
+    "movieLoadFailed": "Failed to load video",
+    "generatingMovie": "Generating video...",
+    "generationFailed": "Generation failed",
+    "uploading": "Uploading...",
+    "uploadFailed": "Upload failed",
+    "enterTitle": "Please enter a title",
+    "registering": "Registering...",
+    "publishFailed": "Failed to publish",
+    "regenerateFailed": "Failed to regenerate",
+    "shareText": "I made {title}!",
+    "qrGenerationError": "QR code error",
+    "saving": "Saving...",
+    "saveFailed": "Save failed"
   },
   "profileEditor": {
     "title": "Edit Profile",
@@ -373,15 +421,24 @@
     "closeModal": "Close",
     "shareText": "Check out {title}!",
     "copied": "Copied!",
-    "lineageLoadError": "Failed to load lineage data"
+    "lineageLoadError": "Failed to load lineage data",
+    "untitled": "Untitled",
+    "noGamesYet": "No games yet"
   },
   "play": {
     "title": "Play - Game Creator",
+    "pageTitle": "{title} - Game Creator",
     "next": "Next",
     "create": "Create",
     "share": "Share",
     "comment": "Comment",
-    "noComments": "No comments yet"
+    "noComments": "No comments yet",
+    "defaultCreator": "You",
+    "untitled": "Untitled",
+    "unknownCreator": "Unknown",
+    "noDescription": "No description",
+    "randomPlayComingSoon": "Random play feature coming in Phase 2",
+    "game": "Game"
   },
   "remix": {
     "complete": "Remix Complete!",
@@ -396,6 +453,7 @@
   },
   "share": {
     "linkCopied": "Link copied!",
+    "urlCopied": "URL copied!",
     "madeWithGameCreator": "{name} - Made with Game Creator"
   },
   "quota": {
@@ -420,6 +478,23 @@
   "project": {
     "generatingIn": "Generating in \"{name}\".<br>Please try again after it's done.",
     "anotherProject": "another project"
+  },
+  "waitlist": {
+    "title": "Registration Complete - DreamCore",
+    "thankYou": "Thanks for signing up!",
+    "message": "Thanks for registering with DreamCore.<br>We're gradually opening access.<br>You'll be able to use it once approved.",
+    "haveInviteCode": "Have an invite code?",
+    "enterInviteCode": "Enter invite code",
+    "apply": "Apply",
+    "loginWithDifferentAccount": "Login with different account",
+    "shareWithFriends": "Share with friends",
+    "share": "Share",
+    "shareText": "I signed up for the DreamCore V2 waitlist!\n\nAn era where you can make games just by chatting with AI has arrived. No coding needed, just your ideas.\n\n#DreamCore #AI #GameDev #NoCode",
+    "pleaseEnterCode": "Please enter an invite code",
+    "checking": "Checking...",
+    "accessApproved": "Access approved! Redirecting...",
+    "errorOccurred": "An error occurred",
+    "networkError": "A network error occurred"
   },
   "samples": {
     "spaceShooting": "Space Shooting",

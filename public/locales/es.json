@@ -4,7 +4,8 @@
     "gameCreator": "Creador de Juegos",
     "loading": "Cargando...",
     "retry": "Intentar de nuevo",
-    "or": "o"
+    "or": "o",
+    "comingSoon": "Muy pronto"
   },
   "nav": {
     "create": "Crear",
@@ -27,12 +28,39 @@
     "logout": "Salir",
     "more": "ver más",
     "less": "ver menos",
-    "reconnect": "Reconectar"
+    "reconnect": "Reconectar",
+    "follow": "Seguir"
   },
   "filter": {
     "all": "Todo",
     "published": "Publicado",
     "draft": "Borrador"
+  },
+  "notifications": {
+    "sample": {
+      "releaseTitle": "Creador de Juegos v2.0 Lanzado",
+      "releaseMessage": "Se han agregado nuevas funciones! Generacion de imagenes con IA, soporte de hojas de sprites y mas posibilidades creativas.",
+      "publishedTitle": "Juego Publicado",
+      "publishedMessage": "\"{name}\" se ha publicado correctamente. Copia el enlace y compartelo con tus amigos!",
+      "maintenanceTitle": "Aviso de Mantenimiento",
+      "maintenanceMessage": "El mantenimiento del sistema se realizara el 20 de enero de 2:00 AM a 5:00 AM. El servicio no estara disponible durante este tiempo.",
+      "commentTitle": "Nuevo Comentario",
+      "commentMessage": "Recibiste un comentario en \"{name}\".",
+      "welcomeTitle": "Bienvenido a Creador de Juegos",
+      "welcomeMessage": "Tu cuenta ha sido creada. Solo chatea para crear tus propios juegos originales."
+    },
+    "date": {
+      "today": "Hoy",
+      "yesterday": "Ayer",
+      "thisWeek": "Esta Semana",
+      "earlier": "Antes"
+    },
+    "time": {
+      "justNow": "Ahora mismo",
+      "minutesAgo": "hace {minutes}m",
+      "hoursAgo": "hace {hours}h",
+      "daysAgo": "hace {days}d"
+    }
   },
   "page": {
     "index": {
@@ -91,6 +119,7 @@
     "delete": {
       "title": "¿Eliminar este juego?",
       "message": "¿Eliminar \"{name}\"?",
+      "messagePrefix": "Eliminar",
       "warning": "No se puede deshacer"
     },
     "quotaLimit": {
@@ -268,7 +297,8 @@
     "skip": "Saltar",
     "stylePrefix": "Estilo: {name}",
     "moreStyles": "Más",
-    "usingImage": "{index}: Usando imagen \"{name}\": {url}"
+    "usingImage": "{index}: Usando imagen \"{name}\": {url}",
+    "imageData": "Datos de imagen"
   },
   "publish": {
     "title": "Publicar Juego - Creador de Juegos",
@@ -308,7 +338,25 @@
     "thumbnailCropInfo": "Recortando a proporción 9:16 para miniatura",
     "qrCode": "Código QR",
     "copyUrl": "Copiar URL",
-    "other": "Otros"
+    "other": "Otros",
+    "noProjectSpecified": "No se especificó proyecto",
+    "loginRequired": "Se requiere iniciar sesión",
+    "projectLoadFailed": "Error al cargar proyecto",
+    "thumbnailGenerationFailed": "Error al generar miniatura",
+    "regeneratingThumbnail": "Regenerando miniatura...",
+    "movieLoadFailed": "Error al cargar video",
+    "generatingMovie": "Generando video...",
+    "generationFailed": "Error en la generación",
+    "uploading": "Subiendo...",
+    "uploadFailed": "Error al subir",
+    "enterTitle": "Por favor ingresa un título",
+    "registering": "Publicando...",
+    "publishFailed": "Error al publicar",
+    "regenerateFailed": "Error al regenerar",
+    "shareText": "¡Hice {title}!",
+    "qrGenerationError": "Error en código QR",
+    "saving": "Guardando...",
+    "saveFailed": "Error al guardar"
   },
   "profileEditor": {
     "title": "Editar Perfil",
@@ -373,15 +421,24 @@
     "closeModal": "Cerrar",
     "shareText": "¡Prueba {title}!",
     "copied": "¡Copiado!",
-    "lineageLoadError": "Error al cargar datos de linaje"
+    "lineageLoadError": "Error al cargar datos de linaje",
+    "untitled": "Sin título",
+    "noGamesYet": "Aún no hay juegos"
   },
   "play": {
     "title": "Jugar - Creador de Juegos",
+    "pageTitle": "{title} - Creador de Juegos",
     "next": "Siguiente",
     "create": "Crear",
     "share": "Compartir",
     "comment": "Comentar",
-    "noComments": "Aún no hay comentarios"
+    "noComments": "Aún no hay comentarios",
+    "defaultCreator": "Tú",
+    "untitled": "Sin título",
+    "unknownCreator": "Desconocido",
+    "noDescription": "Sin descripción",
+    "randomPlayComingSoon": "La función de reproducción aleatoria llegará en la Fase 2",
+    "game": "Juego"
   },
   "remix": {
     "complete": "¡Remix Completado!",
@@ -396,6 +453,7 @@
   },
   "share": {
     "linkCopied": "¡Enlace copiado!",
+    "urlCopied": "¡URL copiada!",
     "madeWithGameCreator": "{name} - Hecho con Creador de Juegos"
   },
   "quota": {
@@ -420,6 +478,23 @@
   "project": {
     "generatingIn": "Generando en \"{name}\".<br>Por favor intenta después de que termine.",
     "anotherProject": "otro proyecto"
+  },
+  "waitlist": {
+    "title": "Registro Completo - DreamCore",
+    "thankYou": "Gracias por registrarte!",
+    "message": "Gracias por registrarte en DreamCore.<br>Estamos abriendo el acceso gradualmente.<br>Podrás usarlo una vez que seas aprobado.",
+    "haveInviteCode": "Tienes un codigo de invitacion?",
+    "enterInviteCode": "Ingresa codigo de invitacion",
+    "apply": "Aplicar",
+    "loginWithDifferentAccount": "Iniciar sesion con otra cuenta",
+    "shareWithFriends": "Compartir con amigos",
+    "share": "Compartir",
+    "shareText": "Me registre en la lista de espera de DreamCore V2!\n\nLlego la era en la que puedes crear juegos solo conversando con IA. Sin codigo, solo tus ideas.\n\n#DreamCore #AI #GameDev #NoCode",
+    "pleaseEnterCode": "Por favor ingresa un codigo de invitacion",
+    "checking": "Verificando...",
+    "accessApproved": "Acceso aprobado! Redirigiendo...",
+    "errorOccurred": "Ocurrio un error",
+    "networkError": "Ocurrio un error de red"
   },
   "samples": {
     "spaceShooting": "Disparo Espacial",

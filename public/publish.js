@@ -25,7 +25,7 @@ class PublishPage {
     this.movieObjectUrl = null;
 
     if (!this.projectId) {
-      alert('プロジェクトが指定されていません');
+      alert(DreamCoreI18n.t('publish.noProjectSpecified'));
       window.location.href = '/create.html';
       return;
     }
@@ -37,7 +37,7 @@ class PublishPage {
     // Check authentication using Supabase Auth
     const session = await DreamCoreAuth.getSession();
     if (!session) {
-      alert('ログインが必要です');
+      alert(DreamCoreI18n.t('publish.loginRequired'));
       window.location.href = '/';
       return;
     }
@@ -178,7 +178,7 @@ class PublishPage {
       this.projectData = await response.json();
     } catch (error) {
       console.error('Error loading project:', error);
-      alert('プロジェクトの読み込みに失敗しました');
+      alert(DreamCoreI18n.t('publish.projectLoadFailed'));
       window.location.href = '/create.html';
     }
   }
@@ -254,7 +254,7 @@ class PublishPage {
     const placeholder = this.thumbnailPreview.querySelector('.thumbnail-placeholder');
     this.thumbnailPreview.classList.add('generating');
     if (placeholder) {
-      placeholder.querySelector('span').textContent = 'サムネイルを生成中...';
+      placeholder.querySelector('span').textContent = DreamCoreI18n.t('publish.generatingThumbnail');
     }
 
     try {
@@ -281,7 +281,7 @@ class PublishPage {
     } catch (error) {
       console.error('Error generating thumbnail:', error);
       if (placeholder) {
-        placeholder.querySelector('span').textContent = 'サムネイル生成に失敗しました';
+        placeholder.querySelector('span').textContent = DreamCoreI18n.t('publish.thumbnailGenerationFailed');
       }
     } finally {
       this.thumbnailPreview.classList.remove('generating');
@@ -328,10 +328,11 @@ class PublishPage {
   }
 
   renderTags() {
+    const deleteTitle = DreamCoreI18n.t('button.delete');
     this.tagsContainer.innerHTML = this.publishData.tags.map((tag, index) => `
       <span class="tag">
         ${this.escapeHtml(tag)}
-        <button class="tag-remove" data-index="${index}" title="削除">
+        <button class="tag-remove" data-index="${index}" title="${deleteTitle}">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -370,7 +371,7 @@ class PublishPage {
   scheduleAutoSave() {
     this.isDirty = true;
     this.saveStatus.classList.add('saving');
-    this.saveText.textContent = '保存中...';
+    this.saveText.textContent = DreamCoreI18n.t('publish.saving');
 
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
@@ -393,10 +394,10 @@ class PublishPage {
 
       this.isDirty = false;
       this.saveStatus.classList.remove('saving');
-      this.saveText.textContent = '保存済み';
+      this.saveText.textContent = DreamCoreI18n.t('publish.saved');
     } catch (error) {
       console.error('Error saving publish data:', error);
-      this.saveText.textContent = '保存失敗';
+      this.saveText.textContent = DreamCoreI18n.t('publish.saveFailed');
     }
   }
 
@@ -443,7 +444,7 @@ class PublishPage {
       }
     } catch (error) {
       console.error('Error regenerating:', error);
-      alert('再生成に失敗しました');
+      alert(DreamCoreI18n.t('publish.regenerateFailed'));
     } finally {
       this.isGenerating = false;
       this.setFieldGenerating(fieldName, false);
@@ -510,7 +511,7 @@ class PublishPage {
     this.thumbnailImage.classList.add('hidden');
     if (placeholder) {
       placeholder.classList.remove('hidden');
-      placeholder.querySelector('span').textContent = 'サムネイルを再生成中...';
+      placeholder.querySelector('span').textContent = DreamCoreI18n.t('publish.regeneratingThumbnail');
     }
 
     await this.generateThumbnail();
@@ -530,7 +531,7 @@ class PublishPage {
               <polyline points="23 4 23 10 17 10"></polyline>
               <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
             </svg>
-            再生成
+            ${DreamCoreI18n.t('publish.regenerate')}
           `;
         }
       })
@@ -559,7 +560,7 @@ class PublishPage {
     } catch (error) {
       console.error('Error loading movie:', error);
       if (this.moviePlaceholderText) {
-        this.moviePlaceholderText.textContent = '動画を読み込めませんでした';
+        this.moviePlaceholderText.textContent = DreamCoreI18n.t('publish.movieLoadFailed');
       }
     }
   }
@@ -577,7 +578,7 @@ class PublishPage {
       placeholder.classList.remove('hidden');
     }
     if (this.moviePlaceholderText) {
-      this.moviePlaceholderText.textContent = '動画を生成中...';
+      this.moviePlaceholderText.textContent = DreamCoreI18n.t('publish.generatingMovie');
     }
 
     try {
@@ -596,18 +597,18 @@ class PublishPage {
             <polyline points="23 4 23 10 17 10"></polyline>
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
           </svg>
-          再生成
+          ${DreamCoreI18n.t('publish.regenerate')}
         `;
       } else {
         console.error('Failed to generate movie:', data.error);
         if (this.moviePlaceholderText) {
-          this.moviePlaceholderText.textContent = '生成に失敗しました';
+          this.moviePlaceholderText.textContent = DreamCoreI18n.t('publish.generationFailed');
         }
       }
     } catch (error) {
       console.error('Error generating movie:', error);
       if (this.moviePlaceholderText) {
-        this.moviePlaceholderText.textContent = 'エラーが発生しました';
+        this.moviePlaceholderText.textContent = DreamCoreI18n.t('error.systemError');
       }
     } finally {
       this.isGeneratingMovie = false;
@@ -691,7 +692,7 @@ class PublishPage {
 
     this.thumbnailPreview.classList.add('generating');
     if (placeholder) {
-      placeholder.querySelector('span').textContent = 'アップロード中...';
+      placeholder.querySelector('span').textContent = DreamCoreI18n.t('publish.uploading');
     }
 
     try {
@@ -725,7 +726,7 @@ class PublishPage {
     } catch (error) {
       console.error('Error uploading thumbnail:', error);
       if (placeholder) {
-        placeholder.querySelector('span').textContent = 'アップロードに失敗しました';
+        placeholder.querySelector('span').textContent = DreamCoreI18n.t('publish.uploadFailed');
       }
     } finally {
       this.thumbnailPreview.classList.remove('generating');
@@ -747,12 +748,12 @@ class PublishPage {
 
   async publish() {
     if (!this.publishData.title.trim()) {
-      alert('タイトルを入力してください');
+      alert(DreamCoreI18n.t('publish.enterTitle'));
       this.titleInput.focus();
       return;
     }
 
-    this.showLoading('登録しています...');
+    this.showLoading(DreamCoreI18n.t('publish.registering'));
 
     try {
       const response = await DreamCoreAuth.authFetch(`/api/projects/${this.projectId}/publish`, {
@@ -769,7 +770,7 @@ class PublishPage {
       this.showShareModal(result.gameId);
     } catch (error) {
       console.error('Error publishing:', error);
-      alert('登録に失敗しました');
+      alert(DreamCoreI18n.t('publish.publishFailed'));
     } finally {
       this.hideLoading();
     }
@@ -792,7 +793,7 @@ class PublishPage {
     const gameUrl = `${window.location.origin}/game/${gameId}`;
 
     // Bind share buttons
-    const shareText = `${this.publishData.title} を作りました！`;
+    const shareText = DreamCoreI18n.t('publish.shareText', { title: this.publishData.title });
 
     // UTMパラメーター付きURL生成
     const getShareUrl = (source, medium = 'social') => {
@@ -904,7 +905,7 @@ class PublishPage {
           const label = nativeBtn.querySelector('.share-btn-label');
           if (label) {
             const original = label.textContent;
-            label.textContent = 'コピー!';
+            label.textContent = DreamCoreI18n.t('game.copied');
             setTimeout(() => { label.textContent = original; }, 1500);
           }
         } catch (err) {
@@ -994,7 +995,7 @@ class PublishPage {
       ctx.fillStyle = '#000';
       ctx.font = '12px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('QR生成エラー', size/2, size/2);
+      ctx.fillText(DreamCoreI18n.t('publish.qrGenerationError'), size/2, size/2);
     };
     img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}`;
   }

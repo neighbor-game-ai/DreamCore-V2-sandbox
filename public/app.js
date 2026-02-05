@@ -5568,7 +5568,7 @@ class GameCreatorApp {
 
     // Insert image data reference into chat
     const prompt = this.imageGenPrompt?.value.trim() || '';
-    const imageRef = `[Generated Image: ${prompt}]\n画像データ: ${this.generatedImageData.substring(0, 100)}...`;
+    const imageRef = `[Generated Image: ${prompt}]\n${this.t('editor.imageData')}: ${this.generatedImageData.substring(0, 100)}...`;
     this.chatInput.value += (this.chatInput.value ? '\n' : '') + imageRef;
 
     this.closeImageGenModalHandler();

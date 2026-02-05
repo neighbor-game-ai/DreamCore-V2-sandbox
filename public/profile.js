@@ -24,6 +24,18 @@ class ProfileApp {
     this.gamesGridEl = document.getElementById('gamesGrid');
   }
 
+  /**
+   * Helper to get translated text
+   * Falls back to key if i18n not available
+   */
+  t(key, vars) {
+    if (typeof DreamCoreI18n !== 'undefined') {
+      return DreamCoreI18n.t(key, vars);
+    }
+    // Fallback to last part of key
+    return key.split('.').pop();
+  }
+
   async init() {
     // 1. Parse URL to determine profile lookup method
     // Supports: /@username and /u/:id (public_id or UUID)
@@ -45,7 +57,7 @@ class ProfileApp {
       username = username.toLowerCase();
 
       if (!username || !USERNAME_REGEX.test(username)) {
-        return this.showError('ユーザーが見つかりません');
+        return this.showError(this.t('error.systemError'));
       }
       profileLookup = { type: 'username', value: username };
       isUsernameUrl = true;
@@ -53,11 +65,11 @@ class ProfileApp {
       // /u/:id format (public_id or UUID)
       const profileId = pathname.split('/')[2];
       if (!profileId) {
-        return this.showError('ユーザーが見つかりません');
+        return this.showError(this.t('error.systemError'));
       }
       profileLookup = { type: 'id', value: profileId };
     } else {
-      return this.showError('ユーザーが見つかりません');
+      return this.showError(this.t('error.systemError'));
     }
 
     // 2. Check current user (via auth.js)
@@ -94,7 +106,7 @@ class ProfileApp {
       this.profileUserId = this.profileData.id;
       this.profilePublicId = this.profileData.public_id;
     } catch (e) {
-      return this.showError('ユーザーが見つかりません');
+      return this.showError(this.t('error.systemError'));
     }
 
     // 4. Normalize URL
@@ -193,15 +205,15 @@ class ProfileApp {
     // Header title
     const headerTitle = document.getElementById('headerTitle');
     if (headerTitle) {
-      headerTitle.textContent = profile.display_name || 'プロフィール';
+      headerTitle.textContent = profile.display_name || this.t('page.profile.header');
     }
 
     // Page title
-    document.title = (profile.display_name || 'プロフィール') + ' - DreamCore';
+    document.title = (profile.display_name || this.t('page.profile.header')) + ' - DreamCore';
 
     // Display name
     if (this.displayNameEl) {
-      this.displayNameEl.textContent = profile.display_name || '名前未設定';
+      this.displayNameEl.textContent = profile.display_name || this.t('profileEditor.noName');
     }
 
     // Bio
@@ -309,16 +321,16 @@ class ProfileApp {
       // Edit button
       const editBtn = document.createElement('button');
       editBtn.className = 'mypage-btn-edit';
-      editBtn.textContent = 'プロフィールを編集';
+      editBtn.textContent = this.t('button.editProfile');
       editBtn.addEventListener('click', () => this.openProfileEditor());
       container.appendChild(editBtn);
     } else {
       // Follow button
       const followBtn = document.createElement('button');
       followBtn.className = 'mypage-btn-follow';
-      followBtn.textContent = 'フォローする';
+      followBtn.textContent = this.t('button.follow');
       followBtn.addEventListener('click', () => {
-        alert('フォロー機能は近日公開予定です');
+        alert(this.t('common.comingSoon'));
       });
       container.appendChild(followBtn);
     }
@@ -375,7 +387,7 @@ class ProfileApp {
       return;
     }
     const shareData = {
-      title: `${this.profileData.display_name || 'ユーザー'} - DreamCore`,
+      title: `${this.profileData.display_name || 'User'} - DreamCore`,
       url: shareUrl,
     };
 
@@ -438,7 +450,7 @@ class ProfileApp {
     if (this.games.length === 0 && !this.isOwner) {
       const empty = document.createElement('div');
       empty.className = 'mypage-games-empty';
-      empty.textContent = 'まだゲームがありません';
+      empty.textContent = this.t('game.noGamesYet') || 'No games yet';
       this.gamesGridEl.appendChild(empty);
       return;
     }
@@ -496,7 +508,7 @@ class ProfileApp {
 
     const title = document.createElement('div');
     title.className = 'mypage-case-title';
-    title.textContent = game.title || '無題';
+    title.textContent = game.title || this.t('game.untitled');
     info.appendChild(title);
 
     card.appendChild(info);
@@ -533,7 +545,7 @@ class ProfileApp {
     info.className = 'mypage-case-info';
     const text = document.createElement('div');
     text.className = 'mypage-empty-case-text';
-    text.textContent = 'ゲームを公開';
+    text.textContent = this.t('editor.publish') || 'Publish';
     info.appendChild(text);
     slot.appendChild(info);
 
@@ -593,7 +605,7 @@ class ProfileApp {
       const a = document.createElement('a');
       a.href = '/';
       a.style.cssText = 'color: #FF3B30; text-decoration: none;';
-      a.textContent = '← ホームに戻る';
+      a.textContent = this.t('error404.goBack') || '← Go back';
       wrapper.appendChild(a);
 
       container.appendChild(wrapper);

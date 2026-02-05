@@ -132,8 +132,8 @@ class NotificationsApp {
       {
         id: '1',
         type: 'system',
-        title: 'ゲームクリエイター v2.0 リリース',
-        message: '新機能が追加されました。AIによる画像生成機能、スプライトシート対応など、より創造的なゲーム制作が可能になりました。',
+        title: DreamCoreI18n.t('notifications.sample.releaseTitle'),
+        message: DreamCoreI18n.t('notifications.sample.releaseMessage'),
         createdAt: new Date(now - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
         read: false,
         icon: 'announcement'
@@ -141,8 +141,8 @@ class NotificationsApp {
       {
         id: '2',
         type: 'project',
-        title: 'ゲームが公開されました',
-        message: '「スペースシューター」が正常に公開されました。共有リンクをコピーして友達にシェアしましょう！',
+        title: DreamCoreI18n.t('notifications.sample.publishedTitle'),
+        message: DreamCoreI18n.t('notifications.sample.publishedMessage', { name: 'Space Shooter' }),
         createdAt: new Date(now - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
         read: false,
         projectId: 'demo-project-1',
@@ -151,8 +151,8 @@ class NotificationsApp {
       {
         id: '3',
         type: 'system',
-        title: 'メンテナンスのお知らせ',
-        message: '1月20日 AM2:00〜AM5:00にシステムメンテナンスを実施します。この間はサービスをご利用いただけません。',
+        title: DreamCoreI18n.t('notifications.sample.maintenanceTitle'),
+        message: DreamCoreI18n.t('notifications.sample.maintenanceMessage'),
         createdAt: new Date(now - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
         read: true,
         icon: 'warning'
@@ -160,8 +160,8 @@ class NotificationsApp {
       {
         id: '4',
         type: 'project',
-        title: 'コメントが届きました',
-        message: '「パズルゲーム」にユーザーからコメントが届きました。',
+        title: DreamCoreI18n.t('notifications.sample.commentTitle'),
+        message: DreamCoreI18n.t('notifications.sample.commentMessage', { name: 'Puzzle Game' }),
         createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
         read: true,
         projectId: 'demo-project-2',
@@ -170,8 +170,8 @@ class NotificationsApp {
       {
         id: '5',
         type: 'system',
-        title: 'ようこそゲームクリエイターへ',
-        message: 'アカウント作成が完了しました。チャットで話しかけるだけで、あなただけのオリジナルゲームが作れます。',
+        title: DreamCoreI18n.t('notifications.sample.welcomeTitle'),
+        message: DreamCoreI18n.t('notifications.sample.welcomeMessage'),
         createdAt: new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
         read: true,
         icon: 'welcome'
@@ -235,13 +235,13 @@ class NotificationsApp {
 
       let label;
       if (dateOnly >= today) {
-        label = '今日';
+        label = DreamCoreI18n.t('notifications.date.today');
       } else if (dateOnly >= yesterday) {
-        label = '昨日';
+        label = DreamCoreI18n.t('notifications.date.yesterday');
       } else if (dateOnly >= thisWeek) {
-        label = '今週';
+        label = DreamCoreI18n.t('notifications.date.thisWeek');
       } else {
-        label = '以前';
+        label = DreamCoreI18n.t('notifications.date.earlier');
       }
 
       if (!groups[label]) {
@@ -258,7 +258,9 @@ class NotificationsApp {
     const timeAgo = this.formatTimeAgo(notification.createdAt);
     const unreadClass = notification.read ? '' : 'unread';
     const badgeClass = notification.type;
-    const badgeText = notification.type === 'system' ? 'システム' : 'プロジェクト';
+    const badgeText = notification.type === 'system'
+      ? DreamCoreI18n.t('page.notifications.system')
+      : DreamCoreI18n.t('page.notifications.project');
 
     return `
       <div class="notification-item ${unreadClass}" data-id="${notification.id}" style="animation-delay: ${index * 0.05}s">
@@ -299,12 +301,15 @@ class NotificationsApp {
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-    if (minutes < 1) return 'たった今';
-    if (minutes < 60) return `${minutes}分前`;
-    if (hours < 24) return `${hours}時間前`;
-    if (days < 7) return `${days}日前`;
+    if (minutes < 1) return DreamCoreI18n.t('notifications.time.justNow');
+    if (minutes < 60) return DreamCoreI18n.t('notifications.time.minutesAgo', { minutes });
+    if (hours < 24) return DreamCoreI18n.t('notifications.time.hoursAgo', { hours });
+    if (days < 7) return DreamCoreI18n.t('notifications.time.daysAgo', { days });
 
-    return date.toLocaleDateString('ja-JP', {
+    // For older dates, use locale-aware formatting
+    const locale = DreamCoreI18n.getLocale() || 'en';
+    const localeMap = { en: 'en-US', ja: 'ja-JP', zh: 'zh-CN', ko: 'ko-KR', es: 'es-ES', pt: 'pt-BR' };
+    return date.toLocaleDateString(localeMap[locale] || 'en-US', {
       month: 'short',
       day: 'numeric'
     });

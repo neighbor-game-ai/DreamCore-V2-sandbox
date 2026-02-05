@@ -68,7 +68,7 @@ class PlayApp {
             creatorId: session.user.id,
             creatorName: session.user.user_metadata?.full_name ||
                          session.user.email?.split('@')[0] ||
-                         '自分',
+                         DreamCoreI18n.t('play.defaultCreator'),
             likes: 0,
             tags: []
           };
@@ -87,16 +87,16 @@ class PlayApp {
   updateUI() {
     if (!this.gameData) return;
 
-    document.title = `${this.gameData.title || 'ゲーム'} - ゲームクリエイター`;
+    document.title = DreamCoreI18n.t('play.pageTitle', { title: this.gameData.title || DreamCoreI18n.t('play.game') });
 
     if (this.gameTitle) {
-      this.gameTitle.textContent = this.gameData.title || 'タイトルなし';
+      this.gameTitle.textContent = this.gameData.title || DreamCoreI18n.t('play.untitled');
     }
     if (this.gameCreator) {
-      this.gameCreator.textContent = this.gameData.creatorName || '不明';
+      this.gameCreator.textContent = this.gameData.creatorName || DreamCoreI18n.t('play.unknownCreator');
     }
     if (this.gameDescription) {
-      this.gameDescription.textContent = this.gameData.description || '説明はありません';
+      this.gameDescription.textContent = this.gameData.description || DreamCoreI18n.t('play.noDescription');
     }
     if (this.likeCount) {
       this.likeCount.textContent = this.gameData.likes || 0;
@@ -155,7 +155,7 @@ class PlayApp {
 
     // Zapping button (disabled in Phase 1)
     this.zappingBtn?.addEventListener('click', () => {
-      alert('ランダム再生機能はPhase 2で提供予定です');
+      alert(DreamCoreI18n.t('play.randomPlayComingSoon'));
     });
 
     // Create button
@@ -237,7 +237,7 @@ class PlayApp {
 
   async shareGame() {
     const url = window.location.href;
-    const title = this.gameData?.title || 'ゲーム';
+    const title = this.gameData?.title || DreamCoreI18n.t('play.game');
 
     if (navigator.share) {
       try {
@@ -252,7 +252,7 @@ class PlayApp {
       // Fallback: copy to clipboard
       try {
         await navigator.clipboard.writeText(url);
-        alert('URLをコピーしました');
+        alert(DreamCoreI18n.t('share.urlCopied'));
       } catch (e) {
         console.error('Failed to copy:', e);
       }

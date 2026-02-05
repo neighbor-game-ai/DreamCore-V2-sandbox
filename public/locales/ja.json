@@ -4,7 +4,8 @@
     "gameCreator": "ゲームクリエイター",
     "loading": "読み込み中...",
     "retry": "もう一度",
-    "or": "または"
+    "or": "または",
+    "comingSoon": "近日公開"
   },
   "nav": {
     "create": "つくる",
@@ -27,12 +28,39 @@
     "logout": "ログアウト",
     "more": "もっと見る",
     "less": "とじる",
-    "reconnect": "再接続する"
+    "reconnect": "再接続する",
+    "follow": "フォロー"
   },
   "filter": {
     "all": "すべて",
     "published": "公開中",
     "draft": "下書き"
+  },
+  "notifications": {
+    "sample": {
+      "releaseTitle": "ゲームクリエイター v2.0 リリース",
+      "releaseMessage": "新機能が追加されました。AIによる画像生成機能、スプライトシート対応など、より創造的なゲーム制作が可能になりました。",
+      "publishedTitle": "ゲームが公開されました",
+      "publishedMessage": "「{name}」が正常に公開されました。共有リンクをコピーして友達にシェアしましょう！",
+      "maintenanceTitle": "メンテナンスのお知らせ",
+      "maintenanceMessage": "1月20日 AM2:00〜AM5:00にシステムメンテナンスを実施します。この間はサービスをご利用いただけません。",
+      "commentTitle": "コメントが届きました",
+      "commentMessage": "「{name}」にユーザーからコメントが届きました。",
+      "welcomeTitle": "ようこそゲームクリエイターへ",
+      "welcomeMessage": "アカウント作成が完了しました。チャットで話しかけるだけで、あなただけのオリジナルゲームが作れます。"
+    },
+    "date": {
+      "today": "今日",
+      "yesterday": "昨日",
+      "thisWeek": "今週",
+      "earlier": "以前"
+    },
+    "time": {
+      "justNow": "たった今",
+      "minutesAgo": "{minutes}分前",
+      "hoursAgo": "{hours}時間前",
+      "daysAgo": "{days}日前"
+    }
   },
   "page": {
     "index": {
@@ -91,6 +119,7 @@
     "delete": {
       "title": "このゲームを削除する？",
       "message": "「{name}」を削除しますか？",
+      "messagePrefix": "削除",
       "warning": "削除すると元にもどせません"
     },
     "quotaLimit": {
@@ -268,7 +297,8 @@
     "skip": "スキップ",
     "stylePrefix": "スタイル: {name}",
     "moreStyles": "もっと見る",
-    "usingImage": "{index}：画像「{name}」を使用: {url}"
+    "usingImage": "{index}：画像「{name}」を使用: {url}",
+    "imageData": "画像データ"
   },
   "publish": {
     "title": "ゲームを登録 - ゲームクリエイター",
@@ -308,7 +338,25 @@
     "thumbnailCropInfo": "9:16のサムネイル比率で切り抜きます",
     "qrCode": "QRコード",
     "copyUrl": "URLをコピー",
-    "other": "その他"
+    "other": "その他",
+    "noProjectSpecified": "プロジェクトが指定されていません",
+    "loginRequired": "ログインが必要です",
+    "projectLoadFailed": "プロジェクトの読み込みに失敗しました",
+    "thumbnailGenerationFailed": "サムネイル生成に失敗しました",
+    "regeneratingThumbnail": "サムネイルを再生成中...",
+    "movieLoadFailed": "動画を読み込めませんでした",
+    "generatingMovie": "動画を生成中...",
+    "generationFailed": "生成に失敗しました",
+    "uploading": "アップロード中...",
+    "uploadFailed": "アップロードに失敗しました",
+    "enterTitle": "タイトルを入力してください",
+    "registering": "登録しています...",
+    "publishFailed": "登録に失敗しました",
+    "regenerateFailed": "再生成に失敗しました",
+    "shareText": "{title} を作りました！",
+    "qrGenerationError": "QR生成エラー",
+    "saving": "保存中...",
+    "saveFailed": "保存失敗"
   },
   "profileEditor": {
     "title": "プロフィール編集",
@@ -373,15 +421,24 @@
     "closeModal": "閉じる",
     "shareText": "{title} で遊んでみて！",
     "copied": "コピー!",
-    "lineageLoadError": "系譜データを読み込めませんでした"
+    "lineageLoadError": "系譜データを読み込めませんでした",
+    "untitled": "タイトルなし",
+    "noGamesYet": "まだゲームがありません"
   },
   "play": {
     "title": "プレイ - ゲームクリエイター",
+    "pageTitle": "{title} - ゲームクリエイター",
     "next": "次へ",
     "create": "作る",
     "share": "共有",
     "comment": "コメント",
-    "noComments": "コメントはまだありません"
+    "noComments": "コメントはまだありません",
+    "defaultCreator": "自分",
+    "untitled": "タイトルなし",
+    "unknownCreator": "不明",
+    "noDescription": "説明はありません",
+    "randomPlayComingSoon": "ランダム再生機能はPhase 2で提供予定です",
+    "game": "ゲーム"
   },
   "remix": {
     "complete": "リミックス完了！",
@@ -396,6 +453,7 @@
   },
   "share": {
     "linkCopied": "リンクをコピーしました！",
+    "urlCopied": "URLをコピーしました",
     "madeWithGameCreator": "{name} - Game Creator で作られたゲーム"
   },
   "quota": {
@@ -420,6 +478,23 @@
   "project": {
     "generatingIn": "『{name}』で生成中です。<br>完了後にもう一度お試しください。",
     "anotherProject": "別のプロジェクト"
+  },
+  "waitlist": {
+    "title": "登録完了 - DreamCore",
+    "thankYou": "登録ありがとうございます！",
+    "message": "DreamCore へのご登録ありがとうございます。<br>現在、アクセスを順次開放しています。<br>承認され次第、ご利用いただけるようになります。",
+    "haveInviteCode": "招待コードをお持ちですか？",
+    "enterInviteCode": "招待コードを入力",
+    "apply": "適用",
+    "loginWithDifferentAccount": "別のアカウントでログイン",
+    "shareWithFriends": "友達にシェアする",
+    "share": "シェア",
+    "shareText": "🎮 DreamCore V2 のウェイトリストに登録した！\n\nAIと会話するだけでゲームが作れる時代が来た。プログラミング不要、アイデアだけでOK\n\n#DreamCore #AI #ゲーム開発 #NoCode",
+    "pleaseEnterCode": "招待コードを入力してください",
+    "checking": "確認中...",
+    "accessApproved": "アクセスが承認されました！リダイレクト中...",
+    "errorOccurred": "エラーが発生しました",
+    "networkError": "ネットワークエラーが発生しました"
   },
   "samples": {
     "spaceShooting": "宇宙シューティング",

@@ -4,7 +4,8 @@
     "gameCreator": "游戏创作者",
     "loading": "加载中...",
     "retry": "再试一次",
-    "or": "或"
+    "or": "或",
+    "comingSoon": "即将推出"
   },
   "nav": {
     "create": "创作",
@@ -27,12 +28,39 @@
     "logout": "退出",
     "more": "展开",
     "less": "收起",
-    "reconnect": "重新连接"
+    "reconnect": "重新连接",
+    "follow": "关注"
   },
   "filter": {
     "all": "全部",
     "published": "已发布",
     "draft": "草稿"
+  },
+  "notifications": {
+    "sample": {
+      "releaseTitle": "游戏创作者 v2.0 发布",
+      "releaseMessage": "新功能已上线！AI图片生成、精灵表支持等，让游戏创作更有创意。",
+      "publishedTitle": "游戏已发布",
+      "publishedMessage": "「{name}」已成功发布。复制分享链接，分享给朋友吧！",
+      "maintenanceTitle": "维护通知",
+      "maintenanceMessage": "系统将于1月20日凌晨2:00至5:00进行维护。届时服务将暂停使用。",
+      "commentTitle": "收到新评论",
+      "commentMessage": "「{name}」收到了用户评论。",
+      "welcomeTitle": "欢迎来到游戏创作者",
+      "welcomeMessage": "账号创建成功。只需聊天就能创建属于你的原创游戏。"
+    },
+    "date": {
+      "today": "今天",
+      "yesterday": "昨天",
+      "thisWeek": "本周",
+      "earlier": "更早"
+    },
+    "time": {
+      "justNow": "刚刚",
+      "minutesAgo": "{minutes}分钟前",
+      "hoursAgo": "{hours}小时前",
+      "daysAgo": "{days}天前"
+    }
   },
   "page": {
     "index": {
@@ -91,6 +119,7 @@
     "delete": {
       "title": "要删除这个游戏吗？",
       "message": "删除「{name}」？",
+      "messagePrefix": "删除",
       "warning": "删了就找不回来了"
     },
     "quotaLimit": {
@@ -268,7 +297,8 @@
     "skip": "跳过",
     "stylePrefix": "风格: {name}",
     "moreStyles": "更多",
-    "usingImage": "{index}: 使用图片「{name}」: {url}"
+    "usingImage": "{index}: 使用图片「{name}」: {url}",
+    "imageData": "图片数据"
   },
   "publish": {
     "title": "发布游戏 - 游戏创作者",
@@ -308,7 +338,25 @@
     "thumbnailCropInfo": "按9:16的缩略图比例裁剪",
     "qrCode": "二维码",
     "copyUrl": "复制链接",
-    "other": "其他"
+    "other": "其他",
+    "noProjectSpecified": "未指定项目",
+    "loginRequired": "需要登录",
+    "projectLoadFailed": "项目加载失败",
+    "thumbnailGenerationFailed": "缩略图生成失败",
+    "regeneratingThumbnail": "正在重新生成缩略图...",
+    "movieLoadFailed": "视频加载失败",
+    "generatingMovie": "正在生成视频...",
+    "generationFailed": "生成失败",
+    "uploading": "上传中...",
+    "uploadFailed": "上传失败",
+    "enterTitle": "请输入标题",
+    "registering": "正在发布...",
+    "publishFailed": "发布失败",
+    "regenerateFailed": "重新生成失败",
+    "shareText": "我做了 {title}！",
+    "qrGenerationError": "二维码生成错误",
+    "saving": "保存中...",
+    "saveFailed": "保存失败"
   },
   "profileEditor": {
     "title": "编辑资料",
@@ -373,15 +421,24 @@
     "closeModal": "关闭",
     "shareText": "快来玩 {title}！",
     "copied": "已复制!",
-    "lineageLoadError": "无法加载谱系数据"
+    "lineageLoadError": "无法加载谱系数据",
+    "untitled": "无标题",
+    "noGamesYet": "还没有游戏"
   },
   "play": {
     "title": "玩游戏 - 游戏创作者",
+    "pageTitle": "{title} - 游戏创作者",
     "next": "下一个",
     "create": "创作",
     "share": "分享",
     "comment": "评论",
-    "noComments": "还没有评论"
+    "noComments": "还没有评论",
+    "defaultCreator": "你",
+    "untitled": "无标题",
+    "unknownCreator": "未知",
+    "noDescription": "暂无描述",
+    "randomPlayComingSoon": "随机播放功能将在第二阶段推出",
+    "game": "游戏"
   },
   "remix": {
     "complete": "二创完成！",
@@ -396,6 +453,7 @@
   },
   "share": {
     "linkCopied": "链接已复制！",
+    "urlCopied": "链接已复制！",
     "madeWithGameCreator": "{name} - 用游戏创作者制作"
   },
   "quota": {
@@ -420,6 +478,23 @@
   "project": {
     "generatingIn": "正在「{name}」中生成。<br>请完成后再试。",
     "anotherProject": "另一个项目"
+  },
+  "waitlist": {
+    "title": "注册完成 - DreamCore",
+    "thankYou": "感谢您的注册！",
+    "message": "感谢您注册 DreamCore。<br>我们正在逐步开放访问权限。<br>审核通过后您即可使用。",
+    "haveInviteCode": "有邀请码吗？",
+    "enterInviteCode": "输入邀请码",
+    "apply": "应用",
+    "loginWithDifferentAccount": "使用其他账号登录",
+    "shareWithFriends": "分享给朋友",
+    "share": "分享",
+    "shareText": "🎮 我注册了 DreamCore V2 候补名单！\n\n只需与AI聊天就能制作游戏的时代来了。不需要编程，只需要你的创意。\n\n#DreamCore #AI #游戏开发 #无代码",
+    "pleaseEnterCode": "请输入邀请码",
+    "checking": "验证中...",
+    "accessApproved": "访问已批准！正在跳转...",
+    "errorOccurred": "发生错误",
+    "networkError": "网络错误"
   },
   "samples": {
     "spaceShooting": "太空射击",
