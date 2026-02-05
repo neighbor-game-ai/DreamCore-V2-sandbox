@@ -4,8 +4,8 @@
  * - Push notification handling
  */
 
-const SW_VERSION = '2026.02.05.i';
-const CACHE_NAME = 'dreamcore-v8';
+const SW_VERSION = '2026.02.05.j';
+const CACHE_NAME = 'dreamcore-v9';
 
 console.log('[SW] Version:', SW_VERSION);
 const PRECACHE_ASSETS = [
@@ -180,81 +180,18 @@ self.addEventListener('notificationclick', (event) => {
     })
   }).catch(() => {});
 
+  // iOS PWA has issues with client.navigate() - it resolves but doesn't actually navigate.
+  // Solution: Always use clients.openWindow() which reliably opens the correct URL.
+  // For PWA, this will open in the same PWA context if the URL matches the scope.
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((windowClients) => {
-        // Debug: Log client info
-        fetch('/api/push/debug-click', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phase: 'clients',
-            clientCount: windowClients.length,
-            clients: windowClients.map(c => ({ url: c.url, focused: c.focused })),
-            absoluteUrl: absoluteUrl
-          })
-        }).catch(() => {});
-
-        // Try to find an existing PWA/browser window to focus
-        for (const client of windowClients) {
-          const clientOrigin = new URL(client.url).origin;
-
-          // Check if client is from our origin
-          if (clientOrigin === self.location.origin) {
-            // Debug: Found matching client
-            fetch('/api/push/debug-click', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                phase: 'found_client',
-                clientUrl: client.url,
-                willNavigateTo: absoluteUrl
-              })
-            }).catch(() => {});
-
-            // Focus existing window and navigate to target
-            return client.focus().then(() => {
-              // Send postMessage for iOS PWA
-              client.postMessage({
-                type: 'NOTIFICATION_CLICK',
-                url: absoluteUrl
-              });
-              // Also try navigate()
-              if ('navigate' in client) {
-                return client.navigate(absoluteUrl).then(() => {
-                  fetch('/api/push/debug-click', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phase: 'navigate_success', url: absoluteUrl })
-                  }).catch(() => {});
-                }).catch((err) => {
-                  fetch('/api/push/debug-click', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phase: 'navigate_failed', error: err.message })
-                  }).catch(() => {});
-                });
-              } else {
-                fetch('/api/push/debug-click', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ phase: 'no_navigate_method' })
-                }).catch(() => {});
-              }
-            });
-          }
-        }
-
-        // No existing window - open new one
-        fetch('/api/push/debug-click', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phase: 'open_new_window', url: absoluteUrl })
-        }).catch(() => {});
-
-        if (clients.openWindow) {
-          return clients.openWindow(absoluteUrl);
-        }
-      })
+    fetch('/api/push/debug-click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phase: 'opening_window', url: absoluteUrl })
+    }).catch(() => {}).then(() => {
+      if (clients.openWindow) {
+        return clients.openWindow(absoluteUrl);
+      }
+    })
   );
 });
