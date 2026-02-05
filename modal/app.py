@@ -278,10 +278,11 @@ def get_user_sandbox_name(user_id: str) -> str:
     """Generate deterministic sandbox name from user_id only.
 
     This allows pre-warming the sandbox before project selection.
-    Format: user-{user_id[:8]}  (truncated for readability)
+    Format: user-{full_user_id}  (full UUID to prevent collision)
     """
-    # Use first 8 chars of user_id for readability (UUIDs are unique enough)
-    return f"user-{user_id[:8]}"
+    # Use full UUID to prevent any collision risk between users
+    # UUID format: 36 chars (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+    return f"user-{user_id}"
 
 
 def get_legacy_sandbox_name(user_id: str, project_id: str) -> str:
