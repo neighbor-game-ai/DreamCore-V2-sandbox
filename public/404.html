@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ページが見つかりません - DreamCore</title>
+    <title data-i18n="error404.title">Page not found - DreamCore</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/i18n.js?v=20260205"></script>
     <style>
         :root {
             --red: #FF3B30;
@@ -145,18 +146,29 @@
 
     <div class="container">
         <div class="error-code">404</div>
-        <h1 class="error-title">ページが見つかりません</h1>
-        <p class="error-message">
-            お探しのページは存在しないか、移動した可能性があります。
+        <h1 class="error-title" data-i18n="error404.heading">Page not found</h1>
+        <p class="error-message" data-i18n="error404.message">
+            The page you're looking for doesn't exist or has been moved.
         </p>
         <div class="actions">
-            <a href="/" class="btn-primary">
-                ホームへ戻る
+            <a href="/" class="btn-primary" data-i18n="error404.goHome">
+                Go home
             </a>
-            <button class="btn-secondary" onclick="history.back()">
-                ← 前のページに戻る
+            <button class="btn-secondary" onclick="history.back()" data-i18n="error404.goBack">
+                ← Go back
             </button>
         </div>
     </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof DreamCoreI18n !== 'undefined') {
+        DreamCoreI18n.init().then(function() {
+          document.documentElement.lang = DreamCoreI18n.currentLang;
+          document.title = DreamCoreI18n.t('error404.title');
+        });
+      }
+    });
+    </script>
 </body>
 </html>

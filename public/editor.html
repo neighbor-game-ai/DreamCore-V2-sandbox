@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ゲームクリエイター - エディタ</title>
+  <title data-i18n="editor.title">Game Creator - Editor</title>
+  <!-- i18n support -->
+  <script src="/i18n.js?v=20260205"></script>
   <!-- Preconnect for faster font loading -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +14,7 @@
   <link rel="stylesheet" href="/style.css?v=20260205">
   <!-- Cropper CSS: lazy load (only needed when editing assets) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" media="print" onload="this.media='all'">
-  <meta name="description" content="チャットで会話するだけで、オリジナルのゲームが作れます。">
+  <meta name="description" data-i18n="editor.description" content="Create your own game just by chatting.">
   <!-- Early auth check: redirect to login if no session (before any JS loads) -->
   <script>
     (function() {
@@ -71,29 +73,29 @@
     <!-- Left: Chat Panel -->
     <div class="chat-panel" id="chatPanel">
       <div class="chat-header">
-        <button id="homeButton" class="home-btn" title="プロジェクト一覧へ戻る">
+        <button id="homeButton" class="home-btn" data-i18n-title="editor.backToProjects" title="Back to projects">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="19" y1="12" x2="5" y2="12"></line>
             <polyline points="12 19 5 12 12 5"></polyline>
           </svg>
         </button>
-        <h1 id="projectTitle" title="クリックで名前を変更">ゲームクリエイター</h1>
+        <h1 id="projectTitle" title="Click to rename" data-i18n="editor.projectTitle">Game Creator</h1>
         <div class="header-actions">
-          <button id="playGameButton" title="ゲームを遊ぶ">
+          <button id="playGameButton" data-i18n-title="editor.playGame" title="Play game">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
-            遊ぶ
+            <span data-i18n="editor.play">Play</span>
           </button>
-          <button id="publishButton" class="publish-btn" title="ゲームを登録">
+          <button id="publishButton" class="publish-btn" data-i18n-title="editor.publishGame" title="Publish game">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="17 8 12 3 7 8"></polyline>
               <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
-            登録
+            <span data-i18n="editor.publish">Publish</span>
           </button>
-          <span id="statusIndicator" style="display: none;">接続中...</span>
+          <span id="statusIndicator" style="display: none;" data-i18n="status.connecting">Connecting...</span>
         </div>
       </div>
 
@@ -107,12 +109,12 @@
               <line x1="12" y1="17" x2="12" y2="21"></line>
             </svg>
           </div>
-          <h3>ようこそ！</h3>
-          <p>どんなゲームを作りたいですか？<br>自由に話しかけてください。</p>
+          <h3 data-i18n="editor.welcome">Welcome!</h3>
+          <p data-i18n="editor.welcomeMessage" data-i18n-html="true">What kind of game do you want to make?<br>Feel free to tell me anything.</p>
           <div class="welcome-examples" id="welcomeExamples">
-            <span class="example-label">例えば...</span>
+            <span class="example-label" data-i18n="editor.exampleLabel">For example...</span>
             <div class="example-chips">
-              <span class="example-chip loading">読み込み中...</span>
+              <span class="example-chip loading" data-i18n="common.loading">Loading...</span>
             </div>
           </div>
         </div>
@@ -121,7 +123,7 @@
       <!-- Streaming Output Display -->
       <div class="streaming-container hidden" id="streamingContainer">
         <div class="streaming-header">
-          <span class="streaming-status" id="streamingStatus">生成中...</span>
+          <span class="streaming-status" id="streamingStatus" data-i18n="editor.generating">Generating...</span>
           <span class="streaming-file" id="streamingFile"></span>
         </div>
         <div class="streaming-output" id="streamingOutput"></div>
@@ -132,12 +134,12 @@
         <label class="toggle-switch">
           <input type="checkbox" id="disableSkillsToggle">
           <span class="toggle-slider"></span>
-          <span class="toggle-label">スキル無効</span>
+          <span class="toggle-label" data-i18n="editor.disableSkills">Disable skills</span>
         </label>
         <label class="toggle-switch">
           <input type="checkbox" id="useClaudeToggle">
           <span class="toggle-slider"></span>
-          <span class="toggle-label">Claude CLI使用</span>
+          <span class="toggle-label" data-i18n="editor.useClaudeCli">Use Claude CLI</span>
         </label>
       </div>
 
@@ -145,7 +147,7 @@
         <div id="attachedAssets" class="attached-assets hidden"></div>
         <div class="input-row">
           <!-- Mobile Plus Button -->
-          <button id="plusMenuButton" class="plus-menu-btn" title="メニュー">
+          <button id="plusMenuButton" class="plus-menu-btn" data-i18n-title="editor.menu" title="Menu">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -158,11 +160,11 @@
                 <circle cx="12" cy="12" r="10"></circle>
                 <polyline points="12 6 12 12 16 14"></polyline>
               </svg>
-              <span>変更履歴</span>
+              <span data-i18n="editor.history">Version history</span>
             </button>
           </div>
           <!-- Mobile Image Button -->
-          <button id="imageMenuButton" class="image-menu-btn" title="画像">
+          <button id="imageMenuButton" class="image-menu-btn" data-i18n-title="editor.image" title="Image">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
               <circle cx="8.5" cy="8.5" r="1.5"></circle>
@@ -175,7 +177,7 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
               </svg>
-              <span>素材</span>
+              <span data-i18n="editor.assets">Assets</span>
             </button>
             <button id="imageMenuUpload" class="plus-menu-item">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -183,7 +185,7 @@
                 <polyline points="17 8 12 3 7 8"></polyline>
                 <line x1="12" y1="3" x2="12" y2="15"></line>
               </svg>
-              <span>アップロード</span>
+              <span data-i18n="editor.upload">Upload</span>
             </button>
             <button id="imageMenuImageGen" class="plus-menu-item">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -191,18 +193,19 @@
                 <circle cx="8.5" cy="8.5" r="1.5"></circle>
                 <polyline points="21 15 16 10 5 21"></polyline>
               </svg>
-              <span>画像生成</span>
+              <span data-i18n="editor.imageGen">Generate image</span>
             </button>
           </div>
           <div class="chat-input-wrapper">
             <textarea
               id="chatInput"
-              placeholder="自由に話しかけてください"
+              data-i18n-placeholder="editor.placeholder"
+              placeholder="Tell me anything"
               rows="1"
               disabled
             ></textarea>
             <!-- Expand to fullscreen button (inside textarea) -->
-            <button id="expandChatButton" class="expand-chat-btn" title="全画面で入力">
+            <button id="expandChatButton" class="expand-chat-btn" data-i18n-title="editor.expandFullscreen" title="Expand to fullscreen">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polyline points="15 3 21 3 21 9"></polyline>
                 <polyline points="9 21 3 21 3 15"></polyline>
@@ -216,38 +219,38 @@
               <line x1="22" y1="2" x2="11" y2="13"></line>
               <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
             </svg>
-            送信
+            <span data-i18n="editor.send">Send</span>
           </button>
           <button id="stopButton" class="hidden">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="6" y="6" width="12" height="12"></rect>
             </svg>
-            停止
+            <span data-i18n="editor.stop">Stop</span>
           </button>
         </div>
       </div>
       <div class="input-extras">
-        <button id="assetButton" title="素材を追加">
+        <button id="assetButton" data-i18n-title="editor.addAssets" title="Add assets">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
           </svg>
-          素材
+          <span data-i18n="editor.assets">Assets</span>
         </button>
-        <button id="uploadButton" title="ファイルをアップロード">
+        <button id="uploadButton" data-i18n-title="editor.uploadFile" title="Upload file">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="17 8 12 3 7 8"></polyline>
             <line x1="12" y1="3" x2="12" y2="15"></line>
           </svg>
-          アップロード
+          <span data-i18n="editor.upload">Upload</span>
         </button>
-        <button id="imageGenButton" title="AIで画像を作成">
+        <button id="imageGenButton" data-i18n-title="editor.createWithAi" title="Create with AI">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
             <circle cx="8.5" cy="8.5" r="1.5"></circle>
             <polyline points="21 15 16 10 5 21"></polyline>
           </svg>
-          画像生成
+          <span data-i18n="editor.imageGen">Generate image</span>
         </button>
       </div>
     </div>
@@ -256,19 +259,19 @@
     <div class="modal hidden" id="assetModal">
       <div class="modal-content asset-modal">
         <div class="modal-header">
-          <h3>素材ライブラリ</h3>
+          <h3 data-i18n="editor.assetLibrary">Asset Library</h3>
           <button class="modal-close" id="closeAssetModal">&times;</button>
         </div>
         <div class="asset-tabs">
-          <button class="asset-tab active" data-tab="my-assets">マイ素材</button>
-          <button class="asset-tab" data-tab="public-assets">みんなの素材</button>
-          <button class="asset-tab" data-tab="upload">アップロード</button>
+          <button class="asset-tab active" data-tab="my-assets" data-i18n="editor.myAssets">My Assets</button>
+          <button class="asset-tab" data-tab="public-assets" data-i18n="editor.publicAssets">Public Assets</button>
+          <button class="asset-tab" data-tab="upload" data-i18n="editor.upload">Upload</button>
         </div>
         <div class="asset-content">
           <!-- My Assets Tab -->
           <div class="asset-tab-content active" id="my-assets">
             <div class="asset-search">
-              <input type="text" id="assetSearch" placeholder="素材を検索...">
+              <input type="text" id="assetSearch" data-i18n-placeholder="editor.searchAssets" placeholder="Search assets...">
             </div>
             <div class="asset-grid" id="myAssetGrid">
               <!-- Assets will be loaded here -->
@@ -290,24 +293,23 @@
                   <polyline points="17 8 12 3 7 8"></polyline>
                   <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
-                <p>ファイルをドラッグ＆ドロップ</p>
-                <p>またはクリックして選択</p>
-                <p class="upload-hint">
-                  画像: JPG, PNG（自動圧縮）, GIF, WebP（300KBまで）, SVG<br>
-                  音声: MP3, WAV, OGG（1MBまで）
+                <p data-i18n="editor.dragAndDrop">Drag and drop files</p>
+                <p data-i18n="editor.orClickToSelect">or click to select</p>
+                <p class="upload-hint" data-i18n="editor.uploadHint" data-i18n-html="true">
+                  Image: JPG, PNG (auto-compress), GIF, WebP (up to 300KB), SVG<br>Audio: MP3, WAV, OGG (up to 1MB)
                 </p>
               </div>
             </div>
             <div class="upload-form hidden" id="uploadForm">
-              <input type="text" id="assetTags" placeholder="タグ（カンマ区切り）">
-              <input type="text" id="assetDescription" placeholder="説明（任意）">
-              <button id="uploadSubmit">アップロード</button>
+              <input type="text" id="assetTags" data-i18n-placeholder="editor.tags" placeholder="Tags (comma separated)">
+              <input type="text" id="assetDescription" data-i18n-placeholder="editor.descriptionOptional" placeholder="Description (optional)">
+              <button id="uploadSubmit" data-i18n="editor.upload">Upload</button>
             </div>
             <div class="upload-preview" id="uploadPreview"></div>
           </div>
         </div>
         <div class="asset-footer">
-          <button id="deleteAssetButton" class="icon-btn icon-btn-danger hidden" title="削除">
+          <button id="deleteAssetButton" class="icon-btn icon-btn-danger hidden" data-i18n-title="button.delete" title="Delete">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
             </svg>
@@ -319,10 +321,10 @@
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
-              編集
+              <span data-i18n="editor.edit">Edit</span>
             </button>
             <button id="insertAssetButton" class="primary-action-btn hidden">
-              挿入
+              <span data-i18n="editor.insert">Insert</span>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
@@ -336,7 +338,7 @@
     <div class="modal hidden" id="imageEditorModal">
       <div class="modal-content image-editor-modal">
         <div class="modal-header">
-          <h3>画像を編集</h3>
+          <h3 data-i18n="editor.editImage">Edit Image</h3>
           <button class="modal-close" id="closeImageEditor">&times;</button>
         </div>
         <div class="image-editor-body">
@@ -350,74 +352,74 @@
             </div>
           </div>
           <div class="editor-toolbar">
-            <button class="tool-btn" data-tool="crop" title="切り抜き">
+            <button class="tool-btn" data-tool="crop" data-i18n-title="editor.crop" title="Crop">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M6 2v4H2v2h4v12h12v4h2v-4h4v-2H8V6h12V4H8V2z"/>
               </svg>
-              <span>クロップ</span>
+              <span data-i18n="editor.crop">Crop</span>
             </button>
-            <button class="tool-btn" data-tool="resize" title="リサイズ">
+            <button class="tool-btn" data-tool="resize" data-i18n-title="editor.resize" title="Resize">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 21l-6-6m6 6v-4.8m0 4.8h-4.8"/>
                 <path d="M3 16.2V21m0 0h4.8M3 21l6-6"/>
                 <path d="M21 7.8V3m0 0h-4.8M21 3l-6 6"/>
                 <path d="M3 7.8V3m0 0h4.8M3 3l6 6"/>
               </svg>
-              <span>リサイズ</span>
+              <span data-i18n="editor.resize">Resize</span>
             </button>
-            <button class="tool-btn" id="rotateRight" title="90°回転">
+            <button class="tool-btn" id="rotateRight" data-i18n-title="editor.rotate" title="Rotate">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
                 <path d="M21 3v5h-5"/>
               </svg>
-              <span>回転</span>
+              <span data-i18n="editor.rotate">Rotate</span>
             </button>
-            <button class="tool-btn" id="flipHorizontal" title="左右反転">
+            <button class="tool-btn" id="flipHorizontal" data-i18n-title="editor.flipH" title="Flip H">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 3v18"/>
                 <path d="M16 7l4 5-4 5"/>
                 <path d="M8 7l-4 5 4 5"/>
               </svg>
-              <span>左右</span>
+              <span data-i18n="editor.flipH">Flip H</span>
             </button>
-            <button class="tool-btn" id="flipVertical" title="上下反転">
+            <button class="tool-btn" id="flipVertical" data-i18n-title="editor.flipV" title="Flip V">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 12h18"/>
                 <path d="M7 8l5-4 5 4"/>
                 <path d="M7 16l5 4 5-4"/>
               </svg>
-              <span>上下</span>
+              <span data-i18n="editor.flipV">Flip V</span>
             </button>
-            <button class="tool-btn" data-tool="remove-bg" title="背景削除">
+            <button class="tool-btn" data-tool="remove-bg" data-i18n-title="editor.removeBg" title="Remove BG">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="3" width="18" height="18" rx="2"/>
                 <circle cx="12" cy="12" r="4"/>
                 <path d="M3 3l18 18"/>
               </svg>
-              <span>背景削除</span>
+              <span data-i18n="editor.removeBg">Remove BG</span>
             </button>
-            <button id="editorUndo" class="tool-btn" disabled title="元に戻す">
+            <button id="editorUndo" class="tool-btn" disabled data-i18n-title="editor.undo" title="Undo">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 7v6h6"/>
                 <path d="M3 13a9 9 0 1 0 3-7.7L3 7"/>
               </svg>
-              <span>戻す</span>
+              <span data-i18n="editor.undo">Undo</span>
             </button>
-            <button id="editorReset" class="tool-btn" title="リセット">
+            <button id="editorReset" class="tool-btn" data-i18n-title="editor.reset" title="Reset">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                 <path d="M3 3v5h5"/>
               </svg>
-              <span>リセット</span>
+              <span data-i18n="editor.reset">Reset</span>
             </button>
           </div>
           <div class="tool-panels">
             <div class="tool-panel hidden" id="cropPanel">
-              <div class="panel-title">クロップ設定</div>
+              <div class="panel-title" data-i18n="editor.cropSettings">Crop Settings</div>
               <div class="preset-ratios">
                 <button class="ratio-btn active" data-ratio="free">
                   <span class="ratio-shape ratio-free"></span>
-                  <span class="ratio-label">フリー</span>
+                  <span class="ratio-label" data-i18n="editor.free">Free</span>
                 </button>
                 <button class="ratio-btn" data-ratio="1:1">
                   <span class="ratio-shape ratio-1-1"></span>
@@ -437,57 +439,57 @@
                 </button>
                 <button class="ratio-btn" data-ratio="circle">
                   <span class="ratio-shape ratio-circle"></span>
-                  <span class="ratio-label">円形</span>
+                  <span class="ratio-label" data-i18n="editor.circle">Circle</span>
                 </button>
               </div>
               <div class="crop-info">
-                <span id="cropSizeInfo">ハンドルをドラッグして調整</span>
+                <span id="cropSizeInfo" data-i18n="editor.dragToAdjust">Drag handles to adjust</span>
               </div>
               <div class="panel-actions">
-                <button class="panel-cancel-btn" data-cancel-tool>キャンセル</button>
-                <button id="applyCrop" class="apply-btn">適用</button>
+                <button class="panel-cancel-btn" data-cancel-tool data-i18n="button.cancel">Cancel</button>
+                <button id="applyCrop" class="apply-btn" data-i18n="editor.apply">Apply</button>
               </div>
             </div>
             <div class="tool-panel hidden" id="resizePanel">
-              <div class="panel-title">リサイズ設定</div>
+              <div class="panel-title" data-i18n="editor.resizeSettings">Resize Settings</div>
               <div class="resize-inputs">
                 <div class="input-group">
-                  <label>幅</label>
+                  <label data-i18n="editor.width">Width</label>
                   <input type="number" id="resizeWidth" min="1" max="4096">
                   <span>px</span>
                 </div>
                 <div class="input-group">
-                  <label>高さ</label>
+                  <label data-i18n="editor.height">Height</label>
                   <input type="number" id="resizeHeight" min="1" max="4096">
                   <span>px</span>
                 </div>
               </div>
               <label class="checkbox-label">
                 <input type="checkbox" id="keepAspect" checked>
-                縦横比を維持
+                <span data-i18n="editor.keepAspectRatio">Keep aspect ratio</span>
               </label>
               <div class="panel-actions">
-                <button class="panel-cancel-btn" data-cancel-tool>キャンセル</button>
-                <button id="applyResize" class="apply-btn">適用</button>
+                <button class="panel-cancel-btn" data-cancel-tool data-i18n="button.cancel">Cancel</button>
+                <button id="applyResize" class="apply-btn" data-i18n="editor.apply">Apply</button>
               </div>
             </div>
             <div class="tool-panel hidden" id="removeBgPanel">
-              <div class="panel-title">背景削除</div>
-              <p class="panel-desc">BRIA RMBG 2.0で高精度に背景を透明化</p>
+              <div class="panel-title" data-i18n="editor.removeBgTitle">Remove Background</div>
+              <p class="panel-desc" data-i18n="editor.removeBgDesc">High-precision background removal with BRIA RMBG 2.0</p>
               <div class="panel-actions">
-                <button class="panel-cancel-btn" data-cancel-tool>キャンセル</button>
-                <button id="applyRemoveBg" class="apply-btn">背景を削除</button>
+                <button class="panel-cancel-btn" data-cancel-tool data-i18n="button.cancel">Cancel</button>
+                <button id="applyRemoveBg" class="apply-btn" data-i18n="editor.removeBackground">Remove Background</button>
               </div>
               <div class="processing-indicator hidden" id="bgProcessing">
                 <div class="spinner"></div>
-                <span>処理中...</span>
+                <span data-i18n="editor.processing">Processing...</span>
               </div>
             </div>
           </div>
         </div>
         <div class="image-editor-footer">
-          <button id="cancelEdit" class="secondary-btn">キャンセル</button>
-          <button id="saveEditedImage" class="primary-btn">保存</button>
+          <button id="cancelEdit" class="secondary-btn" data-i18n="button.cancel">Cancel</button>
+          <button id="saveEditedImage" class="primary-btn" data-i18n="editor.save">Save</button>
         </div>
       </div>
     </div>
@@ -496,33 +498,33 @@
     <div class="modal hidden" id="imageGenModal">
       <div class="modal-content image-gen-modal">
         <div class="modal-header">
-          <h3>AIで画像を作成</h3>
+          <h3 data-i18n="editor.createImageWithAi">Create Image with AI</h3>
           <button class="modal-close" id="closeImageGenModal">&times;</button>
         </div>
         <div class="image-gen-content">
           <div class="image-gen-form">
-            <label class="form-label">どんな画像を作りますか？</label>
-            <textarea id="imageGenPrompt" placeholder="例：かわいい猫のキャラクター、宇宙船、ファンタジーの森..." rows="3"></textarea>
+            <label class="form-label" data-i18n="editor.whatImageToCreate">What image do you want to create?</label>
+            <textarea id="imageGenPrompt" data-i18n-placeholder="editor.imagePlaceholder" placeholder="e.g., a cute cat character, spaceship, fantasy forest..." rows="3"></textarea>
             <div class="image-gen-options">
               <div class="option-group">
-                <label class="option-label">スタイル</label>
+                <label class="option-label" data-i18n="editor.style">Style</label>
                 <select id="imageGenStyle">
-                  <option value="">おまかせ</option>
-                  <option value="pixel">ピクセルアート</option>
-                  <option value="anime">アニメ風</option>
-                  <option value="kawaii">かわいい系</option>
-                  <option value="realistic">リアル調</option>
-                  <option value="watercolor">水彩画風</option>
-                  <option value="flat">フラットデザイン</option>
+                  <option value="" data-i18n="editor.automatic">Automatic</option>
+                  <option value="pixel" data-i18n="editor.pixelArt">Pixel art</option>
+                  <option value="anime" data-i18n="editor.anime">Anime style</option>
+                  <option value="kawaii" data-i18n="editor.kawaii">Kawaii</option>
+                  <option value="realistic" data-i18n="editor.realistic">Realistic</option>
+                  <option value="watercolor" data-i18n="editor.watercolor">Watercolor</option>
+                  <option value="flat" data-i18n="editor.flatDesign">Flat design</option>
                 </select>
               </div>
               <div class="option-group">
-                <label class="option-label">サイズ</label>
+                <label class="option-label" data-i18n="editor.size">Size</label>
                 <select id="imageGenSize">
-                  <option value="512x512">正方形</option>
-                  <option value="768x512">横長</option>
-                  <option value="512x768">縦長</option>
-                  <option value="1024x1024">大きめ</option>
+                  <option value="512x512" data-i18n="editor.square">Square</option>
+                  <option value="768x512" data-i18n="editor.landscape">Landscape</option>
+                  <option value="512x768" data-i18n="editor.portrait">Portrait</option>
+                  <option value="1024x1024" data-i18n="editor.large">Large</option>
                 </select>
               </div>
             </div>
@@ -530,7 +532,7 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
               </svg>
-              画像を生成
+              <span data-i18n="editor.generateImage">Generate Image</span>
             </button>
           </div>
           <div class="image-gen-preview">
@@ -540,12 +542,12 @@
                 <circle cx="8.5" cy="8.5" r="1.5"></circle>
                 <polyline points="21 15 16 10 5 21"></polyline>
               </svg>
-              <span>生成された画像がここに表示されます</span>
+              <span data-i18n="editor.generatedImageHere">Generated image will appear here</span>
             </div>
-            <img id="generatedImage" class="hidden" alt="生成された画像">
+            <img id="generatedImage" class="hidden" data-i18n-alt="editor.generatedImage" alt="Generated image">
             <div class="image-gen-loading hidden" id="imageGenLoading">
               <div class="spinner"></div>
-              <span>画像を作成しています...</span>
+              <span data-i18n="editor.creatingImage">Creating image...</span>
             </div>
           </div>
         </div>
@@ -554,7 +556,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
-            チャットに挿入
+            <span data-i18n="editor.insertToChat">Insert to chat</span>
           </button>
           <button id="downloadImageButton" class="hidden" disabled>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -562,7 +564,7 @@
               <polyline points="7 10 12 15 17 10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
-            保存
+            <span data-i18n="editor.save">Save</span>
           </button>
         </div>
       </div>
@@ -571,34 +573,34 @@
     <!-- Right: Game Preview -->
     <div class="preview-panel" id="previewPanel">
       <div class="preview-header">
-        <button id="backToChatButton" class="back-to-chat-btn" title="チャットに戻る">
+        <button id="backToChatButton" class="back-to-chat-btn" data-i18n-title="editor.backToChat" title="Back to chat">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="19" y1="12" x2="5" y2="12"></line>
             <polyline points="12 19 5 12 12 5"></polyline>
           </svg>
-          チャット
+          <span data-i18n="editor.backToChat">Chat</span>
         </button>
         <div class="preview-actions">
-          <button id="viewCodeButton" class="icon-only-btn hidden" title="HTMLを見る">
+          <button id="viewCodeButton" class="icon-only-btn hidden" data-i18n-title="editor.viewHtml" title="View HTML">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="16 18 22 12 16 6"></polyline>
               <polyline points="8 6 2 12 8 18"></polyline>
             </svg>
           </button>
-          <button id="downloadButton" class="icon-only-btn hidden" title="ダウンロード">
+          <button id="downloadButton" class="icon-only-btn hidden" data-i18n-title="editor.download" title="Download">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
           </button>
-          <button id="versionsButton" class="icon-only-btn hidden" title="履歴を見る">
+          <button id="versionsButton" class="icon-only-btn hidden" data-i18n-title="editor.viewHistory" title="View history">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
           </button>
-          <button id="refreshButton" title="再読み込み">
+          <button id="refreshButton" data-i18n-title="editor.reload" title="Reload">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="23 4 23 10 17 10"></polyline>
               <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
@@ -615,7 +617,7 @@
             <line x1="8" y1="21" x2="16" y2="21"></line>
             <line x1="12" y1="17" x2="12" y2="21"></line>
           </svg>
-          <p>プロジェクトを選んで<br>ゲームを作り始めましょう</p>
+          <p data-i18n="editor.selectProject" data-i18n-html="true">Select a project to<br>start making a game</p>
         </div>
 
         <!-- Error Panel -->
@@ -627,16 +629,16 @@
                 <line x1="12" y1="8" x2="12" y2="12"></line>
                 <line x1="12" y1="16" x2="12.01" y2="16"></line>
               </svg>
-              <span id="errorCount">0</span>件のエラー
+              <span id="errorCountText"><span id="errorCount">0</span> errors</span>
             </span>
             <div class="error-panel-actions">
-              <button id="autoFixButton" class="auto-fix-btn" title="AIで自動修正">
+              <button id="autoFixButton" class="auto-fix-btn" data-i18n-title="editor.autoFix" title="Auto-fix">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                 </svg>
-                自動修正
+                <span data-i18n="editor.autoFix">Auto-fix</span>
               </button>
-              <button id="closeErrorPanel" class="close-btn" title="閉じる">
+              <button id="closeErrorPanel" class="close-btn" data-i18n-title="editor.close" title="Close">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -657,7 +659,7 @@
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
           </span>
-          <span class="game-status-text" id="gameStatusText">読み込み中...</span>
+          <span class="game-status-text" id="gameStatusText" data-i18n="common.loading">Loading...</span>
         </div>
       </div>
     </div>
@@ -667,14 +669,14 @@
   <div class="code-viewer-modal hidden" id="codeViewerModal">
     <div class="code-viewer-content">
       <div class="code-viewer-header">
-        <h3>HTML コード</h3>
+        <h3 data-i18n="editor.htmlCode">HTML Code</h3>
         <div class="code-viewer-actions">
-          <button id="copyCodeButton" class="code-action-btn" title="コピー">
+          <button id="copyCodeButton" class="code-action-btn" data-i18n-title="editor.copy" title="Copy">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
             </svg>
-            コピー
+            <span data-i18n="editor.copy">Copy</span>
           </button>
           <button id="closeCodeViewer" class="code-close-btn">&times;</button>
         </div>
@@ -693,15 +695,15 @@
             <polyline points="12 6 12 12 16 14"></polyline>
           </svg>
         </div>
-        <h2>バージョンを復元</h2>
+        <h2 data-i18n="editor.restoreVersion">Restore Version</h2>
       </div>
       <div class="restore-modal-body">
-        <p id="restoreModalMessage">このバージョンに戻しますか？</p>
-        <p class="restore-modal-hint">現在のバージョンにもいつでも戻れます</p>
+        <p id="restoreModalMessage" data-i18n="editor.restoreVersionMessage">Restore to this version?</p>
+        <p class="restore-modal-hint" data-i18n="editor.restoreHint">You can always go back to the current version</p>
       </div>
       <div class="restore-modal-actions">
-        <button id="cancelRestore" class="restore-modal-cancel">キャンセル</button>
-        <button id="confirmRestore" class="restore-modal-confirm">復元する</button>
+        <button id="cancelRestore" class="restore-modal-cancel" data-i18n="button.cancel">Cancel</button>
+        <button id="confirmRestore" class="restore-modal-confirm" data-i18n="editor.restore">Restore</button>
       </div>
     </div>
   </div>
@@ -715,15 +717,15 @@
             <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
           </svg>
         </div>
-        <h2 id="deleteConfirmTitle">アセットを削除</h2>
+        <h2 id="deleteConfirmTitle" data-i18n="editor.deleteAsset">Delete Asset</h2>
       </div>
       <div class="restore-modal-body">
-        <p id="deleteConfirmMessage">このアセットを削除しますか？</p>
-        <p class="restore-modal-hint">この操作は取り消せません</p>
+        <p id="deleteConfirmMessage" data-i18n="editor.deleteAssetMessage">Delete this asset?</p>
+        <p class="restore-modal-hint" data-i18n="editor.deleteWarning">This action cannot be undone</p>
       </div>
       <div class="restore-modal-actions">
-        <button id="cancelDelete" class="restore-modal-cancel">キャンセル</button>
-        <button id="confirmDelete" class="restore-modal-confirm">削除する</button>
+        <button id="cancelDelete" class="restore-modal-cancel" data-i18n="button.cancel">Cancel</button>
+        <button id="confirmDelete" class="restore-modal-confirm" data-i18n="button.delete">Delete</button>
       </div>
     </div>
   </div>
@@ -753,7 +755,7 @@
   <!-- Version Panel (outside container for mobile overlay) -->
   <div class="version-panel hidden" id="versionPanel">
     <div class="version-header">
-      <span>変更履歴</span>
+      <span data-i18n="editor.versionHistory">Version History</span>
       <button id="closeVersionsButton">&times;</button>
     </div>
     <div class="version-list" id="versionList">
@@ -764,7 +766,7 @@
   <!-- Chat Fullscreen Overlay -->
   <div class="chat-fullscreen-overlay" id="chatFullscreenOverlay">
     <div class="chat-fullscreen-header">
-      <h3>メッセージを入力</h3>
+      <h3 data-i18n="editor.enterMessage">Enter message</h3>
       <button class="chat-fullscreen-close" id="closeChatFullscreen">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -772,17 +774,31 @@
         </svg>
       </button>
     </div>
-    <textarea class="chat-fullscreen-textarea" id="chatFullscreenInput" placeholder="自由に話しかけてください"></textarea>
+    <textarea class="chat-fullscreen-textarea" id="chatFullscreenInput" data-i18n-placeholder="editor.placeholder" placeholder="Tell me anything"></textarea>
     <div class="chat-fullscreen-actions">
-      <button class="chat-fullscreen-cancel" id="cancelChatFullscreen">キャンセル</button>
+      <button class="chat-fullscreen-cancel" id="cancelChatFullscreen" data-i18n="button.cancel">Cancel</button>
       <button class="chat-fullscreen-send" id="sendChatFullscreen">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="22" y1="2" x2="11" y2="13"></line>
           <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
         </svg>
-        送信
+        <span data-i18n="editor.send">Send</span>
       </button>
     </div>
   </div>
+
+  <!-- i18n initialization -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof DreamCoreI18n !== 'undefined') {
+        DreamCoreI18n.init().then(function() {
+          // Update html lang attribute
+          document.documentElement.lang = DreamCoreI18n.currentLang;
+          // Update page title
+          document.title = DreamCoreI18n.t('editor.title');
+        });
+      }
+    });
+  </script>
 </body>
 </html>
