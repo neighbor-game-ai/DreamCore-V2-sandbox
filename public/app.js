@@ -612,27 +612,13 @@ class GameCreatorApp {
       });
     }
 
-    // Listen for BroadcastChannel messages (most reliable for iOS PWA)
-    if ('BroadcastChannel' in window) {
-      const channel = new BroadcastChannel('dreamcore-notifications');
-      channel.onmessage = (event) => {
-        console.log('[App] BroadcastChannel message:', event.data);
-        // Debug: notify server that message was received
-        fetch('/api/push/debug-click', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phase: 'app_received_broadcast', data: event.data })
-        }).catch(() => {});
-
-        if (event.data && event.data.type === 'NAVIGATE') {
-          const url = event.data.url;
-          if (url && url !== window.location.href) {
-            console.log('[App] BroadcastChannel: Navigating to:', url);
-            window.location.href = url;
-          }
-        }
-      };
-    }
+    // Check for pending navigation from notification click (iOS PWA workaround)
+    this.checkPendingNavigation();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.checkPendingNavigation();
+      }
+    });
 
     // Error panel controls
     this.closeErrorPanel?.addEventListener('click', () => {
@@ -642,6 +628,52 @@ class GameCreatorApp {
     this.autoFixButton?.addEventListener('click', () => {
       this.autoFixErrors();
     });
+  }
+
+  // Check for pending navigation URL from notification click (iOS PWA workaround)
+  async checkPendingNavigation() {
+    try {
+      const request = indexedDB.open('dreamcore-navigation', 1);
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains('pending')) {
+          db.createObjectStore('pending');
+        }
+      };
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction('pending', 'readwrite');
+        const store = tx.objectStore('pending');
+        const getRequest = store.get('navigation');
+
+        getRequest.onsuccess = () => {
+          const data = getRequest.result;
+          if (data && data.url) {
+            // Check if URL is recent (within 30 seconds)
+            const age = Date.now() - data.timestamp;
+            if (age < 30000 && data.url !== window.location.href) {
+              console.log('[App] Found pending navigation:', data.url);
+              // Debug: notify server
+              fetch('/api/push/debug-click', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phase: 'app_found_pending', url: data.url, age })
+              }).catch(() => {});
+
+              // Clear the pending navigation
+              store.delete('navigation');
+              // Navigate
+              window.location.href = data.url;
+            } else {
+              // Clear old or same-URL navigation
+              store.delete('navigation');
+            }
+          }
+        };
+      };
+    } catch (err) {
+      console.error('[App] Error checking pending navigation:', err);
+    }
   }
 
   handleGameErrors(errors) {

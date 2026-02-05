@@ -4,8 +4,8 @@
  * - Push notification handling
  */
 
-const SW_VERSION = '2026.02.05.m';
-const CACHE_NAME = 'dreamcore-v12';
+const SW_VERSION = '2026.02.05.n';
+const CACHE_NAME = 'dreamcore-v13';
 
 console.log('[SW] Version:', SW_VERSION);
 const PRECACHE_ASSETS = [
@@ -180,35 +180,27 @@ self.addEventListener('notificationclick', (event) => {
     })
   }).catch(() => {});
 
-  // iOS PWA: openWindow() focuses the window but doesn't navigate.
-  // Solution: First focus the PWA, then send BroadcastChannel messages with delays.
+  // iOS PWA: JavaScript is suspended in background, so no messaging works.
+  // Solution: Store URL in IndexedDB, check on visibility change.
   event.waitUntil(
     (async () => {
       try {
-        // First, focus the PWA window
-        if (clients.openWindow) {
-          await clients.openWindow(absoluteUrl);
-        }
-
-        // Helper to send broadcast message
-        const sendBroadcast = () => {
-          const channel = new BroadcastChannel('dreamcore-notifications');
-          channel.postMessage({ type: 'NAVIGATE', url: absoluteUrl });
-          channel.close();
-        };
-
-        // Send messages with delays to ensure PWA has time to wake up
-        sendBroadcast();  // Immediate
-        setTimeout(sendBroadcast, 100);   // 100ms
-        setTimeout(sendBroadcast, 300);   // 300ms
-        setTimeout(sendBroadcast, 500);   // 500ms
-        setTimeout(sendBroadcast, 1000);  // 1s
+        // Store pending navigation URL in IndexedDB
+        const db = await openNavigationDB();
+        const tx = db.transaction('pending', 'readwrite');
+        await tx.objectStore('pending').put({ url: absoluteUrl, timestamp: Date.now() }, 'navigation');
+        await tx.done;
 
         fetch('/api/push/debug-click', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phase: 'broadcasts_scheduled', url: absoluteUrl })
+          body: JSON.stringify({ phase: 'stored_in_indexeddb', url: absoluteUrl })
         }).catch(() => {});
+
+        // Focus the PWA window
+        if (clients.openWindow) {
+          await clients.openWindow(absoluteUrl);
+        }
       } catch (err) {
         fetch('/api/push/debug-click', {
           method: 'POST',
@@ -218,4 +210,19 @@ self.addEventListener('notificationclick', (event) => {
       }
     })()
   );
+});
+
+// IndexedDB helper for pending navigation
+function openNavigationDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('dreamcore-navigation', 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('pending')) {
+        db.createObjectStore('pending');
+      }
+    };
+  });
 });
