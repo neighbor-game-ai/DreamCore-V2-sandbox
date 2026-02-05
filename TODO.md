@@ -8,6 +8,35 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-05: PWA / Push Notifications 実装 ✅
+
+**詳細:** `.claude/logs/2026-02-05-pwa-push-notifications.md`
+
+DreamCoreをPWA化し、プッシュ通知機能を実装:
+
+| 項目 | 内容 |
+|------|------|
+| **PWA** | manifest.json, Service Worker, アイコン |
+| **Push API** | VAPID認証、購読管理、通知履歴 |
+| **通知トリガー** | ゲーム生成完了/失敗時に自動送信 |
+| **iOS対応** | ユーザージェスチャー必須、ホーム追加後のみ |
+
+**新規ファイル:**
+- `public/manifest.json`, `sw.js`, `push.js`, `icons/`
+- `server/pushService.js`, `notificationService.js`
+- `server/routes/pushApi.js`, `notificationsApi.js`
+- `supabase/migrations/022_push_notifications.sql`
+
+**CTOレビュー対応:**
+- `gen_random_uuid()` 使用（uuid_generate_v7ではなく）
+- 通知許可はボタンクリックから（iOS要件）
+- `unreadCount` は全体件数で計算
+- `push_subscriptions` 書き込みは `supabaseAdmin` 経由
+
+**ステータス:** デプロイ完了、手動E2E検証待ち
+
+---
+
 ### 2026-02-05: Sandbox プリウォーム機能実装 ✅
 
 **詳細:** `.claude/logs/2026-02-05-sandbox-prewarm.md`
