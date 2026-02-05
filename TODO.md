@@ -8,6 +8,48 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-05: Sandbox プリウォーム機能実装 ✅
+
+**詳細:** `.claude/logs/2026-02-05-sandbox-prewarm.md`
+
+Createページアクセス時にModal Sandboxを事前起動し、初回ゲーム生成のコールドスタート待ち時間を削減:
+
+| 項目 | 内容 |
+|------|------|
+| **トリガー** | WS `init` 完了後（Createページアクセス時） |
+| **Sandbox命名** | `user-{full_uuid}`（衝突防止のためフルUUID使用） |
+| **旧形式互換** | `dreamcore-{hash}-p2` へのフォールバック |
+| **重複防止** | 5分TTLのinMemoryキャッシュ |
+| **効果** | 初回生成 26秒 → 15秒（-11秒） |
+
+**変更ファイル:**
+- `modal/app.py` - `prewarm_sandbox` エンドポイント追加
+- `server/modalClient.js` - `prewarmSandboxByUser()` メソッド追加
+- `server/index.js` - WS `init` でプリウォーム呼び出し
+
+**コードレビュー対応:**
+- Critical: `user_id[:8]` → フルUUIDに変更（衝突リスク対策）
+- Warning: bad state再生成時の `AlreadyExistsError` ハンドリング追加
+
+---
+
+### 2026-02-05: マルチアカウント ゲーム作成テスト ✅
+
+**詳細:** `.claude/logs/2026-02-05-multi-account-test.md`
+
+複数のテストアカウントを使用して E2E テストを実施:
+
+| 項目 | 結果 |
+|------|------|
+| Magic Link 認証 | ✅ 成功 |
+| 2D ゲーム作成 | ✅ 成功（10メッセージ処理） |
+| Named Sandbox 再利用 | ✅ "Sandbox already exists" エラーなし |
+| 一時的なバグ自動修復 | ✅ AI が自動で修正 |
+
+**発見事項:** 新規テストアカウントは `user_access` テーブルで手動承認が必要
+
+---
+
 ### 2026-02-05: i18n 完全対応完了 ✅
 
 **詳細:** `.claude/logs/2026-02-05-i18n-completion.md`
@@ -20,8 +62,28 @@ app.js、game.html の残存日本語文字列を全て i18n 化:
 | **game.html** | aria-label, エラー画面, 共有パネル, 系譜エラー |
 | **i18n.js** | `data-i18n-aria` サポート追加 |
 | **6言語** | game セクションに18キー追加 |
+| **mypage.js** | デフォルトユーザー、公開テキスト、共有タイトル |
 
 **CTOレビュー:** 3点の承認条件を確認済み
+
+**追加修正（4954d7c）:** 前回コミットで app.js/mypage.js が漏れていた問題を修正
+
+---
+
+### 2026-02-05: Named Sandbox 最適化 (detect_intent/chat_haiku) ✅
+
+**詳細:** `.claude/logs/2026-02-05-named-sandbox-optimization.md`
+
+「意図を判定中...」の遅延問題を解決:
+
+| 項目 | 内容 |
+|------|------|
+| **問題** | `run_haiku_in_sandbox()` が毎回新しい Sandbox を作成（3-10秒の冷起動） |
+| **解決** | Named Sandbox プール（3つ）を round-robin で再利用 |
+| **設定** | `timeout=5h`, `idle_timeout=1h` |
+| **効果** | 2回目以降のリクエストは warm sandbox から即座に実行 |
+
+**変更:** `modal/app.py` - `get_claude_sandbox()` ヘルパー追加
 
 ---
 
@@ -886,6 +948,7 @@ Content-Security-Policy-Report-Only ヘッダーを導入:
 - [ ] カスタムスキル ZIP 配布（ゲームテンプレート）
 - [ ] Host Tools パターン（Express 側でのアセット検索）
 - [ ] Multi-Provider 抽象化（Modal 以外への切り替え）
+- [ ] **初回公開最短化 + 拡散強化（Growth Plan）** - テンプレ/自動化/計測拡張（`docs/PRODUCT-GROWTH-PLAN.md`）
 
 ---
 
@@ -1661,4 +1724,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-05 (i18n 完全対応完了)
+最終更新: 2026-02-05 (Sandbox プリウォーム機能)
