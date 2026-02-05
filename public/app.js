@@ -632,22 +632,53 @@ class GameCreatorApp {
 
   // Check for pending navigation URL from notification click (iOS PWA workaround)
   async checkPendingNavigation() {
+    // Debug: log that function was called
+    fetch('/api/push/debug-click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phase: 'app_check_start', currentUrl: window.location.href })
+    }).catch(() => {});
+
     try {
       const request = indexedDB.open('dreamcore-navigation', 1);
+
+      request.onerror = () => {
+        fetch('/api/push/debug-click', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phase: 'app_idb_error', error: request.error?.message })
+        }).catch(() => {});
+      };
+
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
         if (!db.objectStoreNames.contains('pending')) {
           db.createObjectStore('pending');
         }
       };
+
       request.onsuccess = () => {
         const db = request.result;
         const tx = db.transaction('pending', 'readwrite');
         const store = tx.objectStore('pending');
         const getRequest = store.get('navigation');
 
+        getRequest.onerror = () => {
+          fetch('/api/push/debug-click', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phase: 'app_get_error', error: getRequest.error?.message })
+          }).catch(() => {});
+        };
+
         getRequest.onsuccess = () => {
           const data = getRequest.result;
+          fetch('/api/push/debug-click', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phase: 'app_idb_read', hasData: !!data, data: data || null })
+          }).catch(() => {});
+
           if (data && data.url) {
             // Check if URL is recent (within 30 seconds)
             const age = Date.now() - data.timestamp;
@@ -665,6 +696,11 @@ class GameCreatorApp {
               // Navigate
               window.location.href = data.url;
             } else {
+              fetch('/api/push/debug-click', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phase: 'app_skip_navigation', age, sameUrl: data.url === window.location.href })
+              }).catch(() => {});
               // Clear old or same-URL navigation
               store.delete('navigation');
             }
@@ -673,6 +709,11 @@ class GameCreatorApp {
       };
     } catch (err) {
       console.error('[App] Error checking pending navigation:', err);
+      fetch('/api/push/debug-click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phase: 'app_error', error: err.message })
+      }).catch(() => {});
     }
   }
 
