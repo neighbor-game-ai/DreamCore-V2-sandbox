@@ -1,3 +1,7 @@
+**🚨 絶対禁止: パスワード、APIキー、シークレット、認証情報をコードにハードコードしない。必ず環境変数を使用すること。**
+
+---
+
 # DreamCore V2 Sandbox
 
 AI-powered browser game creation platform with Modal Sandbox integration.
