@@ -53,6 +53,13 @@ const SSE_TO_WS_TYPE_MAP = {
   'warning': 'warning',
 };
 
+/**
+ * Prewarm cache to prevent duplicate prewarm requests
+ * Map of userId → timestamp
+ */
+const prewarmCache = new Map();
+const PREWARM_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 class ModalClient {
   constructor() {
     this.baseEndpoint = config.MODAL_ENDPOINT;
@@ -751,6 +758,68 @@ class ModalClient {
       console.error('[modalClient] Health check failed:', e.message);
       return false;
     }
+  }
+
+  /**
+   * Pre-warm a sandbox for a user (fire-and-forget).
+   * Called on WS init to reduce cold start latency for subsequent game generation.
+   *
+   * @param {string} userId - User ID (UUID)
+   * @returns {void} Does not wait for completion
+   */
+  prewarmSandboxByUser(userId) {
+    if (!this.baseEndpoint || !this.secret) {
+      console.warn('[modalClient] Prewarm skipped: Modal not configured');
+      return;
+    }
+
+    // Check prewarm cache to avoid duplicate requests
+    const now = Date.now();
+    const lastPrewarm = prewarmCache.get(userId);
+    if (lastPrewarm && (now - lastPrewarm) < PREWARM_TTL_MS) {
+      console.log(`[modalClient] Prewarm skipped (TTL): ${userId.slice(0, 8)}`);
+      return;
+    }
+
+    // Update cache immediately to prevent concurrent requests
+    prewarmCache.set(userId, now);
+
+    // Clean up old cache entries periodically
+    if (prewarmCache.size > 100) {
+      for (const [key, timestamp] of prewarmCache) {
+        if (now - timestamp > PREWARM_TTL_MS) {
+          prewarmCache.delete(key);
+        }
+      }
+    }
+
+    // Fire-and-forget: don't await, don't block
+    const endpoint = getEndpoint(
+      null,
+      this.baseEndpoint,
+      'prewarm_sandbox'
+    );
+
+    fetch(endpoint, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ user_id: userId }),
+    })
+      .then(async (response) => {
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`[modalClient] Prewarm ${data.status}: ${userId.slice(0, 8)}`);
+        } else {
+          console.warn(`[modalClient] Prewarm failed: ${response.status}`);
+          // Remove from cache on failure to allow retry
+          prewarmCache.delete(userId);
+        }
+      })
+      .catch((err) => {
+        console.warn('[modalClient] Prewarm error:', err.message);
+        // Remove from cache on error to allow retry
+        prewarmCache.delete(userId);
+      });
   }
 }
 

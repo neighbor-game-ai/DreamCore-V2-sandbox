@@ -274,15 +274,25 @@ def write_gcp_credentials(sb) -> str:
 # =============================================================================
 
 
-def get_sandbox_name(user_id: str, project_id: str) -> str:
-    """Generate deterministic sandbox name from user_id + project_id.
+def get_user_sandbox_name(user_id: str) -> str:
+    """Generate deterministic sandbox name from user_id only.
 
-    Uses SHA-256 hash to avoid collision and ensure valid naming.
-    Format: dreamcore-{hash[:12]}-p2  (p2 suffix forces new sandbox for Phase 2)
+    This allows pre-warming the sandbox before project selection.
+    Format: user-{user_id[:8]}  (truncated for readability)
+    """
+    # Use first 8 chars of user_id for readability (UUIDs are unique enough)
+    return f"user-{user_id[:8]}"
+
+
+def get_legacy_sandbox_name(user_id: str, project_id: str) -> str:
+    """Legacy sandbox name format (user_id + project_id).
+
+    Kept for migration compatibility - existing sandboxes use this format.
+    Will be deprecated after migration period.
     """
     combined = f"{user_id}:{project_id}"
     hash_str = hashlib.sha256(combined.encode()).hexdigest()[:12]
-    return f"dreamcore-{hash_str}-p2"  # Force new sandbox creation for API proxy
+    return f"dreamcore-{hash_str}-p2"
 
 
 # =============================================================================
@@ -422,6 +432,114 @@ async def run_in_sandbox(
 
 
 # =============================================================================
+# Prewarm Endpoint (User-based Sandbox Pre-warming)
+# =============================================================================
+
+
+@app.function(
+    image=web_image,
+    secrets=[api_proxy_secret, internal_secret, proxy_secret, vertex_ai_secret, vertex_config_secret],
+    volumes={MOUNT_DATA: data_volume, MOUNT_GLOBAL: global_volume}
+)
+@modal.fastapi_endpoint(method="POST")
+async def prewarm_sandbox(request: Request):
+    """Pre-warm a sandbox for a user (before project selection).
+
+    This creates the sandbox early so it's ready when the user starts generating.
+    Called when user visits the Create page or logs in.
+    """
+    from starlette.responses import JSONResponse
+
+    if not verify_internal_auth(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    user_id = body.get("user_id")
+
+    if not user_id or not UUID_PATTERN.match(user_id):
+        return JSONResponse({"error": "Invalid user_id"}, status_code=400)
+
+    sandbox_name = get_user_sandbox_name(user_id)
+    proxy_url = get_proxy_url()
+
+    # Check if sandbox already exists (warm)
+    try:
+        sb = modal.Sandbox.from_name(APP_NAME, sandbox_name)
+        print(f"[Prewarm] Already warm: {sandbox_name}")
+        return JSONResponse({
+            "status": "already_warm",
+            "sandbox_name": sandbox_name
+        })
+    except modal.exception.NotFoundError:
+        pass
+    except (modal.exception.SandboxTerminatedError, modal.exception.SandboxTimeoutError):
+        # Sandbox exists but in bad state - will recreate
+        print(f"[Prewarm] Sandbox in bad state, recreating: {sandbox_name}")
+
+    # Create new sandbox (cold start)
+    try:
+        print(f"[Prewarm] Creating: {sandbox_name}")
+        sb = modal.Sandbox.create(
+            "bash", "-c", "sleep infinity",
+            app=app,
+            name=sandbox_name,
+            image=sandbox_image,
+            secrets=[api_proxy_secret, vertex_ai_secret, vertex_config_secret],
+            volumes={
+                "/data": data_volume,
+                "/global": global_volume,
+            },
+            timeout=SANDBOX_MAX_TIMEOUT,
+            idle_timeout=SANDBOX_IDLE_TIMEOUT,
+            memory=SANDBOX_MEMORY,
+            cidr_allowlist=SANDBOX_CIDR_ALLOWLIST,
+            proxy=modal_proxy,
+            env={
+                "HTTP_PROXY": proxy_url,
+                "HTTPS_PROXY": proxy_url,
+                "NO_PROXY": "localhost,127.0.0.1,api-proxy.dreamcore.gg",
+                **get_vertex_env(),
+            },
+        )
+
+        # Clean Claude CLI cache
+        cleanup_claude_cache = sb.exec("bash", "-c", "rm -rf /home/claude/.claude 2>/dev/null || true")
+        cleanup_claude_cache.wait()
+
+        # Write GCP credentials for Vertex AI
+        gcp_creds_path = write_gcp_credentials(sb)
+        print(f"[Prewarm] GCP credentials written to {gcp_creds_path}")
+
+        # Create base user directory
+        user_dir = f"/data/users/{user_id}"
+        mkdir_proc = sb.exec("bash", "-c", f"mkdir -p {user_dir} && chown -R claude:claude {user_dir}")
+        mkdir_proc.wait()
+
+        print(f"[Prewarm] Sandbox ready: {sandbox_name}")
+        return JSONResponse({
+            "status": "warmed",
+            "sandbox_name": sandbox_name
+        })
+
+    except modal.exception.AlreadyExistsError:
+        # Race condition: another request created it first
+        print(f"[Prewarm] Race resolved, already exists: {sandbox_name}")
+        return JSONResponse({
+            "status": "already_warm",
+            "sandbox_name": sandbox_name
+        })
+    except Exception as e:
+        print(f"[Prewarm] Error: {e}")
+        return JSONResponse({
+            "error": str(e)
+        }, status_code=500)
+
+
+# =============================================================================
 # Main Endpoint
 # =============================================================================
 
@@ -495,93 +613,82 @@ async def generate_game(request: Request):
         import time
 
         start_time = time.time()
-        sandbox_name = get_sandbox_name(user_id, project_id)
+        # New naming: user-based sandbox (for prewarm compatibility)
+        sandbox_name = get_user_sandbox_name(user_id)
+        legacy_sandbox_name = get_legacy_sandbox_name(user_id, project_id)
         proxy_url = get_proxy_url()
         sandbox_reused = False
         sb = None
 
+        def create_new_sandbox(name: str):
+            """Helper to create a new sandbox with standard config."""
+            return modal.Sandbox.create(
+                "bash", "-c", "sleep infinity",
+                app=app,
+                name=name,
+                image=sandbox_image,
+                secrets=[api_proxy_secret, vertex_ai_secret, vertex_config_secret],
+                volumes={
+                    "/data": data_volume,
+                    "/global": global_volume,
+                },
+                timeout=SANDBOX_MAX_TIMEOUT,
+                idle_timeout=SANDBOX_IDLE_TIMEOUT,
+                memory=SANDBOX_MEMORY,
+                cidr_allowlist=SANDBOX_CIDR_ALLOWLIST,
+                proxy=modal_proxy,
+                env={
+                    "HTTP_PROXY": proxy_url,
+                    "HTTPS_PROXY": proxy_url,
+                    "NO_PROXY": "localhost,127.0.0.1,api-proxy.dreamcore.gg",
+                    **get_vertex_env(),
+                },
+            )
+
+        def initialize_new_sandbox(sandbox):
+            """Initialize a newly created sandbox (cleanup + GCP creds)."""
+            cleanup_claude_cache = sandbox.exec("bash", "-c", "rm -rf /home/claude/.claude 2>/dev/null || true")
+            cleanup_claude_cache.wait()
+            gcp_creds_path = write_gcp_credentials(sandbox)
+            print(f"[Sandbox] GCP credentials written to {gcp_creds_path}")
+
         try:
-            # Try to reuse existing sandbox (warm start)
+            # Strategy: Try new name → legacy name → create new
+            # This ensures prewarm sandboxes are used, with legacy fallback
+
+            # Step 1: Try new user-based sandbox name (from prewarm)
             try:
                 sb = modal.Sandbox.from_name(APP_NAME, sandbox_name)
                 sandbox_reused = True
                 yield f"data: {json.dumps({'type': 'status', 'message': 'Sandbox connected (warm)'})}\n\n"
-                print(f"[Sandbox] Reusing: {sandbox_name}")
+                print(f"[Sandbox] Reusing (new): {sandbox_name}")
             except modal.exception.NotFoundError:
-                # Create new sandbox (cold start)
-                yield f"data: {json.dumps({'type': 'status', 'message': 'Creating sandbox...'})}\n\n"
-                print(f"[Sandbox] Creating: {sandbox_name}")
+                # Step 2: Try legacy project-based sandbox name (migration compatibility)
                 try:
-                    sb = modal.Sandbox.create(
-                        "bash", "-c", "sleep infinity",
-                        app=app,
-                        name=sandbox_name,
-                        image=sandbox_image,  # Has Claude CLI installed + Pillow/httpx for image generation
-                        secrets=[api_proxy_secret, vertex_ai_secret, vertex_config_secret],  # GCE proxy + Vertex AI
-                        volumes={
-                            "/data": data_volume,
-                            "/global": global_volume,  # Read-only skills and scripts
-                        },
-                        timeout=SANDBOX_MAX_TIMEOUT,      # 5時間（最大寿命）
-                        idle_timeout=SANDBOX_IDLE_TIMEOUT,  # 20分（アイドル時に自動終了）
-                        memory=SANDBOX_MEMORY,
-                        cidr_allowlist=SANDBOX_CIDR_ALLOWLIST,
-                        proxy=modal_proxy,  # Static IP (52.55.224.171) for api-proxy.dreamcore.gg
-                        env={
-                            "HTTP_PROXY": proxy_url,
-                            "HTTPS_PROXY": proxy_url,
-                            # API proxy is accessed directly (not via Squid proxy)
-                            "NO_PROXY": "localhost,127.0.0.1,api-proxy.dreamcore.gg",
-                            # Vertex AI env vars (Claude CLI will use these)
-                            **get_vertex_env(),
-                        },
-                    )
-                    # Delete old Claude CLI cache (prevents stale auth from old sandbox)
-                    cleanup_claude_cache = sb.exec("bash", "-c", "rm -rf /home/claude/.claude 2>/dev/null || true")
-                    cleanup_claude_cache.wait()
-                    # Write GCP credentials for Vertex AI
-                    gcp_creds_path = write_gcp_credentials(sb)
-                    print(f"[Sandbox] GCP credentials written to {gcp_creds_path}")
-                except (modal.exception.AlreadyExistsError, Exception) as create_err:
-                    # Race condition: another request created it first, or other error
-                    if "already exists" in str(create_err).lower():
-                        sb = modal.Sandbox.from_name(APP_NAME, sandbox_name)
-                        sandbox_reused = True
-                        print(f"[Sandbox] Race resolved, reusing: {sandbox_name}")
-                    else:
-                        raise create_err
+                    sb = modal.Sandbox.from_name(APP_NAME, legacy_sandbox_name)
+                    sandbox_reused = True
+                    yield f"data: {json.dumps({'type': 'status', 'message': 'Sandbox connected (legacy)'})}\n\n"
+                    print(f"[Sandbox] Reusing (legacy): {legacy_sandbox_name}")
+                except modal.exception.NotFoundError:
+                    # Step 3: Create new sandbox with new naming
+                    yield f"data: {json.dumps({'type': 'status', 'message': 'Creating sandbox...'})}\n\n"
+                    print(f"[Sandbox] Creating: {sandbox_name}")
+                    try:
+                        sb = create_new_sandbox(sandbox_name)
+                        initialize_new_sandbox(sb)
+                    except (modal.exception.AlreadyExistsError, Exception) as create_err:
+                        if "already exists" in str(create_err).lower():
+                            sb = modal.Sandbox.from_name(APP_NAME, sandbox_name)
+                            sandbox_reused = True
+                            print(f"[Sandbox] Race resolved, reusing: {sandbox_name}")
+                        else:
+                            raise create_err
             except (modal.exception.SandboxTerminatedError, modal.exception.SandboxTimeoutError) as e:
-                # Sandbox exists but is in bad state (terminated, timed out, etc.)
+                # Sandbox exists but is in bad state - recreate with new naming
                 yield f"data: {json.dumps({'type': 'status', 'message': 'Recreating sandbox...'})}\n\n"
                 print(f"[Sandbox] Sandbox in bad state, recreating: {sandbox_name} - {e}")
-                sb = modal.Sandbox.create(
-                    "bash", "-c", "sleep infinity",
-                    app=app,
-                    name=sandbox_name,
-                    image=sandbox_image,
-                    secrets=[api_proxy_secret, vertex_ai_secret, vertex_config_secret],  # GCE proxy + Vertex AI
-                    volumes={
-                        "/data": data_volume,
-                        "/global": global_volume,
-                    },
-                    timeout=SANDBOX_MAX_TIMEOUT,
-                    idle_timeout=SANDBOX_IDLE_TIMEOUT,
-                    memory=SANDBOX_MEMORY,
-                    cidr_allowlist=SANDBOX_CIDR_ALLOWLIST,
-                    proxy=modal_proxy,  # Static IP (52.55.224.171) for api-proxy.dreamcore.gg
-                    env={
-                        "HTTP_PROXY": proxy_url,
-                        "HTTPS_PROXY": proxy_url,
-                        "NO_PROXY": "localhost,127.0.0.1,api-proxy.dreamcore.gg",
-                        **get_vertex_env(),
-                    },
-                )
-                # Delete old Claude CLI cache (prevents stale auth from recreated sandbox)
-                cleanup_claude_cache = sb.exec("bash", "-c", "rm -rf /home/claude/.claude 2>/dev/null || true")
-                cleanup_claude_cache.wait()
-                # Write GCP credentials for Vertex AI
-                gcp_creds_path = write_gcp_credentials(sb)
-                print(f"[Sandbox] GCP credentials written to {gcp_creds_path}")
+                sb = create_new_sandbox(sandbox_name)
+                initialize_new_sandbox(sb)
 
             # Create project directory (as root, then chown to claude user)
             mkdir_proc = sb.exec("bash", "-c", f"mkdir -p {project_dir} && chown -R claude:claude {project_dir}")

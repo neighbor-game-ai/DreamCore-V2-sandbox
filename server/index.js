@@ -1230,6 +1230,14 @@ wss.on('connection', (ws) => {
             userId,
             projects
           });
+
+          // Pre-warm sandbox for faster game generation (fire-and-forget)
+          if (config.USE_MODAL) {
+            const client = getModalClient();
+            if (client) {
+              client.prewarmSandboxByUser(userId);
+            }
+          }
           break;
 
         case 'ping':
