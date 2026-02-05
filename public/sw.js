@@ -4,7 +4,10 @@
  * - Push notification handling
  */
 
-const CACHE_NAME = 'dreamcore-v4';
+const SW_VERSION = '2026.02.05.f';
+const CACHE_NAME = 'dreamcore-v5';
+
+console.log('[SW] Version:', SW_VERSION);
 const PRECACHE_ASSETS = [
   '/manifest.json',
   '/icons/icon-192.png',
@@ -14,7 +17,7 @@ const PRECACHE_ASSETS = [
 
 // Install - precache minimal assets only
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing...');
+  console.log('[SW] Installing version:', SW_VERSION);
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -79,7 +82,7 @@ self.addEventListener('fetch', (event) => {
 
 // Push notification handler
 self.addEventListener('push', (event) => {
-  console.log('[SW] Push received');
+  console.log('[SW] Push received, version:', SW_VERSION);
 
   let data = {
     title: 'DreamCore',
@@ -123,7 +126,7 @@ self.addEventListener('push', (event) => {
 
 // Notification click handler
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification click:', event.action);
+  console.log('[SW] Notification click, version:', SW_VERSION, 'action:', event.action);
   console.log('[SW] Notification data:', JSON.stringify(event.notification.data));
   console.log('[SW] self.location.origin:', self.location.origin);
   event.notification.close();
