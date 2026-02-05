@@ -326,7 +326,9 @@
     "socialLinks": "社交链接",
     "changePhoto": "更换头像",
     "uploadAvatar": "上传头像",
-    "noName": "未设置名称"
+    "noName": "未设置名称",
+    "displayNameHint": "最多50个字符",
+    "characters": "个字符"
   },
   "error404": {
     "title": "页面未找到 - DreamCore",

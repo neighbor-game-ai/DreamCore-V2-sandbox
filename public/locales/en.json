@@ -326,7 +326,9 @@
     "socialLinks": "Social Links",
     "changePhoto": "Change Photo",
     "uploadAvatar": "Upload Avatar",
-    "noName": "No name set"
+    "noName": "No name set",
+    "displayNameHint": "Max 50 characters",
+    "characters": "characters"
   },
   "error404": {
     "title": "Page not found - DreamCore",

@@ -326,7 +326,9 @@
     "socialLinks": "Enlaces sociales",
     "changePhoto": "Cambiar foto",
     "uploadAvatar": "Subir avatar",
-    "noName": "Sin nombre"
+    "noName": "Sin nombre",
+    "displayNameHint": "Máximo 50 caracteres",
+    "characters": "caracteres"
   },
   "error404": {
     "title": "Página no encontrada - DreamCore",

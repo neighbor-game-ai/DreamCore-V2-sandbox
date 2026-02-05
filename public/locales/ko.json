@@ -326,7 +326,9 @@
     "socialLinks": "소셜 링크",
     "changePhoto": "사진 변경",
     "uploadAvatar": "아바타 업로드",
-    "noName": "이름 미설정"
+    "noName": "이름 미설정",
+    "displayNameHint": "최대 50자",
+    "characters": "자"
   },
   "error404": {
     "title": "페이지를 찾을 수 없습니다 - DreamCore",

@@ -137,14 +137,14 @@ class ProfileEditor {
           <div class="profile-form-group">
             <label class="profile-form-label" for="editDisplayName">${this.escapeAttr(this.t('profileEditor.displayName'))}</label>
             <input type="text" id="editDisplayName" class="profile-form-input" placeholder="${this.escapeAttr(this.t('profileEditor.displayNamePlaceholder'))}" maxlength="50">
-            <div class="profile-form-hint">Max 50 characters</div>
+            <div class="profile-form-hint">${this.escapeAttr(this.t('profileEditor.displayNameHint'))}</div>
           </div>
 
           <!-- Bio -->
           <div class="profile-form-group">
             <label class="profile-form-label" for="editBio">${this.escapeAttr(this.t('profileEditor.bio'))}</label>
             <textarea id="editBio" class="profile-form-input profile-form-textarea" placeholder="${this.escapeAttr(this.t('profileEditor.bioPlaceholder'))}" maxlength="160"></textarea>
-            <div class="profile-form-hint"><span id="bioCharCount">0</span>/160</div>
+            <div class="profile-form-hint"><span id="bioCharCount">0</span>/160 ${this.escapeAttr(this.t('profileEditor.characters'))}</div>
           </div>
 
           <!-- Social Links -->

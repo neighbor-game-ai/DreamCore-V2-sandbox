@@ -326,7 +326,9 @@
     "socialLinks": "SNSリンク",
     "changePhoto": "画像を変更",
     "uploadAvatar": "アバターをアップロード",
-    "noName": "名前未設定"
+    "noName": "名前未設定",
+    "displayNameHint": "最大50文字",
+    "characters": "文字"
   },
   "error404": {
     "title": "ページが見つかりません - DreamCore",
