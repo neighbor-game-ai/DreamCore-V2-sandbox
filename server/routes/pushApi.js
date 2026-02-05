@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../authMiddleware');
 const pushService = require('../pushService');
+const { isAllowedPushUser } = require('../notificationService');
 
 /**
  * GET /api/push/vapid-key
@@ -31,6 +32,12 @@ router.get('/vapid-key', (req, res) => {
 router.post('/subscribe', authenticate, async (req, res) => {
   const userId = req.user.id;
   const { endpoint, keys, userAgent } = req.body;
+
+  // Check allowlist (for E2E testing)
+  if (!isAllowedPushUser({ userId, email: req.user.email })) {
+    console.log('[Push] Subscribe blocked (user not in allowlist):', userId);
+    return res.status(403).json({ error: 'Push notifications disabled for this account' });
+  }
 
   if (!endpoint || !keys?.p256dh || !keys?.auth) {
     return res.status(400).json({ error: 'Invalid subscription data' });

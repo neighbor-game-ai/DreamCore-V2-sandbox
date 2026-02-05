@@ -9,6 +9,32 @@ const { supabaseAdmin } = require('./supabaseClient');
 const pushService = require('./pushService');
 
 /**
+ * Check if user is allowed to receive push notifications
+ * Used for E2E testing to limit notifications to specific users
+ *
+ * @param {Object} options
+ * @param {string} [options.userId] - User ID to check
+ * @param {string} [options.email] - User email to check
+ * @returns {boolean} True if allowed, false if blocked
+ */
+function isAllowedPushUser({ userId, email } = {}) {
+  const ids = (process.env.PUSH_ALLOWLIST_USER_IDS || '')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const emails = (process.env.PUSH_ALLOWLIST_EMAILS || '')
+    .split(',').map(s => s.trim()).filter(Boolean);
+
+  // If allowlist is set, check membership
+  if (ids.length && userId && ids.includes(userId)) return true;
+  if (emails.length && email && emails.includes(email)) return true;
+
+  // If no allowlist configured, allow everyone (production mode)
+  if (!ids.length && !emails.length) return true;
+
+  // Allowlist is set but user not in it
+  return false;
+}
+
+/**
  * Create notification and optionally send push
  *
  * @param {Object} options
@@ -36,6 +62,12 @@ async function createNotification(options) {
 
   if (!userId || !type || !title || !message) {
     console.error('[Notification] Missing required fields');
+    return null;
+  }
+
+  // Check allowlist (for E2E testing)
+  if (!isAllowedPushUser({ userId })) {
+    console.log('[Notification] Skipped (user not in allowlist):', userId);
     return null;
   }
 
@@ -243,5 +275,6 @@ module.exports = {
   getNotifications,
   markAsRead,
   markAllAsRead,
-  getUnreadCount
+  getUnreadCount,
+  isAllowedPushUser
 };
