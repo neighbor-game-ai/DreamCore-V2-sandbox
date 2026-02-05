@@ -4,8 +4,8 @@
  * - Push notification handling
  */
 
-const SW_VERSION = '2026.02.05.p';
-const CACHE_NAME = 'dreamcore-v15';
+const SW_VERSION = '2026.02.06.a';
+const CACHE_NAME = 'dreamcore-v16';
 
 console.log('[SW] Version:', SW_VERSION);
 const PRECACHE_ASSETS = [
@@ -95,10 +95,7 @@ self.addEventListener('push', (event) => {
   if (event.data) {
     try {
       const payload = event.data.json();
-      console.log('[SW] Push payload:', JSON.stringify(payload));
       data = { ...data, ...payload };
-      console.log('[SW] Merged data:', JSON.stringify(data));
-      console.log('[SW] data.data:', JSON.stringify(data.data));
     } catch (e) {
       console.error('[SW] Failed to parse push data:', e);
     }
@@ -120,8 +117,6 @@ self.addEventListener('push', (event) => {
   if (!notificationData.projectId && data.projectId) {
     notificationData.projectId = data.projectId;
   }
-
-  console.log('[SW] Final notificationData:', JSON.stringify(notificationData));
 
   const options = {
     body: data.body,
@@ -166,44 +161,21 @@ self.addEventListener('notificationclick', (event) => {
   // Convert to absolute URL for PWA scope matching
   const absoluteUrl = new URL(targetUrl, self.location.origin).href;
 
-  // Debug: Send all computed values to server
-  fetch('/api/push/debug-click', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      version: SW_VERSION,
-      rawDataUrl: notificationData.url,
-      rawDataProjectId: notificationData.projectId,
-      targetUrl: targetUrl,
-      absoluteUrl: absoluteUrl,
-      origin: self.location.origin
-    })
-  }).catch(() => {});
-
-  // iOS PWA: JavaScript is suspended in background, so no messaging works.
-  // Solution: Store URL in IndexedDB, check on visibility change.
+  // Open the target URL
+  // - Android: clients.openWindow() navigates directly
+  // - iOS PWA: Has platform limitations, stores URL in IndexedDB as fallback
   event.waitUntil(
     (async () => {
       try {
-        // Store pending navigation URL in IndexedDB
+        // Store URL in IndexedDB (fallback for iOS PWA)
         await storeNavigationUrl(absoluteUrl);
 
-        fetch('/api/push/debug-click', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phase: 'stored_in_indexeddb', url: absoluteUrl })
-        }).catch(() => {});
-
-        // Focus the PWA window
+        // Open/focus the PWA window with target URL
         if (clients.openWindow) {
           await clients.openWindow(absoluteUrl);
         }
       } catch (err) {
-        fetch('/api/push/debug-click', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phase: 'error', error: err.message })
-        }).catch(() => {});
+        console.error('[SW] Notification click error:', err);
       }
     })()
   );

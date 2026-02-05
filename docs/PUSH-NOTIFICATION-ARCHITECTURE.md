@@ -86,49 +86,41 @@ DreamCore uses Web Push Notifications to notify users when game generation is co
 }
 ```
 
-## iOS PWA Limitations & Solutions
+## iOS PWA Limitations (Known Issue)
 
-### Problem 1: `client.navigate()` doesn't work
+**Status**: Accepted as platform limitation (2026-02-06)
 
-**Symptom**: `client.navigate(url)` Promise resolves successfully, but the page doesn't actually navigate.
+iOS PWA では通知タップ時にプロジェクトページへの遷移ができません。これは iOS の制限によるもので、現時点では解決策がありません。
 
-**Root Cause**: iOS PWA has a bug where `navigate()` reports success but doesn't perform the navigation.
+### 試した方法と結果
 
-**Solution**: Don't rely on `navigate()`. Use alternative methods.
+| API | 結果 |
+|-----|------|
+| `client.navigate(url)` | Promise は resolve するが遷移しない |
+| `clients.openWindow(url)` | PWA をフォーカスするが URL は無視される |
+| `postMessage` | バックグラウンドでは JS 停止のため受信不可 |
+| `BroadcastChannel` | 同上 |
+| `IndexedDB` + `visibilitychange` | IndexedDB 保存は成功するが、アプリ側で読み取れない |
 
-### Problem 2: `clients.openWindow()` doesn't navigate
+### 現在の動作
 
-**Symptom**: `clients.openWindow(url)` returns a WindowClient, but `windowClient.url` is the current page URL, not the target URL.
+- **iOS**: 通知タップで PWA が開くが、`start_url` (`/create.html`) が表示される
+- **Android**: 通知タップで直接プロジェクトページに遷移する
 
-**Root Cause**: On iOS PWA, `openWindow()` focuses the existing window but doesn't navigate to the specified URL.
+### 実装
 
-**Evidence from logs**:
-```json
-{
-  "phase": "openWindow_result",
-  "url": "https://v2.dreamcore.gg/create.html?project=xxx",
-  "success": true,
-  "clientUrl": "https://v2.dreamcore.gg/"  // Wrong! Should be the target URL
-}
+IndexedDB への URL 保存は残しています（将来の iOS アップデートで動作する可能性があるため）。
+
+```javascript
+// sw.js - 通知タップ時
+await storeNavigationUrl(absoluteUrl);  // iOS 用フォールバック
+await clients.openWindow(absoluteUrl);   // Android で動作
+
+// app.js - visibilitychange 時
+checkPendingNavigation();  // IndexedDB をチェックして遷移（iOS では動作しない）
 ```
 
-**Solution**: Use `openWindow()` only to focus the window, then use BroadcastChannel for navigation.
-
-### Problem 3: `postMessage` not received
-
-**Symptom**: SW sends `client.postMessage()`, but the app never receives it.
-
-**Root Cause**: When the PWA is in the background, JavaScript execution is suspended. The message is sent before the PWA wakes up.
-
-**Solution**: Use BroadcastChannel with delays after `openWindow()`.
-
-### Problem 4: BroadcastChannel timing
-
-**Symptom**: BroadcastChannel message sent immediately is not received.
-
-**Root Cause**: The PWA needs time to wake up after `openWindow()` focuses it.
-
-**Solution**: Send multiple broadcast messages with delays:
+### 参考: 過去の試行 (BroadcastChannel)
 
 ```javascript
 // First, focus the PWA
