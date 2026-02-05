@@ -192,6 +192,7 @@ npx supabase secrets set BREVO_API_KEY=xkeysib-xxx --project-ref tcynrijrovktirs
 | API エンドポイント URL を直接記述 | 環境変数 or `/api/config` から取得 |
 | シークレットキーをコードに記述 | 環境変数で管理 |
 | 特定ユーザー ID をコードに記述 | DB から動的に取得 |
+| 日本語テキストを直接記述 | i18n を使用（`docs/I18N.md` 参照） |
 
 **例（早期認証チェック）:**
 ```javascript
@@ -333,6 +334,7 @@ git push origin main
 - `docs/MODAL-MIGRATION-PLAN.md` - Modal移行計画
 - `docs/MODAL-DESIGN.md` - Modal技術設計
 - `docs/API-REFERENCE.md` - **API/エンドポイント一覧（実装準拠）**
+- `docs/I18N.md` - **多言語対応（i18n）ガイド**
 - `.claude/plans/auth-migration.md` - 認証移行ドキュメント（実装の詳細）
 - `.claude/plans/sandbox-architecture.md` - セキュリティ/サンドボックス設計
 - `server/authMiddleware.js` - 認証ミドルウェア
