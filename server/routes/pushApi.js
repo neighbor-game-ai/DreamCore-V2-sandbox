@@ -17,6 +17,7 @@ const { isAllowedPushUser } = require('../notificationService');
  * No authentication required (public endpoint)
  */
 router.get('/vapid-key', (req, res) => {
+  console.log('[Push API] VAPID key requested from:', req.headers['user-agent']?.substring(0, 50));
   const key = pushService.getVapidPublicKey();
   if (!key) {
     return res.status(503).json({ error: 'Push notifications not configured' });
@@ -30,6 +31,7 @@ router.get('/vapid-key', (req, res) => {
  * Uses service_role internally (never user-scoped client)
  */
 router.post('/subscribe', authenticate, async (req, res) => {
+  console.log('[Push API] Subscribe request from user:', req.user.id?.substring(0, 8));
   const userId = req.user.id;
   const { endpoint, keys, userAgent } = req.body;
 
