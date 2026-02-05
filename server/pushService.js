@@ -167,6 +167,7 @@ async function sendPushToUser(userId, payload) {
     data: {
       url: payload.url || '/notifications.html',
       projectId: payload.projectId || null,
+      type: payload.type || 'system',
       timestamp: Date.now()
     }
   });
