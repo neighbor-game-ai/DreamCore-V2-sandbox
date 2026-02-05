@@ -1172,6 +1172,25 @@ ${userMessage}
       let currentCode = null;
       let isNewProject = true;
 
+      // Diagnostic logging for 2D/3D issue debugging
+      console.log(`[isNewProject] projectId=${projectId}, files.length=${files.length}`);
+
+      // Fail-open: If file listing returns empty, check DB is_initialized as fallback
+      // This prevents false "new project" detection when Modal file listing fails
+      if (files.length === 0) {
+        try {
+          const dbInitialized = await db.isProjectInitialized(projectId);
+          if (dbInitialized) {
+            console.log(`[isNewProject] FAIL-OPEN: files empty but DB is_initialized=true, treating as EXISTING`);
+            isNewProject = false;
+          }
+        } catch (dbErr) {
+          console.error(`[isNewProject] DB check failed: ${dbErr.message}`);
+          // On DB error, default to "existing" (fail-open) to avoid showing 2D/3D incorrectly
+          isNewProject = false;
+        }
+      }
+
       if (files.length > 0) {
         // Check if it's just the initial welcome page
         const indexContent = await userManager.readProjectFile(userId, projectId, 'index.html');
@@ -1179,15 +1198,20 @@ ${userMessage}
           indexContent.length < 2000 &&
           indexContent.includes('Welcome to Game Creator');
 
+        console.log(`[isNewProject] indexContent.length=${indexContent?.length || 0}, isInitialWelcomePage=${isInitialWelcomePage}`);
+
         if (!isInitialWelcomePage) {
           // Real project with actual code
           isNewProject = false;
+          console.log(`[isNewProject] Determined as EXISTING project (has real code)`);
           const fileContents = await Promise.all(files.map(async f => {
             const content = await userManager.readProjectFile(userId, projectId, f);
             return `--- ${f} ---\n${content}`;
           }));
           currentCode = fileContents.join('\n\n');
         }
+      } else {
+        console.log(`[isNewProject] No files found, treating as NEW project`);
       }
 
       // For new projects, detect if 2D or 3D is specified
@@ -1195,6 +1219,7 @@ ${userMessage}
       let effectiveUserMessage = userMessage;
 
       if (isNewProject) {
+        console.log(`[2D/3D Check] Entering dimension detection for NEW project: ${projectId}`);
         // Clear Claude CLI cache to prevent cross-project data leakage
         const projectDir = userManager.getProjectDir(userId, projectId);
         this.clearClaudeCache(projectDir);
