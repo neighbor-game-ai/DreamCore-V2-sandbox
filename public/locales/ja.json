@@ -496,6 +496,10 @@
     "errorOccurred": "エラーが発生しました",
     "networkError": "ネットワークエラーが発生しました"
   },
+  "notification": {
+    "enablePrompt": "通知をオンにすると、ゲームができたときにお知らせします！",
+    "enableButton": "オンにする"
+  },
   "samples": {
     "spaceShooting": "宇宙シューティング",
     "spaceShootingPrompt": "宇宙を飛ぶシューティングゲームを作って",

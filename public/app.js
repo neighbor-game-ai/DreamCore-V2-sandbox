@@ -3160,20 +3160,25 @@ class GameCreatorApp {
   }
 
   /**
-   * Subscribe to push notifications (if supported and not already subscribed)
+   * Subscribe to push notifications (if supported)
+   * Always attempts to subscribe - server uses UPSERT to handle duplicates
    */
   async subscribeToPush() {
-    if (typeof DreamCorePush === 'undefined') return;
-    if (!DreamCorePush.isSupported()) return;
+    if (typeof DreamCorePush === 'undefined') {
+      console.log('[Notification] DreamCorePush not loaded');
+      return;
+    }
+    if (!DreamCorePush.isSupported()) {
+      console.log('[Notification] Push not supported');
+      return;
+    }
 
     try {
-      const isSubscribed = await DreamCorePush.isSubscribed();
-      if (!isSubscribed) {
-        await DreamCorePush.subscribe();
-        console.log('[Notification] Push subscription successful');
-      }
+      // Always subscribe - server uses UPSERT, so duplicates are OK
+      await DreamCorePush.subscribe();
+      console.log('[Notification] Push subscription successful');
     } catch (err) {
-      console.log('[Notification] Push subscription failed:', err.message);
+      console.error('[Notification] Push subscription failed:', err.message);
     }
   }
 

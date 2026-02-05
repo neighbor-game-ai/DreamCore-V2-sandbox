@@ -496,6 +496,10 @@
     "errorOccurred": "An error occurred",
     "networkError": "A network error occurred"
   },
+  "notification": {
+    "enablePrompt": "Enable notifications to know when your game is ready!",
+    "enableButton": "Enable"
+  },
   "samples": {
     "spaceShooting": "Space Shooting",
     "spaceShootingPrompt": "Make a space shooting game",
