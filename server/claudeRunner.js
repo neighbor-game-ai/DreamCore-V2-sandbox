@@ -1840,6 +1840,9 @@ ${userMessage}
             generator: 'gemini'
           });
 
+          // Mark project as initialized (code generation successful)
+          await db.setProjectInitialized(projectId);
+
           console.log('Job completed with Gemini:', jobId);
 
           // Create/Update specs asynchronously (don't wait)
@@ -2062,6 +2065,9 @@ ${userMessage}
           html: currentHtml
         });
 
+        // Mark project as initialized (code generation successful)
+        await db.setProjectInitialized(projectId);
+
         // Update specs asynchronously (don't wait)
         this.updateSpec(userId, projectId, userMessage).catch(err => {
           console.error('Spec update error:', err.message);
@@ -2262,6 +2268,9 @@ ${userMessage}
               message: responseMessage,
               html: currentHtml
             });
+
+            // Mark project as initialized (code generation successful)
+            await db.setProjectInitialized(projectId);
 
             // Update specs asynchronously (don't wait) - pass userMessage for selective update
             this.updateSpec(userId, projectId, userMessage).catch(err => {

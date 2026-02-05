@@ -1255,20 +1255,18 @@ wss.on('connection', (ws) => {
             });
           }
 
-          // Get conversation history
-          const history = await userManager.getConversationHistory(userSupabase, userId, currentProjectId);
+          // Parallel fetch: history + activeJob (both are fast DB queries)
+          const [history, activeJob] = await Promise.all([
+            userManager.getConversationHistory(userSupabase, userId, currentProjectId),
+            jobManager.getActiveJob(currentProjectId)
+          ]);
 
-          // Get versions (without edits - edits are fetched on demand)
-          const versionsWithEdits = await userManager.getVersions(userId, currentProjectId);
-
-          // Check for active job
-          const activeJob = await jobManager.getActiveJob(currentProjectId);
-
+          // Send initial response immediately (without versions for faster response)
           safeSend({
             type: 'projectSelected',
             projectId: currentProjectId,
             history,
-            versions: versionsWithEdits,
+            versions: [], // Lazy load - sent separately
             activeJob: activeJob || null
           });
 
@@ -1279,6 +1277,20 @@ wss.on('connection', (ws) => {
               safeSend({ type: 'jobUpdate', ...update });
             });
           }
+
+          // Fetch versions in background and send as separate message (lazy load)
+          userManager.getVersions(userId, currentProjectId).then(result => {
+            // result is { versions, currentHead, autoInitialized }
+            safeSend({
+              type: 'versionsList',
+              projectId: currentProjectId,
+              versions: result.versions || [],
+              currentHead: result.currentHead,
+              autoInitialized: result.autoInitialized
+            });
+          }).catch(err => {
+            console.error(`[selectProject] getVersions failed for ${currentProjectId}:`, err.message);
+          });
           break;
 
         case 'createProject':
@@ -1464,68 +1476,76 @@ wss.on('connection', (ws) => {
           }
 
           // Check if style selection is needed for new game creation
+          // Optimization: Check regex first (no I/O), then DB flag (single query)
           const shouldCheckStyleSelection = !data.skipStyleSelection && !data.selectedStyle;
           if (shouldCheckStyleSelection) {
-            // Check if this is a new project
-            const files = await userManager.listProjectFiles(userId, currentProjectId);
-            let isNewProject = true;
-            if (files.length > 0) {
-              const indexContent = await userManager.readProjectFile(userId, currentProjectId, 'index.html');
-              const isInitialWelcomePage = indexContent &&
-                indexContent.length < 2000 &&
-                indexContent.includes('Welcome to Game Creator');
-              if (!isInitialWelcomePage) {
-                isNewProject = false;
-              }
-            }
-
-            // Check if user is requesting game creation (and dimension is specified)
+            // Step 1: Quick regex check (no I/O) - if no match, skip entirely
             const isGameCreationRequest = /作って|作成|create|ゲーム/i.test(userMessage);
             const has2DSpecified = /2d|２d|2D|２D/i.test(userMessage);
             const has3DSpecified = /3d|３d|3D|３D/i.test(userMessage);
             const hasDimensionSpecified = has2DSpecified || has3DSpecified;
 
-            if (isNewProject && isGameCreationRequest && hasDimensionSpecified) {
-              // Show style selection
-              const dimension = has3DSpecified ? '3d' : '2d';
+            // Step 2: Only check DB if regex conditions are met
+            if (isGameCreationRequest && hasDimensionSpecified) {
+              // Check is_initialized flag (single DB query, ~10ms)
+              const isInitialized = await db.isProjectInitialized(currentProjectId);
 
-              // Get styles with images
-              const styles = getStyleOptionsWithImages(dimension);
+              // Show style selection only for uninitialized projects
+              if (!isInitialized) {
+                const dimension = has3DSpecified ? '3d' : '2d';
 
-              safeSend({
-                type: 'styleOptions',
-                dimension,
-                styles,
-                originalMessage: userMessage
-              });
-              return; // Wait for user to select style
+                // Get styles with images
+                const styles = getStyleOptionsWithImages(dimension);
+
+                safeSend({
+                  type: 'styleOptions',
+                  dimension,
+                  styles,
+                  originalMessage: userMessage
+                });
+                return; // Wait for user to select style
+              }
             }
           }
 
-          // If style was selected, generate visual guide with AI
+          // If style was selected, generate visual guide with AI (with timeout for faster response)
           if (data.selectedStyle) {
             const { dimension, styleId } = data.selectedStyle;
             const style = getStyleById(dimension, styleId);
             console.log(`[Style Selection] Received: dimension=${dimension}, styleId=${styleId}, style=${style?.name}`);
 
             if (style) {
-              // Save STYLE.md to project for persistence across updates
-              try {
-                const styleContent = `# ビジュアルスタイル: ${style.name}\n\nID: ${styleId}\nDimension: ${dimension}\n\n${style.guideline || ''}`;
-                await userManager.writeProjectFile(userSupabase, userId, currentProjectId, 'STYLE.md', styleContent);
+              // Save STYLE.md to project for persistence across updates (non-blocking)
+              userManager.writeProjectFile(userSupabase, userId, currentProjectId, 'STYLE.md',
+                `# ビジュアルスタイル: ${style.name}\n\nID: ${styleId}\nDimension: ${dimension}\n\n${style.guideline || ''}`
+              ).then(() => {
                 console.log(`[Style Selection] Saved STYLE.md for ${style.name}`);
-              } catch (err) {
+              }).catch(err => {
                 console.error(`[Style Selection] Failed to save STYLE.md:`, err.message);
-              }
+              });
+
+              // Generate visual guide with 2-second timeout
+              // If AI takes too long, use static guideline and proceed
+              const GUIDE_TIMEOUT = 2000; // 2 seconds
+              const guidePromise = generateVisualGuide(userMessage, dimension, styleId);
+              const timeoutPromise = new Promise(resolve =>
+                setTimeout(() => resolve({ timeout: true }), GUIDE_TIMEOUT)
+              );
 
               try {
-                // Generate AI-powered visual guide
-                const guide = await generateVisualGuide(userMessage, dimension, styleId);
-                if (guide) {
-                  const formattedGuide = formatGuideForCodeGeneration(guide);
+                const result = await Promise.race([guidePromise, timeoutPromise]);
+
+                if (result && !result.timeout) {
+                  // AI guide completed in time
+                  const formattedGuide = formatGuideForCodeGeneration(result);
                   userMessage = `${userMessage}\n\n${formattedGuide}`;
-                  console.log(`[Style Selection] AI-generated guide for: ${guide.styleName}`);
-                  console.log(`[Style Selection] Full message length: ${userMessage.length}`);
+                  console.log(`[Style Selection] AI-generated guide for: ${result.styleName}`);
+                } else if (result?.timeout) {
+                  // Timeout - use static guideline as fallback
+                  console.log(`[Style Selection] Guide generation timed out (${GUIDE_TIMEOUT}ms), using static guideline`);
+                  if (style.guideline) {
+                    userMessage = `${userMessage}\n\n${style.guideline}`;
+                  }
                 }
               } catch (error) {
                 console.error(`[Style Selection] Guide generation failed:`, error.message);
@@ -1790,6 +1810,9 @@ wss.on('connection', (ws) => {
 
             // Sync restored files from Modal to local for fast preview
             await userManager.syncFromModal(userId, data.projectId);
+
+            // Mark as initialized (restored version has valid code)
+            await db.setProjectInitialized(data.projectId);
 
             safeSend({
               type: 'versionRestored',

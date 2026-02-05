@@ -8,6 +8,28 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-05: ゲーム生成パフォーマンス最適化 ✅
+
+**詳細:** `.claude/logs/2026-02-05-is-initialized-backfill.md`
+
+`is_initialized` フラグを唯一の真実（Single Source of Truth）として確立:
+
+| 項目 | 内容 |
+|------|------|
+| **判定ルール** | DB証拠（published_games, activity_log） → Modal証拠（git コミット数, index.html） |
+| **バックフィル結果** | 178件処理、70件 true、108件 false、エラー 0件 |
+| **効果** | 2D/3D判定でファイル I/O（200-350ms）を排除 |
+
+**その他の最適化:**
+- `Promise.all()` で selectProject の並列クエリ
+- バージョン遅延読み込み（別メッセージ `versionsList`）
+- 署名付き URL キャッシュ（4分 TTL）
+- Visual Guide 生成に 2秒タイムアウト
+
+**スクリプト:** `scripts/backfill-is-initialized.js`
+
+---
+
 ### 2026-02-05: 多言語対応（i18n）実装 ✅
 
 **詳細:** `.claude/logs/2026-02-05-i18n-implementation.md`
@@ -824,6 +846,12 @@ Content-Security-Policy-Report-Only ヘッダーを導入:
 - [ ] **Sandbox 上限** - ユーザーあたり最大3個の制限（Phase 2）
 
 ### 低優先度（将来）
+- [ ] **Photo Game Creator（初心者向けフロー）** - 写真をアップロードしてパーソナライズされたゲームを作成
+  - **サンプル:** `public/sample-photo-game/`（UIプロトタイプ完成）
+  - **フロー:** 写真アップロード → 「人物全体」or「顔だけ」選択 → ゲームタイプ選択 → ゲーム生成
+  - **実装済み:** 顔検出（face-api.js）、UI/UX、プロンプト生成
+  - **未実装:** 背景除去（BRIA RMBG連携）、本体統合
+  - **目的:** 初心者でも「自分の写真でゲームが作れる」という明確な体験を提供
 - [ ] **多言語化（i18n）** - 日本語/英語の2言語対応、ブラウザ言語で自動切替
   - **計画書:** `/Users/admin/.claude/plans/quiet-imagining-rossum.md`
   - 翻訳対象: HTML静的テキスト200+、JS動的テキスト120+
@@ -1616,4 +1644,4 @@ cron: */5 * * * *
 
 ---
 
-最終更新: 2026-02-05 (認証機能改善)
+最終更新: 2026-02-05 (ゲーム生成パフォーマンス最適化)

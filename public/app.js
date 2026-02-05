@@ -235,6 +235,17 @@ class GameCreatorApp {
     this.init();
   }
 
+  /**
+   * i18n helper method
+   */
+  t(key, vars) {
+    if (typeof DreamCoreI18n !== 'undefined') {
+      return DreamCoreI18n.t(key, vars);
+    }
+    // Fallback: return the last part of the key
+    return key.split('.').pop();
+  }
+
   async init() {
     // Detect which page we're on
     this.currentPage = document.body.dataset.page || 'unknown';
@@ -576,12 +587,12 @@ class GameCreatorApp {
 
     this.currentErrors = errors;
     this.showErrorPanel(errors);
-    this.updateGameStatus('error', `${errors.length}件のエラー`);
+    this.updateGameStatus('error', this.t('editor.errorsCount', { count: errors.length }));
   }
 
   handleGameLoaded(data) {
     if (data.success) {
-      this.updateGameStatus('success', '実行中');
+      this.updateGameStatus('success', this.t('editor.running'));
       this.hideErrorPanel();
       // Hide status after 2 seconds
       setTimeout(() => {
@@ -813,7 +824,7 @@ class GameCreatorApp {
     if (this.projects.length === 0) {
       this.projectGrid.innerHTML = `
         <div class="project-empty">
-          <p>まだゲームがありません</p>
+          <p>${this.t('editor.noGamesYet')}</p>
         </div>
       `;
       return;
@@ -828,9 +839,9 @@ class GameCreatorApp {
     });
 
     if (filteredProjects.length === 0) {
-      const emptyMessage = filter === 'published' ? '公開中のゲームはありません' :
-                          filter === 'draft' ? '下書きのゲームはありません' :
-                          'まだゲームがありません';
+      const emptyMessage = filter === 'published' ? this.t('editor.noPublishedGames') :
+                          filter === 'draft' ? this.t('editor.noDraftGames') :
+                          this.t('editor.noGamesYet');
       this.projectGrid.innerHTML = `
         <div class="project-empty">
           <p>${emptyMessage}</p>
@@ -847,7 +858,7 @@ class GameCreatorApp {
               <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
               </svg>
-              公開中
+              ${this.t('editor.publishedBadge')}
             </div>
           ` : ''}
           <img
@@ -863,13 +874,13 @@ class GameCreatorApp {
         <div class="project-card-header">
           <h3 class="project-card-title">${this.escapeHtml(project.name)}</h3>
           <div class="project-card-actions">
-            <button onclick="event.stopPropagation(); app.renameProjectFromList('${project.id}')" title="名前を変更">
+            <button onclick="event.stopPropagation(); app.renameProjectFromList('${project.id}')" title="${this.t('editor.renameTooltip')}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
               </svg>
             </button>
-            <button class="delete-btn" onclick="event.stopPropagation(); app.deleteProjectFromList('${project.id}')" title="削除">
+            <button class="delete-btn" onclick="event.stopPropagation(); app.deleteProjectFromList('${project.id}')" title="${this.t('editor.deleteTooltip')}"
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3 6 5 6 21 6"></polyline>
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -1018,7 +1029,7 @@ class GameCreatorApp {
     if (!this.projectTitle) return;
 
     if (!name) {
-      this.projectTitle.textContent = 'ゲームクリエイター';
+      this.projectTitle.textContent = this.t('editor.projectTitle');
       this.projectTitle.classList.remove('editable');
     } else {
       if (animate && this.projectTitle.textContent !== name) {
@@ -1142,11 +1153,11 @@ class GameCreatorApp {
       this.isConnected = true;
       this.reconnectAttempts = 0; // Reset on successful connection
       if (this.statusIndicator) {
-        this.updateStatus('connected', '接続中');
+        this.updateStatus('connected', this.t('status.connected'));
       }
       if (this.listStatusIndicator) {
         this.listStatusIndicator.className = 'status-indicator connected';
-        this.listStatusIndicator.textContent = '接続中';
+        this.listStatusIndicator.textContent = this.t('status.connected');
       }
       // Restore send button to normal state
       this.restoreSendButton();
@@ -1166,11 +1177,11 @@ class GameCreatorApp {
       console.log(`[${this.sessionId}] WebSocket closed: code=${event.code}, reason=${event.reason}`);
       this.isConnected = false;
       if (this.statusIndicator) {
-        this.updateStatus('', '再接続中...');
+        this.updateStatus('', this.t('status.reconnecting'));
       }
       if (this.listStatusIndicator) {
         this.listStatusIndicator.className = 'status-indicator';
-        this.listStatusIndicator.textContent = '再接続中...';
+        this.listStatusIndicator.textContent = this.t('status.reconnecting');
       }
       // Show reconnect button
       this.showReconnectButton();
@@ -1185,7 +1196,7 @@ class GameCreatorApp {
     this.ws.onerror = (error) => {
       console.error(`[${this.sessionId}] WebSocket error:`, error);
       if (this.statusIndicator) {
-        this.updateStatus('', 'エラー');
+        this.updateStatus('', this.t('status.error'));
       }
     };
 
@@ -1286,7 +1297,7 @@ class GameCreatorApp {
       this.connectWebSocket();
     } else if (this.ws.readyState === WebSocket.OPEN) {
       console.log('[Reconnect] WebSocket appears connected, verifying with ping...');
-      this.updateStatus('', '接続確認中...');
+      this.updateStatus('', this.t('status.checkingConnection'));
 
       // Set a timeout - if no pong within 2 seconds, force reconnect
       this.pingTimeout = setTimeout(() => {
@@ -1753,7 +1764,7 @@ class GameCreatorApp {
       }).catch(() => {});
     } else {
       navigator.clipboard.writeText(shareUrl).then(() => {
-        alert('リンクをコピーしました！');
+        alert(this.t('share.linkCopied'));
       });
     }
   }
@@ -1789,7 +1800,7 @@ class GameCreatorApp {
 
   goToPublishPage() {
     if (!this.currentProjectId) {
-      alert('プロジェクトを選択してください');
+      alert(this.t('editor.selectProjectFirst'));
       return;
     }
     window.location.href = `/publish.html?id=${this.currentProjectId}`;
@@ -1810,11 +1821,11 @@ class GameCreatorApp {
         }
         console.log('[Reconnect] Pong received, connection verified');
         if (this.statusIndicator) {
-          this.updateStatus('connected', '接続中');
+          this.updateStatus('connected', this.t('status.connected'));
         }
         if (this.listStatusIndicator) {
           this.listStatusIndicator.className = 'status-indicator connected';
-          this.listStatusIndicator.textContent = '接続中';
+          this.listStatusIndicator.textContent = this.t('status.connected');
         }
         break;
 
@@ -1834,7 +1845,7 @@ class GameCreatorApp {
         // Update status indicators
         if (this.listStatusIndicator) {
           this.listStatusIndicator.className = 'status-indicator connected';
-          this.listStatusIndicator.textContent = '接続中';
+          this.listStatusIndicator.textContent = this.t('status.connected');
         }
 
         // Update quota display
@@ -2033,7 +2044,7 @@ class GameCreatorApp {
         if (data.mode !== 'chat' && data.mode !== 'restore') {
           this.addMessage(data.message, 'assistant', { showPlayButton: true });
         }
-        this.updateStatus('connected', '接続中');
+        this.updateStatus('connected', this.t('status.connected'));
         this.isProcessing = false;
         this.currentJobId = null;
         this.sendButton.disabled = false;
@@ -2097,10 +2108,10 @@ class GameCreatorApp {
           // Handle quota exceeded errors
           this.showQuotaExceededError(data.error);
         } else {
-          this.addMessage(errorMessage || 'エラーが発生しました', 'error');
+          this.addMessage(errorMessage || this.t('editor.errorOccurred'), 'error');
         }
 
-        this.updateStatus('connected', '接続中');
+        this.updateStatus('connected', this.t('status.connected'));
         this.isProcessing = false;
         this.currentJobId = null;
         this.sendButton.disabled = false;
@@ -2109,8 +2120,8 @@ class GameCreatorApp {
 
       case 'cancelled':
         this.hideStreaming();
-        this.addMessage('停止しました', 'system');
-        this.updateStatus('connected', '接続中');
+        this.addMessage(this.t('editor.stopped'), 'system');
+        this.updateStatus('connected', this.t('status.connected'));
         this.isProcessing = false;
         this.currentJobId = null;
         this.sendButton.disabled = false;
@@ -2161,6 +2172,14 @@ class GameCreatorApp {
 
       case 'versionsList':
         console.log('versionsList received, pendingRestore:', this.pendingRestore, 'versions:', data.versions?.length, 'currentHead:', data.currentHead);
+
+        // Cache versions for later use (lazy load from projectSelected)
+        if (data.projectId === this.currentProjectId) {
+          this.cachedVersions = data.versions || [];
+          // Update version buttons in existing chat messages
+          this.updateVersionButtonsInChat(this.cachedVersions);
+        }
+
         // Set current version from server (persisted across page reloads)
         if (data.currentHead) {
           this.currentVersionId = data.currentHead;
@@ -2179,7 +2198,7 @@ class GameCreatorApp {
           this.addMessage(`前のバージョン（${previousVersion.message}）に戻しています...`, 'system');
         } else if (this.pendingRestore) {
           this.pendingRestore = false;
-          this.addMessage('戻せるバージョンがありません', 'system');
+          this.addMessage(this.t('editor.noVersionToRestore'), 'system');
         } else {
           this.displayVersions(data.versions, data.autoInitialized);
         }
@@ -2241,7 +2260,7 @@ class GameCreatorApp {
   handleJobUpdate(update) {
     switch (update.type) {
       case 'started':
-        this.updateStreamingStatus('処理中...');
+        this.updateStreamingStatus(this.t('editor.processing'));
         break;
 
       case 'progress':
@@ -2256,33 +2275,33 @@ class GameCreatorApp {
         // Skip message display for chat/restore mode (already handled by their own methods)
         if (update.result?.mode !== 'chat' && update.result?.mode !== 'restore') {
           this.currentVersionId = null; // Reset to latest version
-          const message = update.result?.message || update.message || 'ゲームを更新しました';
+          const message = update.result?.message || update.message || this.t('editor.gameUpdated');
           this.addMessage(message, 'assistant', { showPlayButton: true });
           this.refreshPreview();
         }
-        this.updateStatus('connected', '接続中');
+        this.updateStatus('connected', this.t('status.connected'));
         this.isProcessing = false;
         this.currentJobId = null;
         this.sendButton.disabled = false;
         this.stopButton.classList.add('hidden');
         // Browser notification
         this.showNotification('🎮 ゲーム完成！', {
-          body: this.currentProjectName || 'ゲームが更新されました',
+          body: this.currentProjectName || this.t('editor.gameUpdatedNotification'),
         });
         break;
 
       case 'failed':
         this.hideStreaming();
         // Use userMessage (user-friendly) if available, fallback to raw error
-        const errorMessage = update.userMessage || update.error || 'エラーが発生しました';
+        const errorMessage = update.userMessage || update.error || this.t('editor.errorOccurred');
         this.addMessage(`エラー: ${errorMessage}`, 'error');
 
         // Show recovery hint for recoverable errors
         if (update.recoverable) {
-          this.addMessage('もう一度お試しください', 'system');
+          this.addMessage(this.t('editor.tryAgain'), 'system');
         }
 
-        this.updateStatus('connected', '接続中');
+        this.updateStatus('connected', this.t('status.connected'));
         this.isProcessing = false;
         this.currentJobId = null;
         this.sendButton.disabled = false;
@@ -2299,8 +2318,8 @@ class GameCreatorApp {
 
       case 'cancelled':
         this.hideStreaming();
-        this.addMessage('キャンセルしました', 'system');
-        this.updateStatus('connected', '接続中');
+        this.addMessage(this.t('editor.cancelled'), 'system');
+        this.updateStatus('connected', this.t('status.connected'));
         this.isProcessing = false;
         this.currentJobId = null;
         this.sendButton.disabled = false;
@@ -2342,14 +2361,14 @@ class GameCreatorApp {
         minute: '2-digit',
         timeZone: 'Asia/Tokyo'
       });
-      this.showQuotaLimitModal('作成', this.currentQuota.projects.limit, resetTimeStr);
+      this.showQuotaLimitModal(this.t('quota.projectCreation'), this.currentQuota.projects.limit, resetTimeStr);
       return;
     }
 
     // Skip modal and directly create project with default name
     this.ws.send(JSON.stringify({
       type: 'createProject',
-      name: '新しいゲーム'
+      name: this.t('editor.newGame')
     }));
   }
 
@@ -2365,7 +2384,7 @@ class GameCreatorApp {
   }
 
   confirmCreateProject() {
-    const name = this.newGameName.value.trim() || '新しいゲーム';
+    const name = this.newGameName.value.trim() || this.t('editor.newGame');
     this.hideNewGameModal();
 
     this.ws.send(JSON.stringify({
@@ -2386,6 +2405,63 @@ class GameCreatorApp {
       this.viewCodeButton?.classList.add('hidden');
       this.downloadButton?.classList.add('hidden');
       this.hideVersionPanel();
+    }
+  }
+
+  /**
+   * Update version hash attributes in chat messages after lazy-loaded versions arrive
+   * Also adds "変更箇所を見る" buttons to messages that didn't have them
+   * @param {Array} versions - Array of version objects with hash
+   */
+  updateVersionButtonsInChat(versions) {
+    if (!versions || versions.length === 0) return;
+    if (!this.chatMessages) return;
+
+    // Find all assistant messages (they may have version buttons)
+    const assistantMessages = this.chatMessages.querySelectorAll('.message.assistant');
+    const assistantCount = assistantMessages.length;
+
+    // Map versions to messages (newest version -> newest message)
+    for (let i = 0; i < Math.min(versions.length, assistantCount); i++) {
+      const messageIdx = assistantCount - 1 - i;
+      const version = versions[i];
+      const message = assistantMessages[messageIdx];
+
+      if (message && version && version.hash) {
+        // Store version hash as data attribute for on-demand fetch
+        message.dataset.versionHash = version.hash;
+
+        // Check if "変更箇所を見る" button already exists
+        let btnContainer = message.querySelector('.message-buttons');
+        const existingChangesBtn = btnContainer?.querySelector('.view-changes-btn');
+
+        if (!existingChangesBtn) {
+          // Create button container if needed
+          if (!btnContainer) {
+            btnContainer = document.createElement('div');
+            btnContainer.className = 'message-buttons';
+            message.appendChild(btnContainer);
+          }
+
+          // Add "変更箇所を見る" button
+          const changesBtn = document.createElement('button');
+          changesBtn.className = 'view-changes-btn';
+          changesBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            変更箇所を見る
+          `;
+          const versionHash = version.hash;
+          changesBtn.addEventListener('click', () => {
+            this.fetchAndShowChanges(versionHash);
+          });
+          btnContainer.appendChild(changesBtn);
+        }
+      }
     }
   }
 
@@ -2878,21 +2954,21 @@ class GameCreatorApp {
   showWelcomeMessage() {
     // All possible game suggestions
     const allSuggestions = [
-      { label: '宇宙シューティング', prompt: '宇宙を飛ぶシューティングゲームを作って' },
-      { label: '動物集め', prompt: 'かわいい動物を集めるゲームを作って' },
-      { label: 'ブロックパズル', prompt: 'ブロックを消すパズルゲームを作って' },
-      { label: 'カーレース', prompt: '車のレースゲームを作って' },
-      { label: 'ジャンプアクション', prompt: '障害物を飛び越えるジャンプゲームを作って' },
-      { label: 'タップゲーム', prompt: '画面をタップして遊ぶゲームを作って' },
-      { label: 'ボール転がし', prompt: 'ボールを転がして遊ぶ3Dゲームを作って' },
-      { label: '迷路脱出', prompt: '迷路から脱出するゲームを作って' },
-      { label: 'フルーツキャッチ', prompt: '落ちてくるフルーツをキャッチするゲームを作って' },
-      { label: 'リズムゲーム', prompt: 'タイミングよくタップするリズムゲームを作って' },
-      { label: '釣りゲーム', prompt: '魚を釣るシンプルなゲームを作って' },
-      { label: 'モグラたたき', prompt: 'モグラたたきゲームを作って' },
-      { label: '玉転がし', prompt: '玉を転がしてゴールを目指すゲームを作って' },
-      { label: 'バブルシューター', prompt: '泡を飛ばして消すパズルゲームを作って' },
-      { label: 'エンドレスラン', prompt: '走り続けるエンドレスランゲームを作って' },
+      { label: this.t('samples.spaceShooting'), prompt: this.t('samples.spaceShootingPrompt') },
+      { label: this.t('samples.animalCollect'), prompt: this.t('samples.animalCollectPrompt') },
+      { label: this.t('samples.blockPuzzle'), prompt: this.t('samples.blockPuzzlePrompt') },
+      { label: this.t('samples.carRace'), prompt: this.t('samples.carRacePrompt') },
+      { label: this.t('samples.jumpAction'), prompt: this.t('samples.jumpActionPrompt') },
+      { label: this.t('samples.tapGame'), prompt: this.t('samples.tapGamePrompt') },
+      { label: this.t('samples.ballRolling'), prompt: this.t('samples.ballRollingPrompt') },
+      { label: this.t('samples.mazeEscape'), prompt: this.t('samples.mazeEscapePrompt') },
+      { label: this.t('samples.fruitCatch'), prompt: this.t('samples.fruitCatchPrompt') },
+      { label: this.t('samples.rhythmGame'), prompt: this.t('samples.rhythmGamePrompt') },
+      { label: this.t('samples.fishingGame'), prompt: this.t('samples.fishingGamePrompt') },
+      { label: this.t('samples.whackAMole'), prompt: this.t('samples.whackAMolePrompt') },
+      { label: this.t('samples.marbleRoll'), prompt: this.t('samples.marbleRollPrompt') },
+      { label: this.t('samples.bubbleShooter'), prompt: this.t('samples.bubbleShooterPrompt') },
+      { label: this.t('samples.endlessRun'), prompt: this.t('samples.endlessRunPrompt') },
     ];
 
     // Randomly select 3 suggestions
@@ -3127,7 +3203,7 @@ class GameCreatorApp {
   // Fetch version edits on demand and show modal
   fetchAndShowChanges(versionHash) {
     // Show loading state
-    this.showChangesModal({ edits: [], summary: '読み込み中...' });
+    this.showChangesModal({ edits: [], summary: this.t('common.loading') });
 
     // Request edits from server
     this.ws.send(JSON.stringify({
@@ -3304,8 +3380,8 @@ class GameCreatorApp {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message assistant restore-confirm';
 
-    const confirmLabel = data.confirmLabel || '戻す';
-    const cancelLabel = data.cancelLabel || 'キャンセル';
+    const confirmLabel = data.confirmLabel || this.t('editor.restore');
+    const cancelLabel = data.cancelLabel || this.t('button.cancel');
     const confirmId = `restore-confirm-${Date.now()}`;
     const cancelId = `restore-cancel-${Date.now()}`;
 
@@ -3329,7 +3405,7 @@ class GameCreatorApp {
     });
 
     document.getElementById(cancelId).addEventListener('click', () => {
-      this.addMessage('キャンセルしました', 'system');
+      this.addMessage(this.t('editor.cancelled'), 'system');
       messageDiv.querySelector('.restore-buttons').remove();
     });
 
@@ -3362,7 +3438,7 @@ class GameCreatorApp {
     existingModals.forEach(modal => modal.remove());
 
     const job = data.jobs && data.jobs[0];
-    const projectName = job?.projectName || '別のプロジェクト';
+    const projectName = job?.projectName || this.t('project.anotherProject');
 
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message assistant limit-exceeded-confirm';
@@ -3370,9 +3446,9 @@ class GameCreatorApp {
     const closeId = `limit-close-${Date.now()}`;
 
     messageDiv.innerHTML = `
-      <div class="message-content">『${this.escapeHtml(projectName)}』で生成中です。<br>完了後にもう一度お試しください。</div>
+      <div class="message-content">${this.t('project.generatingIn', { name: this.escapeHtml(projectName) })}</div>
       <div class="restore-buttons">
-        <button class="restore-btn cancel" id="${closeId}">閉じる</button>
+        <button class="restore-btn cancel" id="${closeId}">${this.t('editor.close')}</button>
       </div>
     `;
 
@@ -3431,29 +3507,51 @@ class GameCreatorApp {
       .replace(/'/g, '&#039;');
   }
 
-  async refreshPreview() {
+  /**
+   * Refresh game preview with optional signed URL caching
+   * @param {boolean} forceRefresh - If true, bypass cache and fetch new URL
+   */
+  async refreshPreview(forceRefresh = false) {
     if (!this.gamePreview) return;
     if (this.userId && this.currentProjectId && this.accessToken) {
       // Show loading status
-      this.updateGameStatus('loading', '読み込み中...');
+      this.updateGameStatus('loading', this.t('common.loading'));
       this.currentErrors = [];
       this.hideErrorPanel();
 
       try {
-        // Get signed URL from API (no access_token in URL)
-        const response = await DreamCoreAuth.authFetch(`/api/game-url/${this.currentProjectId}`);
-        if (!response.ok) {
-          throw new Error('Failed to get game URL');
+        let url;
+        const cacheKey = `signedUrl_${this.currentProjectId}`;
+        const cached = this.signedUrlCache?.[cacheKey];
+        const now = Date.now();
+        const CACHE_TTL = 4 * 60 * 1000; // 4 minutes (server TTL is 5 min)
+
+        // Use cached URL if valid and not forcing refresh
+        if (!forceRefresh && cached && (now - cached.timestamp) < CACHE_TTL) {
+          url = cached.url;
+        } else {
+          // Fetch new signed URL from API
+          const response = await DreamCoreAuth.authFetch(`/api/game-url/${this.currentProjectId}`);
+          if (!response.ok) {
+            throw new Error('Failed to get game URL');
+          }
+          const data = await response.json();
+          url = data.url;
+
+          // Cache the URL
+          if (!this.signedUrlCache) this.signedUrlCache = {};
+          this.signedUrlCache[cacheKey] = { url, timestamp: now };
         }
-        const { url } = await response.json();
-        // Add cache-busting timestamp
+
+        // Add cache-busting timestamp for iframe reload
         this.gamePreview.src = `${url}&t=${Date.now()}`;
       } catch (err) {
         console.error('Failed to refresh preview:', err);
-        this.updateGameStatus('error', '読み込み失敗');
+        this.updateGameStatus('error', this.t('editor.loadingFailed'));
       }
     }
   }
+
 
   
   updateStatus(className, text) {
@@ -3525,9 +3623,9 @@ class GameCreatorApp {
       timeZone: 'Asia/Tokyo'
     });
 
-    const msgLimit = quota.messages.limit === -1 ? '無制限' : `${quota.messages.limit}回`;
+    const msgLimit = quota.messages.limit === -1 ? this.t('quota.unlimited') : `${quota.messages.limit}`;
     const msgUsed = quota.messages.used;
-    const projLimit = quota.projects.limit === -1 ? '無制限' : `${quota.projects.limit}回`;
+    const projLimit = quota.projects.limit === -1 ? this.t('quota.unlimited') : `${quota.projects.limit}`;
     const projUsed = quota.projects.used;
 
     // Create popup
@@ -3539,16 +3637,16 @@ class GameCreatorApp {
     popup.className = 'quota-popup';
     popup.innerHTML = `
       <div class="quota-popup-content">
-        <div class="quota-popup-title">本日の利用状況</div>
+        <div class="quota-popup-title">${this.t('quota.todayUsage')}</div>
         <div class="quota-popup-item">
-          <span class="quota-popup-label">チャット</span>
+          <span class="quota-popup-label">${this.t('quota.chat')}</span>
           <span class="quota-popup-value">${msgUsed} / ${msgLimit}</span>
         </div>
         <div class="quota-popup-item">
-          <span class="quota-popup-label">プロジェクト作成</span>
+          <span class="quota-popup-label">${this.t('quota.projectCreation')}</span>
           <span class="quota-popup-value">${projUsed} / ${projLimit}</span>
         </div>
-        <div class="quota-popup-reset">リセット: 毎日 09:00（日本時間）</div>
+        <div class="quota-popup-reset">${this.t('quota.resetTime')}</div>
       </div>
     `;
 
@@ -3620,7 +3718,7 @@ class GameCreatorApp {
     });
 
     const isProjectLimit = error.code === 'DAILY_PROJECT_LIMIT_EXCEEDED';
-    const limitType = isProjectLimit ? 'プロジェクト作成' : 'メッセージ送信';
+    const limitType = isProjectLimit ? this.t('quota.projectCreation') : this.t('quota.messageSending');
 
     // On create page (no chatMessages), show modal
     if (!this.chatMessages) {
@@ -3639,9 +3737,9 @@ class GameCreatorApp {
           </svg>
         </div>
         <div class="quota-error-content">
-          <div class="quota-error-title">本日の${limitType}上限に達しました</div>
-          <div class="quota-error-detail">1日${error.limit}回までご利用いただけます</div>
-          <div class="quota-error-reset">リセット時刻: 明日 ${resetTimeStr}（日本時間）</div>
+          <div class="quota-error-title">${this.t('quota.limitReached', { type: limitType })}</div>
+          <div class="quota-error-detail">${this.t('quota.limitDetail', { limit: error.limit })}</div>
+          <div class="quota-error-reset">${this.t('quota.resetTimeDetail', { time: resetTimeStr })}</div>
         </div>
       </div>
     `;
@@ -3666,9 +3764,9 @@ class GameCreatorApp {
         if (freshSession) {
           console.log('[App] Session refreshed successfully, reconnecting...');
           this.tokenExpiredShown = false;  // Reset so we can show modal if it fails again
-          this.updateStatus('connecting', '再接続中...');
+          this.updateStatus('connecting', this.t('status.reconnecting'));
           await this.connectWebSocket();
-          this.addMessage('セッションを更新しました', 'system');
+          this.addMessage(this.t('session.refreshed'), 'system');
           return;
         }
       } catch (e) {
@@ -3744,7 +3842,7 @@ class GameCreatorApp {
         <polyline points="1 4 1 10 7 10"></polyline>
         <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
       </svg>
-      再接続する
+      ${this.t('button.reconnect')}
     `;
   }
 
@@ -3756,7 +3854,7 @@ class GameCreatorApp {
         <line x1="22" y1="2" x2="11" y2="13"></line>
         <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
       </svg>
-      送信
+      ${this.t('editor.send')}
     `;
     // Re-enable based on current project state
     if (this.currentProjectId && !this.isProcessing) {
@@ -3864,7 +3962,7 @@ class GameCreatorApp {
         `;
       }, 2000);
     } else {
-      alert('コピーに失敗しました。手動でコードを選択してコピーしてください。');
+      alert(this.t('editor.copyFailed'));
     }
   }
 
@@ -4000,11 +4098,11 @@ class GameCreatorApp {
     }
 
     // Show loading in the modal (for mobile users on preview screen)
-    this.showRestoreLoading('バージョン復元中...');
+    this.showRestoreLoading(this.t('editor.restoringVersion'));
 
     // Also show streaming UI (for desktop users on chat screen)
     this.showStreaming();
-    this.updateStreamingStatus('バージョン復元中...');
+    this.updateStreamingStatus(this.t('editor.restoringVersion'));
 
     this.ws.send(JSON.stringify({
       type: 'restoreVersion',
@@ -4019,7 +4117,7 @@ class GameCreatorApp {
     this.streamingText = '';
     if (this.streamingOutput) this.streamingOutput.innerHTML = '<span class="cursor"></span>';
     if (this.streamingStatus) {
-      this.streamingStatus.textContent = '生成中...';
+      this.streamingStatus.textContent = this.t('editor.generating');
       this.streamingStatus.className = 'streaming-status';
     }
     if (this.streamingFile) this.streamingFile.textContent = 'index.html';
@@ -4042,7 +4140,7 @@ class GameCreatorApp {
 
   completeStreaming() {
     if (this.streamingStatus) {
-      this.streamingStatus.textContent = '完了';
+      this.streamingStatus.textContent = this.t('editor.complete');
       this.streamingStatus.className = 'streaming-status completed';
     }
 
@@ -4793,10 +4891,10 @@ class GameCreatorApp {
   showDeleteConfirmModal(assets) {
     this.pendingDeleteAssets = assets;
 
-    const title = assets.length === 1 ? 'アセットを削除' : `${assets.length}件のアセットを削除`;
+    const title = assets.length === 1 ? this.t('editor.deleteAsset') : this.t('editor.deleteAssets');
     const message = assets.length === 1
-      ? `「${assets[0].name}」を削除しますか？`
-      : `${assets.length}件のアセットを削除しますか？`;
+      ? this.t('editor.deleteAssetConfirm', { name: assets[0].name })
+      : this.t('editor.deleteAssetsConfirm', { count: assets.length });
 
     this.deleteConfirmTitle.textContent = title;
     this.deleteConfirmMessage.textContent = message;
@@ -5168,7 +5266,7 @@ class GameCreatorApp {
       this.updateUndoButton();
       this.selectTool(null);
     } else {
-      alert('サイズは1〜4096pxの範囲で指定してください');
+      alert(this.t('editor.sizeRangeError'));
     }
   }
 
@@ -5185,7 +5283,7 @@ class GameCreatorApp {
       this.selectTool(null);
     } catch (error) {
       console.error('Background removal failed:', error);
-      alert('エラーが起きました。もう一度お試しください。');
+      alert(this.t('editor.errorTryAgain'));
     } finally {
       processing?.classList.add('hidden');
       if (applyBtn) applyBtn.disabled = false;
@@ -5248,7 +5346,7 @@ class GameCreatorApp {
       console.log('Image saved:', result.asset);
     } catch (error) {
       console.error('Save failed:', error);
-      alert('保存に失敗しました: ' + error.message);
+      alert(this.t('editor.saveFailed', { error: error.message }));
     }
   }
 

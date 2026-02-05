@@ -747,13 +747,13 @@ const saveGeneratedImage = async (client, userId, projectId, filename, base64Dat
  * @returns {Promise<Array>} Array of message objects
  */
 const getConversationHistory = async (client, userId, projectId, limit = 50) => {
-  const messages = await db.getChatHistory(getClient(client), projectId);
-  const result = messages.map(m => ({
+  // DB-side limit is now applied in getChatHistory (optimized query)
+  const messages = await db.getChatHistory(getClient(client), projectId, limit);
+  return messages.map(m => ({
     role: m.role,
     content: m.message,
     timestamp: m.created_at
   }));
-  return result.length > limit ? result.slice(-limit) : result;
 };
 
 /**
@@ -1240,6 +1240,9 @@ const remixProject = async (client, userId, sourceProjectId) => {
   execGitSafe(['commit', '-m', `Remixed from ${sourceProjectId}`], targetDir);
 
   logActivity('remix', 'project', newProject.id, `from ${sourceProjectId}`, userId);
+
+  // Mark as initialized (remix has valid code)
+  await db.setProjectInitialized(newProject.id);
 
   return {
     id: newProject.id,

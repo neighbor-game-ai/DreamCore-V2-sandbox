@@ -453,23 +453,69 @@ const touchProject = async (client, projectId) => {
   return true;
 };
 
+/**
+ * Set project as initialized
+ * Called after first successful code generation, version restore, or remix completion
+ * @param {string} projectId - Project ID
+ * @returns {Promise<boolean>} Success
+ */
+const setProjectInitialized = async (projectId) => {
+  const { error } = await supabaseAdmin
+    .from('projects')
+    .update({ is_initialized: true })
+    .eq('id', projectId);
+
+  if (error) {
+    console.error('[DB] setProjectInitialized error:', error.message);
+    return false;
+  }
+  return true;
+};
+
+/**
+ * Check if project is initialized
+ * @param {string} projectId - Project ID
+ * @returns {Promise<boolean>} True if initialized
+ */
+const isProjectInitialized = async (projectId) => {
+  const { data, error } = await supabaseAdmin
+    .from('projects')
+    .select('is_initialized')
+    .eq('id', projectId)
+    .single();
+
+  if (error) {
+    console.error('[DB] isProjectInitialized error:', error.message);
+    return false;
+  }
+  return data?.is_initialized === true;
+};
+
 // ==================== Chat History Operations ====================
 
 /**
  * Get chat history for a project
+ * Optimized: fetches only required columns, uses DB-side LIMIT, orders DESC then reverses
+ * @param {Object} client - Supabase client
+ * @param {string} projectId - Project ID
+ * @param {number} limit - Maximum messages to return (default 50)
+ * @returns {Promise<Array>} Chat history in chronological order
  */
-const getChatHistory = async (client, projectId) => {
+const getChatHistory = async (client, projectId, limit = 50) => {
   const { data, error } = await client
     .from('chat_history')
-    .select('*')
+    .select('role, message, created_at')
     .eq('project_id', projectId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false })
+    .limit(limit);
 
   if (error) {
     console.error('[DB] getChatHistory error:', error.message);
     return [];
   }
-  return data || [];
+
+  // Reverse to get chronological order (oldest first)
+  return (data || []).reverse();
 };
 
 /**
@@ -1795,6 +1841,8 @@ module.exports = {
   setProjectPublic,
   getPublicProjects,
   touchProject,
+  setProjectInitialized,
+  isProjectInitialized,
 
   // Chat operations
   getChatHistory,
