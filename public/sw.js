@@ -4,8 +4,8 @@
  * - Push notification handling
  */
 
-const SW_VERSION = '2026.02.05.o';
-const CACHE_NAME = 'dreamcore-v14';
+const SW_VERSION = '2026.02.05.p';
+const CACHE_NAME = 'dreamcore-v15';
 
 console.log('[SW] Version:', SW_VERSION);
 const PRECACHE_ASSETS = [
@@ -160,7 +160,7 @@ self.addEventListener('notificationclick', (event) => {
     targetUrl = notificationData.url;
   } else if (notificationData.projectId) {
     // Fallback: Generate URL from projectId
-    targetUrl = `/create.html?project=${notificationData.projectId}`;
+    targetUrl = `/project/${notificationData.projectId}`;
   }
 
   // Convert to absolute URL for PWA scope matching
