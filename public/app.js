@@ -3160,14 +3160,46 @@ class GameCreatorApp {
   }
 
   /**
+   * Dynamically load push.js if not already loaded
+   * Used as fallback when defer loading fails (cache, iOS, etc.)
+   * @returns {Promise<boolean>} true if loaded successfully
+   */
+  async loadPushScript() {
+    if (window.DreamCorePush) return true;
+    if (this._pushScriptLoading) return this._pushScriptLoading;
+
+    console.log('[Notification] Dynamically loading push.js...');
+    this._pushScriptLoading = new Promise((resolve) => {
+      const s = document.createElement('script');
+      s.src = '/push.js?v=20260205';  // Cache bust
+      s.onload = () => {
+        console.log('[Notification] push.js loaded dynamically');
+        resolve(true);
+      };
+      s.onerror = () => {
+        console.error('[Notification] Failed to load push.js');
+        resolve(false);
+      };
+      document.head.appendChild(s);
+    });
+
+    return this._pushScriptLoading;
+  }
+
+  /**
    * Subscribe to push notifications (if supported)
    * Always attempts to subscribe - server uses UPSERT to handle duplicates
    */
   async subscribeToPush() {
-    if (typeof DreamCorePush === 'undefined') {
-      console.log('[Notification] DreamCorePush not loaded');
-      return;
+    // Ensure push.js is loaded (dynamic fallback)
+    if (!window.DreamCorePush) {
+      const ok = await this.loadPushScript();
+      if (!ok || !window.DreamCorePush) {
+        console.error('[Notification] DreamCorePush failed to load');
+        return;
+      }
     }
+
     if (!DreamCorePush.isSupported()) {
       console.log('[Notification] Push not supported');
       return;
