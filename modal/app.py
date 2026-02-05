@@ -79,6 +79,11 @@ SANDBOX_MEMORY = 2048
 SANDBOX_IDLE_TIMEOUT = 20 * 60      # 20分（アイドル時の自動終了）
 SANDBOX_MAX_TIMEOUT = 5 * 60 * 60   # 5時間（最大寿命）
 
+# Lightweight Claude Sandbox settings (for detect_intent, chat_haiku, etc.)
+CLAUDE_SANDBOX_POOL_SIZE = 3        # Number of warm sandboxes in pool
+CLAUDE_SANDBOX_IDLE_TIMEOUT = 60 * 60  # 1時間（アイドル時の自動終了）
+CLAUDE_SANDBOX_PREFIX = "dreamcore-claude"  # Sandbox name prefix
+
 # Network allowlist (CIDR ranges for allowed outbound traffic)
 # Sandbox can ONLY access the GCE proxy server (Squid handles Google APIs)
 SANDBOX_CIDR_ALLOWLIST = [
@@ -1256,9 +1261,74 @@ async def apply_files(request: Request):
 # AI Detection Endpoints (Claude Haiku for lightweight tasks)
 # =============================================================================
 
+# Request counter for round-robin pool selection
+_claude_sandbox_counter = 0
+
+
+def get_claude_sandbox(model: str = "haiku") -> tuple[modal.Sandbox, bool]:
+    """Get or create a Named Sandbox for Claude CLI execution.
+
+    Uses a pool of warm sandboxes with round-robin selection to handle
+    concurrent requests efficiently.
+
+    Args:
+        model: "haiku" or "sonnet" (affects memory allocation)
+
+    Returns:
+        Tuple of (Modal Sandbox, is_new) - is_new indicates if sandbox was just created
+    """
+    global _claude_sandbox_counter
+
+    # Round-robin pool selection
+    pool_idx = _claude_sandbox_counter % CLAUDE_SANDBOX_POOL_SIZE
+    _claude_sandbox_counter += 1
+
+    sandbox_name = f"{CLAUDE_SANDBOX_PREFIX}-{pool_idx}"
+    memory = 1024 if model == "haiku" else 2048
+
+    proxy_url = get_proxy_url()
+
+    try:
+        # Try to get existing sandbox
+        sb = modal.Sandbox.from_name(
+            sandbox_name,
+            create_if_missing=False,
+        )
+        print(f"[get_claude_sandbox] Reusing warm sandbox: {sandbox_name}")
+        return sb, False
+    except Exception as e:
+        # Sandbox doesn't exist or terminated, create new one
+        print(f"[get_claude_sandbox] Creating new sandbox: {sandbox_name} (reason: {type(e).__name__})")
+
+        sb = modal.Sandbox.create(
+            "bash", "-c", "sleep infinity",
+            name=sandbox_name,
+            image=sandbox_image,
+            secrets=[api_proxy_secret, proxy_secret, vertex_ai_secret, vertex_config_secret],
+            timeout=SANDBOX_MAX_TIMEOUT,  # Long timeout (5 hours max)
+            idle_timeout=CLAUDE_SANDBOX_IDLE_TIMEOUT,  # 1 hour idle
+            memory=memory,
+            cidr_allowlist=SANDBOX_CIDR_ALLOWLIST,
+            proxy=modal_proxy,
+            env={
+                "HTTP_PROXY": proxy_url,
+                "HTTPS_PROXY": proxy_url,
+                "NO_PROXY": "localhost,127.0.0.1,api-proxy.dreamcore.gg",
+                **get_vertex_env(),
+            },
+        )
+
+        # Write GCP credentials on creation
+        gcp_creds_path = write_gcp_credentials(sb)
+        print(f"[get_claude_sandbox] GCP credentials written to {gcp_creds_path}")
+
+        return sb, True
+
 
 async def run_haiku_in_sandbox(prompt: str, timeout_seconds: int = 15) -> str:
-    """Run Claude CLI with Haiku model in a sandbox for fast, lightweight tasks.
+    """Run Claude CLI with Haiku model in a Named Sandbox for fast, lightweight tasks.
+
+    Uses a pool of warm sandboxes for efficient execution without cold start overhead.
 
     Args:
         prompt: The prompt to send to Claude Haiku
@@ -1267,61 +1337,41 @@ async def run_haiku_in_sandbox(prompt: str, timeout_seconds: int = 15) -> str:
     Returns:
         The text response from Claude Haiku
     """
-    import os as _os  # Local import to avoid conflict
+    import uuid
 
     proxy_url = get_proxy_url()
-    sb = modal.Sandbox.create(
-        "bash", "-c", "sleep infinity",
-        image=sandbox_image,
-        secrets=[api_proxy_secret, proxy_secret, vertex_ai_secret, vertex_config_secret],  # API proxy + Vertex AI
-        timeout=60,  # Sandbox timeout
-        memory=1024,  # Less memory needed for Haiku
-        cidr_allowlist=SANDBOX_CIDR_ALLOWLIST,
-        proxy=modal_proxy,  # Static IP (52.55.224.171) for api-proxy.dreamcore.gg
-        env={
-            "HTTP_PROXY": proxy_url,
-            "HTTPS_PROXY": proxy_url,
-            "NO_PROXY": "localhost,127.0.0.1,api-proxy.dreamcore.gg",
-            **get_vertex_env(),
-        },
-    )
+    vertex_env = get_vertex_env()
+    gcp_creds_path = "/tmp/gcp_credentials.json"
+
+    # Get warm sandbox from pool
+    sb, is_new = get_claude_sandbox(model="haiku")
+    print(f"[run_haiku] Using sandbox for prompt ({len(prompt)} chars), new={is_new}")
+
+    # Ensure GCP credentials exist (may be missing if sandbox was recreated externally)
+    if not is_new:
+        check_proc = sb.exec("bash", "-c", f"test -f {gcp_creds_path} && echo 'exists'")
+        check_output = "".join(line.strip() for line in check_proc.stdout)
+        check_proc.wait()
+        if "exists" not in check_output:
+            print("[run_haiku] GCP credentials missing, writing...")
+            write_gcp_credentials(sb)
+
+    # Use unique prompt file to avoid conflicts with concurrent requests
+    prompt_id = uuid.uuid4().hex[:8]
+    prompt_file = f"/tmp/haiku_{prompt_id}.txt"
 
     try:
-        print(f"[run_haiku] Starting sandbox for prompt ({len(prompt)} chars)")
-
-        # Write GCP credentials for Vertex AI
-        gcp_creds_path = write_gcp_credentials(sb)
-        print(f"[run_haiku] GCP credentials written to {gcp_creds_path}")
-
-        # Get Vertex AI env vars
-        vertex_env = get_vertex_env()
-        print(f"[run_haiku] Using Vertex AI: project={vertex_env.get('ANTHROPIC_VERTEX_PROJECT_ID')}, region={vertex_env.get('CLOUD_ML_REGION')}")
-
         # Write prompt to temp file with world-readable permissions
         prompt_b64 = base64.b64encode(prompt.encode()).decode()
-        prompt_file = "/tmp/haiku_prompt.txt"
         write_cmd = f"echo '{prompt_b64}' | base64 -d > {prompt_file} && chmod 644 {prompt_file}"
         write_proc = sb.exec("bash", "-c", write_cmd)
         write_proc.wait()
-        print("[run_haiku] Prompt written to file")
-
-        # Test: Simple echo to verify output capture works
-        echo_proc = sb.exec("bash", "-c", "echo 'TEST_OUTPUT_CAPTURE'")
-        echo_output = []
-        for line in echo_proc.stdout:
-            echo_output.append(line.strip())
-        echo_proc.wait()
-        print(f"[run_haiku] Echo test: {echo_output}")
 
         # Run Claude CLI with Vertex AI environment variables
-        # Don't rely on su -m, pass the env vars explicitly
-        # Use shlex.quote() for shell-safe escaping of all values
         claude_cmd = (
-            # Proxy settings (for Vertex AI OAuth via Squid)
             f"export HTTP_PROXY={shlex.quote(proxy_url)} && "
             f"export HTTPS_PROXY={shlex.quote(proxy_url)} && "
             f"export NO_PROXY='localhost,127.0.0.1,api-proxy.dreamcore.gg' && "
-            # Vertex AI settings
             f"export GOOGLE_APPLICATION_CREDENTIALS={shlex.quote(gcp_creds_path)} && "
             f"export CLAUDE_CODE_USE_VERTEX='1' && "
             f"export ANTHROPIC_VERTEX_PROJECT_ID={shlex.quote(vertex_env.get('ANTHROPIC_VERTEX_PROJECT_ID', ''))} && "
@@ -1331,9 +1381,7 @@ async def run_haiku_in_sandbox(prompt: str, timeout_seconds: int = 15) -> str:
             f"export ANTHROPIC_DEFAULT_HAIKU_MODEL={shlex.quote(vertex_env.get('ANTHROPIC_DEFAULT_HAIKU_MODEL', ''))} && "
             f"cat {prompt_file} | /usr/bin/claude --model haiku --print --dangerously-skip-permissions 2>&1"
         )
-        # Run as claude user with env vars exported in the command
         full_cmd = f"timeout {timeout_seconds} su claude -c \"{claude_cmd}\""
-        print(f"[run_haiku] Running command (first 200 chars): {full_cmd[:200]}...")
 
         proc = sb.exec("bash", "-c", full_cmd)
 
@@ -1343,7 +1391,6 @@ async def run_haiku_in_sandbox(prompt: str, timeout_seconds: int = 15) -> str:
                 stripped = line.strip() if isinstance(line, str) else line.decode('utf-8', errors='replace').strip()
                 if stripped:
                     output_lines.append(stripped)
-                    print(f"[run_haiku] Output: {stripped[:100]}")
             except Exception as e:
                 print(f"[run_haiku] Error reading line: {e}")
 
@@ -1352,12 +1399,24 @@ async def run_haiku_in_sandbox(prompt: str, timeout_seconds: int = 15) -> str:
 
         return "\n".join(output_lines)
 
+    except modal.exception.SandboxTerminatedError as e:
+        # Sandbox was terminated, will be recreated on next call
+        print(f"[run_haiku] Sandbox terminated, will retry: {e}")
+        raise
+
     finally:
-        sb.terminate()
+        # Clean up prompt file (don't terminate sandbox - it will be reused)
+        try:
+            cleanup_proc = sb.exec("bash", "-c", f"rm -f {prompt_file}")
+            cleanup_proc.wait()
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 async def run_sonnet_in_sandbox(prompt: str, timeout_seconds: int = 30) -> str:
-    """Run Claude CLI with Sonnet model in a sandbox for complex tasks.
+    """Run Claude CLI with Sonnet model in a Named Sandbox for complex tasks.
+
+    Uses a pool of warm sandboxes for efficient execution without cold start overhead.
 
     Args:
         prompt: The prompt to send to Claude Sonnet
@@ -1366,43 +1425,35 @@ async def run_sonnet_in_sandbox(prompt: str, timeout_seconds: int = 30) -> str:
     Returns:
         The text response from Claude Sonnet
     """
-    import os as _os  # Local import to avoid conflict
+    import uuid
 
     proxy_url = get_proxy_url()
-    sb = modal.Sandbox.create(
-        "bash", "-c", "sleep infinity",
-        image=sandbox_image,
-        secrets=[api_proxy_secret, proxy_secret, vertex_ai_secret, vertex_config_secret],
-        timeout=120,  # Longer timeout for Sonnet
-        memory=2048,  # More memory for Sonnet
-        cidr_allowlist=SANDBOX_CIDR_ALLOWLIST,
-        proxy=modal_proxy,
-        env={
-            "HTTP_PROXY": proxy_url,
-            "HTTPS_PROXY": proxy_url,
-            "NO_PROXY": "localhost,127.0.0.1,api-proxy.dreamcore.gg",
-            **get_vertex_env(),
-        },
-    )
+    vertex_env = get_vertex_env()
+    gcp_creds_path = "/tmp/gcp_credentials.json"
+
+    # Get warm sandbox from pool
+    sb, is_new = get_claude_sandbox(model="sonnet")
+    print(f"[run_sonnet] Using sandbox for prompt ({len(prompt)} chars), new={is_new}")
+
+    # Ensure GCP credentials exist (may be missing if sandbox was recreated externally)
+    if not is_new:
+        check_proc = sb.exec("bash", "-c", f"test -f {gcp_creds_path} && echo 'exists'")
+        check_output = "".join(line.strip() for line in check_proc.stdout)
+        check_proc.wait()
+        if "exists" not in check_output:
+            print("[run_sonnet] GCP credentials missing, writing...")
+            write_gcp_credentials(sb)
+
+    # Use unique prompt file to avoid conflicts with concurrent requests
+    prompt_id = uuid.uuid4().hex[:8]
+    prompt_file = f"/tmp/sonnet_{prompt_id}.txt"
 
     try:
-        print(f"[run_sonnet] Starting sandbox for prompt ({len(prompt)} chars)")
-
-        # Write GCP credentials for Vertex AI
-        gcp_creds_path = write_gcp_credentials(sb)
-        print(f"[run_sonnet] GCP credentials written to {gcp_creds_path}")
-
-        # Get Vertex AI env vars
-        vertex_env = get_vertex_env()
-        print(f"[run_sonnet] Using Vertex AI: project={vertex_env.get('ANTHROPIC_VERTEX_PROJECT_ID')}, region={vertex_env.get('CLOUD_ML_REGION')}")
-
         # Write prompt to temp file with world-readable permissions
         prompt_b64 = base64.b64encode(prompt.encode()).decode()
-        prompt_file = "/tmp/sonnet_prompt.txt"
         write_cmd = f"echo '{prompt_b64}' | base64 -d > {prompt_file} && chmod 644 {prompt_file}"
         write_proc = sb.exec("bash", "-c", write_cmd)
         write_proc.wait()
-        print("[run_sonnet] Prompt written to file")
 
         # Run Claude CLI with Sonnet model
         claude_cmd = (
@@ -1419,7 +1470,6 @@ async def run_sonnet_in_sandbox(prompt: str, timeout_seconds: int = 30) -> str:
             f"cat {prompt_file} | /usr/bin/claude --model sonnet --print --dangerously-skip-permissions 2>&1"
         )
         full_cmd = f"timeout {timeout_seconds} su claude -c \"{claude_cmd}\""
-        print(f"[run_sonnet] Running command (first 200 chars): {full_cmd[:200]}...")
 
         proc = sb.exec("bash", "-c", full_cmd)
 
@@ -1429,7 +1479,6 @@ async def run_sonnet_in_sandbox(prompt: str, timeout_seconds: int = 30) -> str:
                 stripped = line.strip() if isinstance(line, str) else line.decode('utf-8', errors='replace').strip()
                 if stripped:
                     output_lines.append(stripped)
-                    print(f"[run_sonnet] Output: {stripped[:100]}")
             except Exception as e:
                 print(f"[run_sonnet] Error reading line: {e}")
 
@@ -1438,8 +1487,18 @@ async def run_sonnet_in_sandbox(prompt: str, timeout_seconds: int = 30) -> str:
 
         return "\n".join(output_lines)
 
+    except modal.exception.SandboxTerminatedError as e:
+        # Sandbox was terminated, will be recreated on next call
+        print(f"[run_sonnet] Sandbox terminated, will retry: {e}")
+        raise
+
     finally:
-        sb.terminate()
+        # Clean up prompt file (don't terminate sandbox - it will be reused)
+        try:
+            cleanup_proc = sb.exec("bash", "-c", f"rm -f {prompt_file}")
+            cleanup_proc.wait()
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 @app.function(image=web_image, secrets=[api_proxy_secret, internal_secret, proxy_secret, vertex_ai_secret, vertex_config_secret])
