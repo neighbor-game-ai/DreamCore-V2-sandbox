@@ -688,8 +688,17 @@ async def generate_game(request: Request):
                 # Sandbox exists but is in bad state - recreate with new naming
                 yield f"data: {json.dumps({'type': 'status', 'message': 'Recreating sandbox...'})}\n\n"
                 print(f"[Sandbox] Sandbox in bad state, recreating: {sandbox_name} - {e}")
-                sb = create_new_sandbox(sandbox_name)
-                initialize_new_sandbox(sb)
+                try:
+                    sb = create_new_sandbox(sandbox_name)
+                    initialize_new_sandbox(sb)
+                except (modal.exception.AlreadyExistsError, Exception) as recreate_err:
+                    # Race condition: name still reserved after termination
+                    if "already exists" in str(recreate_err).lower():
+                        sb = modal.Sandbox.from_name(APP_NAME, sandbox_name)
+                        sandbox_reused = True
+                        print(f"[Sandbox] Recreate race resolved, reusing: {sandbox_name}")
+                    else:
+                        raise recreate_err
 
             # Create project directory (as root, then chown to claude user)
             mkdir_proc = sb.exec("bash", "-c", f"mkdir -p {project_dir} && chown -R claude:claude {project_dir}")
