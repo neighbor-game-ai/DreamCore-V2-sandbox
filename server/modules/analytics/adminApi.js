@@ -3,6 +3,8 @@
  *
  * Admin-only endpoints for analytics dashboard.
  * Mounted at /api/analytics/admin
+ *
+ * Uses database RPCs for aggregation to avoid PostgREST 1000-row limit.
  */
 
 const express = require('express');
@@ -48,188 +50,115 @@ router.get('/summary', basicAuthAdmin, authenticate, requireAdmin, async (req, r
     weekStart.setHours(0, 0, 0, 0);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    // Run all queries in parallel
+    // Today boundary
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Run all queries in parallel using RPC functions
     const [
-      totalSessionsResult,
-      avgDurationResult,
-      pageViewsResult,
-      gamePlayResult,
-      gameCreateResult,
-      gamePublishResult,
-      errorsResult,
-      dauEventsResult,
-      wauEventsResult,
-      mauEventsResult,
-      visitedUsersResult,
-      createdUsersResult,
-      publishedUsersResult,
-      playedUsersResult,
+      // DAU array using RPC
+      dauArrayResult,
+      // WAU using RPC
+      wauResult,
+      // MAU using RPC
+      mauResult,
+      // Session stats using RPC
+      sessionStatsResult,
+      // Event counts using RPC
+      eventCountsResult,
+      // Funnel using RPC
+      funnelResult,
+      // Country breakdown using RPC
       countryResult,
-      deviceOsResult,
-      firstSessionUsersResult,
+      // Device breakdown using RPC
+      deviceResult,
+      // Top pages using RPC
       topPagesResult,
+      // Top games using RPC
       topGamesResult,
+      // New vs returning using RPC
+      newReturningResult,
+      // Total registered users (simple count)
       totalUsersResult,
+      // Total published games (simple count)
       totalGamesResult,
+      // Today's new users (simple count)
       todayNewUsersResult,
+      // Today's new games (simple count)
       todayNewGamesResult,
+      // AI metrics (simple counts - won't hit 1000 limit in normal usage)
       aiRequestsResult,
       aiResponsesResult,
       suggestionShownResult,
       suggestionClickResult,
     ] = await Promise.all([
-      // Total sessions in period
-      supabaseAdmin
-        .from('user_sessions')
-        .select('id', { count: 'exact', head: true })
-        .gte('started_at', periodStartISO)
-        .lte('started_at', periodEndISO),
+      // DAU array
+      supabaseAdmin.rpc('analytics_dau_array', {
+        p_start_date: periodStart.toISOString().split('T')[0],
+        p_end_date: periodEnd.toISOString().split('T')[0],
+      }),
 
-      // Average session duration
-      supabaseAdmin
-        .from('user_sessions')
-        .select('duration_sec')
-        .gte('started_at', periodStartISO)
-        .lte('started_at', periodEndISO)
-        .not('duration_sec', 'is', null)
-        .gt('duration_sec', 0),
+      // WAU
+      supabaseAdmin.rpc('analytics_active_users', {
+        p_start_ts: weekStart.toISOString(),
+        p_end_ts: null,
+      }),
 
-      // Page view count
-      supabaseAdmin
-        .from('user_events')
-        .select('id', { count: 'exact', head: true })
-        .eq('event_type', 'page_view')
-        .gte('event_ts', periodStartISO)
-        .lte('event_ts', periodEndISO),
+      // MAU
+      supabaseAdmin.rpc('analytics_active_users', {
+        p_start_ts: monthStart.toISOString(),
+        p_end_ts: null,
+      }),
 
-      // Game play count
-      supabaseAdmin
-        .from('user_events')
-        .select('id', { count: 'exact', head: true })
-        .eq('event_type', 'game_play')
-        .gte('event_ts', periodStartISO)
-        .lte('event_ts', periodEndISO),
+      // Session stats
+      supabaseAdmin.rpc('analytics_session_stats', {
+        p_start_ts: periodStartISO,
+        p_end_ts: periodEndISO,
+      }),
 
-      // Game create count
-      supabaseAdmin
-        .from('user_events')
-        .select('id', { count: 'exact', head: true })
-        .eq('event_type', 'game_create')
-        .gte('event_ts', periodStartISO)
-        .lte('event_ts', periodEndISO),
+      // Event counts
+      supabaseAdmin.rpc('analytics_event_counts', {
+        p_start_ts: periodStartISO,
+        p_end_ts: periodEndISO,
+        p_event_types: ['page_view', 'game_play', 'game_create', 'game_publish', 'error'],
+      }),
 
-      // Game publish count
-      supabaseAdmin
-        .from('user_events')
-        .select('id', { count: 'exact', head: true })
-        .eq('event_type', 'game_publish')
-        .gte('event_ts', periodStartISO)
-        .lte('event_ts', periodEndISO),
-
-      // Error count
-      supabaseAdmin
-        .from('user_events')
-        .select('id', { count: 'exact', head: true })
-        .eq('event_type', 'error')
-        .gte('event_ts', periodStartISO)
-        .lte('event_ts', periodEndISO),
-
-      // DAU events
-      supabaseAdmin
-        .from('user_events')
-        .select('user_id, event_ts')
-        .gte('event_ts', periodStartISO)
-        .lte('event_ts', periodEndISO)
-        .not('user_id', 'is', null),
-
-      // WAU events
-      supabaseAdmin
-        .from('user_events')
-        .select('user_id')
-        .gte('event_ts', weekStart.toISOString())
-        .not('user_id', 'is', null),
-
-      // MAU events
-      supabaseAdmin
-        .from('user_events')
-        .select('user_id')
-        .gte('event_ts', monthStart.toISOString())
-        .not('user_id', 'is', null),
-
-      // Funnel: Users who visited
-      supabaseAdmin
-        .from('user_sessions')
-        .select('user_id')
-        .gte('started_at', periodStartISO)
-        .lte('started_at', periodEndISO)
-        .not('user_id', 'is', null),
-
-      // Funnel: Users who created
-      supabaseAdmin
-        .from('user_events')
-        .select('user_id')
-        .eq('event_type', 'game_create')
-        .gte('event_ts', periodStartISO)
-        .lte('event_ts', periodEndISO)
-        .not('user_id', 'is', null),
-
-      // Funnel: Users who published
-      supabaseAdmin
-        .from('user_events')
-        .select('user_id')
-        .eq('event_type', 'game_publish')
-        .gte('event_ts', periodStartISO)
-        .lte('event_ts', periodEndISO)
-        .not('user_id', 'is', null),
-
-      // Funnel: Users who played
-      supabaseAdmin
-        .from('user_events')
-        .select('user_id')
-        .eq('event_type', 'game_play')
-        .gte('event_ts', periodStartISO)
-        .lte('event_ts', periodEndISO)
-        .not('user_id', 'is', null),
+      // Funnel
+      supabaseAdmin.rpc('analytics_funnel', {
+        p_start_ts: periodStartISO,
+        p_end_ts: periodEndISO,
+      }),
 
       // Country breakdown
-      supabaseAdmin
-        .from('user_sessions')
-        .select('country, user_id')
-        .gte('started_at', periodStartISO)
-        .lte('started_at', periodEndISO)
-        .not('country', 'is', null),
+      supabaseAdmin.rpc('analytics_by_country', {
+        p_start_ts: periodStartISO,
+        p_end_ts: periodEndISO,
+        p_limit: 10,
+      }),
 
-      // Device OS breakdown
-      supabaseAdmin
-        .from('user_devices')
-        .select('os, user_id')
-        .gte('last_seen_at', periodStartISO),
-
-      // First session users
-      supabaseAdmin
-        .from('user_sessions')
-        .select('user_id, started_at')
-        .gte('started_at', periodStartISO)
-        .lte('started_at', periodEndISO)
-        .not('user_id', 'is', null)
-        .order('started_at', { ascending: true }),
+      // Device breakdown
+      supabaseAdmin.rpc('analytics_by_device', {
+        p_since_ts: periodStartISO,
+      }),
 
       // Top pages
-      supabaseAdmin
-        .from('user_events')
-        .select('path')
-        .eq('event_type', 'page_view')
-        .gte('event_ts', periodStartISO)
-        .lte('event_ts', periodEndISO)
-        .not('path', 'is', null),
+      supabaseAdmin.rpc('analytics_top_pages', {
+        p_start_ts: periodStartISO,
+        p_end_ts: periodEndISO,
+        p_limit: 10,
+      }),
 
       // Top games
-      supabaseAdmin
-        .from('user_events')
-        .select('properties')
-        .eq('event_type', 'game_play')
-        .gte('event_ts', periodStartISO)
-        .lte('event_ts', periodEndISO),
+      supabaseAdmin.rpc('analytics_top_games', {
+        p_start_ts: periodStartISO,
+        p_end_ts: periodEndISO,
+        p_limit: 10,
+      }),
+
+      // New vs returning
+      supabaseAdmin.rpc('analytics_new_vs_returning', {
+        p_start_ts: periodStartISO,
+        p_end_ts: periodEndISO,
+      }),
 
       // Total registered users
       supabaseAdmin
@@ -245,13 +174,13 @@ router.get('/summary', basicAuthAdmin, authenticate, requireAdmin, async (req, r
       supabaseAdmin
         .from('users')
         .select('id', { count: 'exact', head: true })
-        .gte('created_at', new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()),
+        .gte('created_at', todayStart.toISOString()),
 
       // Today's new games
       supabaseAdmin
         .from('published_games')
         .select('id', { count: 'exact', head: true })
-        .gte('published_at', new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()),
+        .gte('published_at', todayStart.toISOString()),
 
       // AI metrics
       supabaseAdmin
@@ -283,136 +212,67 @@ router.get('/summary', basicAuthAdmin, authenticate, requireAdmin, async (req, r
         .lte('event_ts', periodEndISO),
     ]);
 
-    // ========== Process KPIs ==========
-    const dauByDate = new Map();
-    const numDays = Math.ceil((periodEnd - periodStart) / (1000 * 60 * 60 * 24)) + 1;
-    for (let i = 0; i < numDays; i++) {
-      const d = new Date(periodStart);
-      d.setDate(d.getDate() + i);
-      dauByDate.set(d.toISOString().split('T')[0], new Set());
-    }
-
-    (dauEventsResult.data || []).forEach(row => {
-      const dateKey = row.event_ts.split('T')[0];
-      if (dauByDate.has(dateKey)) {
-        dauByDate.get(dateKey).add(row.user_id);
-      }
-    });
-
-    const dauArray = Array.from(dauByDate.entries()).map(([date, users]) => ({
-      date,
-      count: users.size,
+    // ========== Process DAU Array ==========
+    const dauArray = (dauArrayResult.data || []).map(row => ({
+      date: row.date,
+      count: row.count,
     }));
 
-    const wau = new Set((wauEventsResult.data || []).map(r => r.user_id)).size;
-    const mau = new Set((mauEventsResult.data || []).map(r => r.user_id)).size;
-    const totalSessions = totalSessionsResult.count || 0;
-
-    const durations = (avgDurationResult.data || []).map(r => r.duration_sec);
-    const avgSessionDuration = durations.length > 0
-      ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
-      : 0;
-
     // ========== Process Event Counts ==========
+    const eventCountsMap = new Map();
+    (eventCountsResult.data || []).forEach(row => {
+      eventCountsMap.set(row.event_type, Number(row.count));
+    });
+
     const eventCounts = {
-      page_view: pageViewsResult.count || 0,
-      game_play: gamePlayResult.count || 0,
-      game_create: gameCreateResult.count || 0,
-      game_publish: gamePublishResult.count || 0,
-      error: errorsResult.count || 0,
+      page_view: eventCountsMap.get('page_view') || 0,
+      game_play: eventCountsMap.get('game_play') || 0,
+      game_create: eventCountsMap.get('game_create') || 0,
+      game_publish: eventCountsMap.get('game_publish') || 0,
+      error: eventCountsMap.get('error') || 0,
     };
 
     // ========== Process Funnel ==========
+    const funnelData = funnelResult.data?.[0] || {};
     const funnel = {
-      visited: new Set((visitedUsersResult.data || []).map(r => r.user_id)).size,
-      created: new Set((createdUsersResult.data || []).map(r => r.user_id)).size,
-      published: new Set((publishedUsersResult.data || []).map(r => r.user_id)).size,
-      played: new Set((playedUsersResult.data || []).map(r => r.user_id)).size,
+      visited: funnelData.visited || 0,
+      created: funnelData.created || 0,
+      published: funnelData.published || 0,
+      played: funnelData.played || 0,
     };
 
     // ========== Process Segments ==========
-    // By country
-    const countryMap = new Map();
-    (countryResult.data || []).forEach(row => {
-      const country = row.country || 'Unknown';
-      if (!countryMap.has(country)) countryMap.set(country, new Set());
-      if (row.user_id) countryMap.get(country).add(row.user_id);
-    });
-    const byCountry = Array.from(countryMap.entries())
-      .map(([country, users]) => ({ country, userCount: users.size }))
-      .sort((a, b) => b.userCount - a.userCount)
-      .slice(0, 10);
+    const byCountry = (countryResult.data || []).map(row => ({
+      country: row.country,
+      userCount: row.user_count,
+    }));
 
-    // By device OS
-    const osMap = new Map();
-    (deviceOsResult.data || []).forEach(row => {
-      const os = row.os || 'Unknown';
-      if (!osMap.has(os)) osMap.set(os, new Set());
-      if (row.user_id) osMap.get(os).add(row.user_id);
-    });
-    const byDevice = Array.from(osMap.entries())
-      .map(([os, users]) => ({ os, userCount: users.size }))
-      .sort((a, b) => b.userCount - a.userCount);
+    const byDevice = (deviceResult.data || []).map(row => ({
+      os: row.os,
+      userCount: row.user_count,
+    }));
 
-    // New vs returning users
-    const userFirstSession = new Map();
-    (firstSessionUsersResult.data || []).forEach(row => {
-      if (row.user_id && !userFirstSession.has(row.user_id)) {
-        userFirstSession.set(row.user_id, row.started_at);
-      }
-    });
-
-    const usersInPeriod = Array.from(userFirstSession.keys());
-    let newUsers = 0;
-    let returningUsers = 0;
-
-    if (usersInPeriod.length > 0) {
-      const { data: firstSessionsEver } = await supabaseAdmin
-        .from('user_sessions')
-        .select('user_id, started_at')
-        .in('user_id', usersInPeriod.slice(0, 1000))
-        .order('started_at', { ascending: true });
-
-      const actualFirstSession = new Map();
-      (firstSessionsEver || []).forEach(row => {
-        if (row.user_id && !actualFirstSession.has(row.user_id)) {
-          actualFirstSession.set(row.user_id, new Date(row.started_at));
-        }
-      });
-
-      usersInPeriod.forEach(userId => {
-        const firstEver = actualFirstSession.get(userId);
-        if (firstEver && firstEver >= periodStart && firstEver <= periodEnd) {
-          newUsers++;
-        } else {
-          returningUsers++;
-        }
-      });
-    }
+    const newReturningData = newReturningResult.data?.[0] || {};
+    const newVsReturning = {
+      newUsers: newReturningData.new_users || 0,
+      returningUsers: newReturningData.returning_users || 0,
+    };
 
     // ========== Process Popular Content ==========
-    const pageCountMap = new Map();
-    (topPagesResult.data || []).forEach(row => {
-      const count = pageCountMap.get(row.path) || 0;
-      pageCountMap.set(row.path, count + 1);
-    });
-    const topPages = Array.from(pageCountMap.entries())
-      .map(([path, count]) => ({ path, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
+    const topPages = (topPagesResult.data || []).map(row => ({
+      path: row.path,
+      count: Number(row.count),
+    }));
 
-    const gameCountMap = new Map();
-    (topGamesResult.data || []).forEach(row => {
-      const gameId = row.properties?.game_id || row.properties?.gameId;
-      if (gameId) {
-        const count = gameCountMap.get(gameId) || 0;
-        gameCountMap.set(gameId, count + 1);
-      }
-    });
-    const topGames = Array.from(gameCountMap.entries())
-      .map(([gameId, playCount]) => ({ gameId, playCount }))
-      .sort((a, b) => b.playCount - a.playCount)
-      .slice(0, 10);
+    const topGames = (topGamesResult.data || []).map(row => ({
+      gameId: row.game_id,
+      playCount: Number(row.play_count),
+    }));
+
+    // ========== Process Session Stats ==========
+    const sessionStats = sessionStatsResult.data?.[0] || {};
+    const totalSessions = Number(sessionStats.total_sessions) || 0;
+    const avgSessionDuration = sessionStats.avg_duration_sec || 0;
 
     // ========== Build Response ==========
     res.json({
@@ -424,8 +284,8 @@ router.get('/summary', basicAuthAdmin, authenticate, requireAdmin, async (req, r
       },
       kpis: {
         dau: dauArray,
-        wau,
-        mau,
+        wau: wauResult.data || 0,
+        mau: mauResult.data || 0,
         totalSessions,
         avgSessionDuration,
         totalUsers: totalUsersResult.count || 0,
@@ -447,7 +307,7 @@ router.get('/summary', basicAuthAdmin, authenticate, requireAdmin, async (req, r
       segments: {
         byCountry,
         byDevice,
-        newVsReturning: { newUsers, returningUsers },
+        newVsReturning,
       },
       popularContent: {
         topPages,
@@ -475,15 +335,91 @@ router.get('/retention', basicAuthAdmin, authenticate, requireAdmin, async (req,
     thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay());
     thisWeekStart.setHours(0, 0, 0, 0);
 
-    const lastWeekStart = new Date(thisWeekStart);
-    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-
-    const twoWeeksAgoStart = new Date(lastWeekStart);
-    twoWeeksAgoStart.setDate(twoWeeksAgoStart.getDate() - 7);
-
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    // Get sessions for retention calculation
+    // Run all RPC queries in parallel
+    const [
+      // Day retention using RPC
+      dayRetentionResult,
+      // Lifecycle using RPC
+      lifecycleResult,
+      // DAU
+      dauResult,
+      // WAU
+      wauResult,
+      // MAU
+      mauResult,
+    ] = await Promise.all([
+      supabaseAdmin.rpc('analytics_day_retention', {
+        p_days: [1, 3, 7, 14, 30],
+      }),
+
+      supabaseAdmin.rpc('analytics_lifecycle'),
+
+      supabaseAdmin.rpc('analytics_active_users', {
+        p_start_ts: today.toISOString(),
+        p_end_ts: null,
+      }),
+
+      supabaseAdmin.rpc('analytics_active_users', {
+        p_start_ts: thisWeekStart.toISOString(),
+        p_end_ts: null,
+      }),
+
+      supabaseAdmin.rpc('analytics_active_users', {
+        p_start_ts: monthStart.toISOString(),
+        p_end_ts: null,
+      }),
+    ]);
+
+    // ========== Process Day Retention ==========
+    const dayRetention = {};
+    (dayRetentionResult.data || []).forEach(row => {
+      dayRetention[`d${row.day_n}`] = parseFloat(row.retention_rate) || 0;
+    });
+
+    // ========== Process Lifecycle ==========
+    const lifecycleData = lifecycleResult.data?.[0] || {};
+    const lifecycle = {
+      new: lifecycleData.new_users || 0,
+      active: lifecycleData.active_users || 0,
+      atRisk: lifecycleData.at_risk_users || 0,
+      dormant: lifecycleData.dormant_users || 0,
+      resurrected: lifecycleData.resurrected_users || 0,
+    };
+
+    // ========== Active Users ==========
+    const dau = dauResult.data || 0;
+    const wau = wauResult.data || 0;
+    const mau = mauResult.data || 0;
+
+    // ========== Stickiness ==========
+    const currentStickiness = mau > 0 ? (dau / mau) * 100 : 0;
+
+    // Stickiness trend requires day-by-day calculation
+    // For now, get last 7 days DAU
+    const stickinessTrend = [];
+    for (let i = 6; i >= 0; i--) {
+      const dayStart = new Date(today);
+      dayStart.setDate(dayStart.getDate() - i);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+
+      const { data: dayDau } = await supabaseAdmin.rpc('analytics_active_users', {
+        p_start_ts: dayStart.toISOString(),
+        p_end_ts: dayEnd.toISOString(),
+      });
+
+      const dayStickiness = mau > 0 ? ((dayDau || 0) / mau) * 100 : 0;
+      stickinessTrend.push({
+        date: dayStart.toISOString().split('T')[0],
+        value: dayStickiness,
+      });
+    }
+
+    // ========== Cohort Retention ==========
+    // Cohort calculation still needs raw data for now
+    // This could be optimized with another RPC function in the future
     const sixtyDaysAgo = new Date(now);
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
@@ -492,9 +428,9 @@ router.get('/retention', basicAuthAdmin, authenticate, requireAdmin, async (req,
       .select('user_id, started_at')
       .gte('started_at', sixtyDaysAgo.toISOString())
       .not('user_id', 'is', null)
-      .order('started_at', { ascending: true });
+      .order('started_at', { ascending: true })
+      .limit(10000); // Higher limit for cohort analysis
 
-    // Calculate first session date per user
     const userFirstSession = new Map();
     const userSessionDays = new Map();
 
@@ -514,35 +450,6 @@ router.get('/retention', basicAuthAdmin, authenticate, requireAdmin, async (req,
       userSessionDays.get(userId).add(dayKey);
     });
 
-    // Calculate Day N retention rates
-    const retentionDays = [1, 3, 7, 14, 30];
-    const dayRetention = {};
-
-    retentionDays.forEach(n => {
-      const cutoff = new Date(now);
-      cutoff.setDate(cutoff.getDate() - n);
-
-      let eligibleUsers = 0;
-      let retainedUsers = 0;
-
-      userFirstSession.forEach((firstDate, userId) => {
-        if (firstDate <= cutoff) {
-          eligibleUsers++;
-          const sessionDays = userSessionDays.get(userId);
-          const targetDate = new Date(firstDate);
-          targetDate.setDate(targetDate.getDate() + n);
-          const targetKey = targetDate.toISOString().split('T')[0];
-
-          if (sessionDays.has(targetKey)) {
-            retainedUsers++;
-          }
-        }
-      });
-
-      dayRetention[`d${n}`] = eligibleUsers > 0 ? (retainedUsers / eligibleUsers) * 100 : 0;
-    });
-
-    // Cohort retention (last 8 weeks)
     const cohorts = [];
     for (let i = 0; i < 8; i++) {
       const cohortStart = new Date(thisWeekStart);
@@ -593,124 +500,10 @@ router.get('/retention', basicAuthAdmin, authenticate, requireAdmin, async (req,
           week1: weeklyRetention[1],
           week2: weeklyRetention[2],
           week3: weeklyRetention[3],
-          week4: weeklyRetention[4]
+          week4: weeklyRetention[4],
         });
       }
     }
-
-    // Active users
-    const { data: dauData } = await supabaseAdmin
-      .from('user_events')
-      .select('user_id')
-      .gte('event_ts', today.toISOString())
-      .not('user_id', 'is', null);
-
-    const dau = new Set((dauData || []).map(r => r.user_id)).size;
-
-    const { data: wauData } = await supabaseAdmin
-      .from('user_events')
-      .select('user_id')
-      .gte('event_ts', thisWeekStart.toISOString())
-      .not('user_id', 'is', null);
-
-    const wau = new Set((wauData || []).map(r => r.user_id)).size;
-
-    const { data: mauData } = await supabaseAdmin
-      .from('user_events')
-      .select('user_id')
-      .gte('event_ts', monthStart.toISOString())
-      .not('user_id', 'is', null);
-
-    const mau = new Set((mauData || []).map(r => r.user_id)).size;
-
-    // Stickiness
-    const currentStickiness = mau > 0 ? (dau / mau) * 100 : 0;
-
-    // Stickiness trend (last 7 days)
-    const stickinessTrend = [];
-    for (let i = 6; i >= 0; i--) {
-      const dayStart = new Date(today);
-      dayStart.setDate(dayStart.getDate() - i);
-      const dayEnd = new Date(dayStart);
-      dayEnd.setDate(dayEnd.getDate() + 1);
-
-      const dayDau = new Set();
-      (sessionsData || []).forEach(row => {
-        const sessionDate = new Date(row.started_at);
-        if (sessionDate >= dayStart && sessionDate < dayEnd) {
-          dayDau.add(row.user_id);
-        }
-      });
-
-      const dayStickiness = mau > 0 ? (dayDau.size / mau) * 100 : 0;
-      stickinessTrend.push({
-        date: dayStart.toISOString().split('T')[0],
-        value: dayStickiness
-      });
-    }
-
-    // Lifecycle segments
-    const { data: lastWeekData } = await supabaseAdmin
-      .from('user_events')
-      .select('user_id')
-      .gte('event_ts', lastWeekStart.toISOString())
-      .lt('event_ts', thisWeekStart.toISOString())
-      .not('user_id', 'is', null);
-
-    const lastWeekUsers = new Set((lastWeekData || []).map(r => r.user_id));
-    const thisWeekUsers = new Set((wauData || []).map(r => r.user_id));
-
-    const { data: twoWeeksAgoData } = await supabaseAdmin
-      .from('user_events')
-      .select('user_id')
-      .gte('event_ts', twoWeeksAgoStart.toISOString())
-      .lt('event_ts', lastWeekStart.toISOString())
-      .not('user_id', 'is', null);
-
-    const twoWeeksAgoUsers = new Set((twoWeeksAgoData || []).map(r => r.user_id));
-
-    let newUsers = 0;
-    let activeUsers = 0;
-    let atRiskUsers = 0;
-    let dormantUsers = 0;
-    let resurrectedUsers = 0;
-
-    // New: First session this week
-    userFirstSession.forEach((firstDate, userId) => {
-      if (firstDate >= thisWeekStart) {
-        newUsers++;
-      }
-    });
-
-    // Active: Active this week AND last week (not new)
-    thisWeekUsers.forEach(userId => {
-      const firstDate = userFirstSession.get(userId);
-      if (firstDate && firstDate < thisWeekStart && lastWeekUsers.has(userId)) {
-        activeUsers++;
-      }
-    });
-
-    // At Risk: Active last week but NOT this week
-    lastWeekUsers.forEach(userId => {
-      if (!thisWeekUsers.has(userId)) {
-        atRiskUsers++;
-      }
-    });
-
-    // Dormant: Not active this week or last week, but had sessions before
-    userFirstSession.forEach((firstDate, userId) => {
-      if (!thisWeekUsers.has(userId) && !lastWeekUsers.has(userId) && firstDate < lastWeekStart) {
-        dormantUsers++;
-      }
-    });
-
-    // Resurrected: Active this week, was dormant
-    thisWeekUsers.forEach(userId => {
-      const firstDate = userFirstSession.get(userId);
-      if (firstDate && firstDate < lastWeekStart && !lastWeekUsers.has(userId)) {
-        resurrectedUsers++;
-      }
-    });
 
     res.json({
       generated_at: new Date().toISOString(),
@@ -718,16 +511,10 @@ router.get('/retention', basicAuthAdmin, authenticate, requireAdmin, async (req,
       cohortRetention: cohorts,
       stickiness: {
         current: currentStickiness,
-        trend: stickinessTrend
+        trend: stickinessTrend,
       },
       activeUsers: { dau, wau, mau },
-      lifecycle: {
-        new: newUsers,
-        active: activeUsers,
-        atRisk: atRiskUsers,
-        dormant: dormantUsers,
-        resurrected: resurrectedUsers
-      }
+      lifecycle,
     });
   } catch (err) {
     console.error('[Analytics Admin] Retention error:', err);

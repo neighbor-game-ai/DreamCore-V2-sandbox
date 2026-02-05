@@ -4,9 +4,15 @@
  * Authentication and authorization for analytics endpoints.
  */
 
-// Basic Auth credentials
-const ADMIN_BASIC_USER = process.env.ADMIN_BASIC_USER || 'admin';
-const ADMIN_BASIC_PASS = process.env.ADMIN_BASIC_PASS || 'dc-ops-f1f0c1ad';
+// Basic Auth credentials (REQUIRED - no fallback)
+const ADMIN_BASIC_USER = process.env.ADMIN_BASIC_USER;
+const ADMIN_BASIC_PASS = process.env.ADMIN_BASIC_PASS;
+
+// Validate at module load time
+if (!ADMIN_BASIC_USER || !ADMIN_BASIC_PASS) {
+  console.error('[Analytics] FATAL: ADMIN_BASIC_USER and ADMIN_BASIC_PASS must be set');
+  process.exit(1);
+}
 
 // Admin emails (domain + allowlist)
 const ADMIN_EMAILS = [
