@@ -8,10 +8,11 @@
 const ADMIN_BASIC_USER = process.env.ADMIN_BASIC_USER;
 const ADMIN_BASIC_PASS = process.env.ADMIN_BASIC_PASS;
 
-// Validate at module load time
-if (!ADMIN_BASIC_USER || !ADMIN_BASIC_PASS) {
-  console.error('[Analytics] FATAL: ADMIN_BASIC_USER and ADMIN_BASIC_PASS must be set');
-  process.exit(1);
+// Track if admin routes are enabled
+const ADMIN_ROUTES_ENABLED = !!(ADMIN_BASIC_USER && ADMIN_BASIC_PASS);
+
+if (!ADMIN_ROUTES_ENABLED) {
+  console.warn('[Analytics] WARNING: ADMIN_BASIC_USER and ADMIN_BASIC_PASS not set - admin routes disabled');
 }
 
 // Admin emails (domain + allowlist)
@@ -23,6 +24,11 @@ const ADMIN_EMAILS = [
  * Basic Auth middleware for admin routes
  */
 function basicAuthAdmin(req, res, next) {
+  // If admin routes not configured, return 503
+  if (!ADMIN_ROUTES_ENABLED) {
+    return res.status(503).json({ error: 'Admin routes not configured' });
+  }
+
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Basic ')) {
