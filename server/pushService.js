@@ -158,7 +158,7 @@ async function sendPushToUser(userId, payload) {
     return { sent: 0, failed: 0 };
   }
 
-  const notification = JSON.stringify({
+  const notificationPayload = {
     title: payload.title,
     body: payload.body,
     icon: payload.icon || '/icons/icon-192.png',
@@ -170,7 +170,9 @@ async function sendPushToUser(userId, payload) {
       type: payload.type || 'system',
       timestamp: Date.now()
     }
-  });
+  };
+  console.log('[Push] Full payload:', JSON.stringify(notificationPayload));
+  const notification = JSON.stringify(notificationPayload);
 
   let sent = 0;
   let failed = 0;
