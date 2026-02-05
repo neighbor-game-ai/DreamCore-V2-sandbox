@@ -1288,20 +1288,11 @@ def get_claude_sandbox(model: str = "haiku") -> tuple[modal.Sandbox, bool]:
 
     proxy_url = get_proxy_url()
 
-    try:
-        # Try to get existing sandbox
-        sb = modal.Sandbox.from_name(
-            sandbox_name,
-            create_if_missing=False,
-        )
-        print(f"[get_claude_sandbox] Reusing warm sandbox: {sandbox_name}")
-        return sb, False
-    except Exception as e:
-        # Sandbox doesn't exist or terminated, create new one
-        print(f"[get_claude_sandbox] Creating new sandbox: {sandbox_name} (reason: {type(e).__name__})")
-
-        sb = modal.Sandbox.create(
+    # Helper to create a new sandbox
+    def create_sandbox():
+        return modal.Sandbox.create(
             "bash", "-c", "sleep infinity",
+            app=app,
             name=sandbox_name,
             image=sandbox_image,
             secrets=[api_proxy_secret, proxy_secret, vertex_ai_secret, vertex_config_secret],
@@ -1318,11 +1309,42 @@ def get_claude_sandbox(model: str = "haiku") -> tuple[modal.Sandbox, bool]:
             },
         )
 
-        # Write GCP credentials on creation
-        gcp_creds_path = write_gcp_credentials(sb)
-        print(f"[get_claude_sandbox] GCP credentials written to {gcp_creds_path}")
-
-        return sb, True
+    try:
+        # Try to get existing sandbox (requires app_name and sandbox_name)
+        sb = modal.Sandbox.from_name(APP_NAME, sandbox_name)
+        print(f"[get_claude_sandbox] Reusing warm sandbox: {sandbox_name}")
+        return sb, False
+    except modal.exception.NotFoundError:
+        # Sandbox doesn't exist, create new one
+        print(f"[get_claude_sandbox] Creating new sandbox: {sandbox_name} (not found)")
+        try:
+            sb = create_sandbox()
+            # Write GCP credentials on creation
+            gcp_creds_path = write_gcp_credentials(sb)
+            print(f"[get_claude_sandbox] GCP credentials written to {gcp_creds_path}")
+            return sb, True
+        except Exception as create_err:
+            # If create fails (e.g., AlreadyExists race condition), retry from_name
+            if "already exists" in str(create_err).lower():
+                print(f"[get_claude_sandbox] Race condition, retrying from_name: {sandbox_name}")
+                sb = modal.Sandbox.from_name(APP_NAME, sandbox_name)
+                return sb, False
+            raise
+    except Exception as e:
+        # Other errors (e.g., sandbox terminated but name cached)
+        print(f"[get_claude_sandbox] from_name failed: {type(e).__name__}: {e}")
+        print(f"[get_claude_sandbox] Creating new sandbox: {sandbox_name}")
+        try:
+            sb = create_sandbox()
+            gcp_creds_path = write_gcp_credentials(sb)
+            print(f"[get_claude_sandbox] GCP credentials written to {gcp_creds_path}")
+            return sb, True
+        except Exception as create_err:
+            if "already exists" in str(create_err).lower():
+                print(f"[get_claude_sandbox] Race condition, retrying from_name: {sandbox_name}")
+                sb = modal.Sandbox.from_name(APP_NAME, sandbox_name)
+                return sb, False
+            raise
 
 
 async def run_haiku_in_sandbox(prompt: str, timeout_seconds: int = 15) -> str:
@@ -1341,7 +1363,7 @@ async def run_haiku_in_sandbox(prompt: str, timeout_seconds: int = 15) -> str:
 
     proxy_url = get_proxy_url()
     vertex_env = get_vertex_env()
-    gcp_creds_path = "/tmp/gcp_credentials.json"
+    gcp_creds_path = "/tmp/gcp-creds.json"  # Must match write_gcp_credentials()
 
     # Get warm sandbox from pool
     sb, is_new = get_claude_sandbox(model="haiku")
@@ -1429,7 +1451,7 @@ async def run_sonnet_in_sandbox(prompt: str, timeout_seconds: int = 30) -> str:
 
     proxy_url = get_proxy_url()
     vertex_env = get_vertex_env()
-    gcp_creds_path = "/tmp/gcp_credentials.json"
+    gcp_creds_path = "/tmp/gcp-creds.json"  # Must match write_gcp_credentials()
 
     # Get warm sandbox from pool
     sb, is_new = get_claude_sandbox(model="sonnet")
