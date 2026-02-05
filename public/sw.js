@@ -4,8 +4,8 @@
  * - Push notification handling
  */
 
-const SW_VERSION = '2026.02.05.k';
-const CACHE_NAME = 'dreamcore-v10';
+const SW_VERSION = '2026.02.05.l';
+const CACHE_NAME = 'dreamcore-v11';
 
 console.log('[SW] Version:', SW_VERSION);
 const PRECACHE_ASSETS = [
@@ -180,35 +180,31 @@ self.addEventListener('notificationclick', (event) => {
     })
   }).catch(() => {});
 
-  // iOS PWA has issues with client.navigate() - it resolves but doesn't actually navigate.
-  // Solution: Always use clients.openWindow() which reliably opens the correct URL.
+  // iOS PWA: openWindow() focuses the window but doesn't navigate.
+  // Solution: Use BroadcastChannel to send URL to the app, then openWindow to focus.
   event.waitUntil(
     (async () => {
       try {
+        // Send URL via BroadcastChannel (more reliable than postMessage)
+        const channel = new BroadcastChannel('dreamcore-notifications');
+        channel.postMessage({ type: 'NAVIGATE', url: absoluteUrl });
+        channel.close();
+
+        // Also try openWindow to focus the PWA
         if (clients.openWindow) {
-          const windowClient = await clients.openWindow(absoluteUrl);
-          fetch('/api/push/debug-click', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              phase: 'openWindow_result',
-              url: absoluteUrl,
-              success: !!windowClient,
-              clientUrl: windowClient?.url || null
-            })
-          }).catch(() => {});
-        } else {
-          fetch('/api/push/debug-click', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phase: 'no_openWindow_method' })
-          }).catch(() => {});
+          await clients.openWindow(absoluteUrl);
         }
+
+        fetch('/api/push/debug-click', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phase: 'broadcast_sent', url: absoluteUrl })
+        }).catch(() => {});
       } catch (err) {
         fetch('/api/push/debug-click', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phase: 'openWindow_error', error: err.message })
+          body: JSON.stringify({ phase: 'error', error: err.message })
         }).catch(() => {});
       }
     })()

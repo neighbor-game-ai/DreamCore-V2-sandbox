@@ -612,6 +612,21 @@ class GameCreatorApp {
       });
     }
 
+    // Listen for BroadcastChannel messages (most reliable for iOS PWA)
+    if ('BroadcastChannel' in window) {
+      const channel = new BroadcastChannel('dreamcore-notifications');
+      channel.onmessage = (event) => {
+        console.log('[App] BroadcastChannel message:', event.data);
+        if (event.data && event.data.type === 'NAVIGATE') {
+          const url = event.data.url;
+          if (url) {
+            console.log('[App] BroadcastChannel: Navigating to:', url);
+            window.location.href = url;
+          }
+        }
+      };
+    }
+
     // Error panel controls
     this.closeErrorPanel?.addEventListener('click', () => {
       this.hideErrorPanel();
