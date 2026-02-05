@@ -358,7 +358,11 @@ class NotificationsApp {
 }
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Initialize i18n
+  await DreamCoreI18n.init();
+  document.title = DreamCoreI18n.t('page.notifications.title');
+
   const app = new NotificationsApp();
   app.init();
 });

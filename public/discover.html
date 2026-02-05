@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>発見 - DreamCore</title>
+  <title>Explore - DreamCore</title>
+  <script src="/i18n.js?v=20260205"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
   <link rel="stylesheet" href="/style.css?v=20260205">
-  <meta name="description" content="みんなが作ったゲームを発見しよう">
+  <meta name="description" content="Find games others have made">
   <!-- Early auth check + Supabase lazy loader -->
   <script>
     (function() {
@@ -113,12 +114,9 @@
   <div class="coming-soon-container">
     <div class="coming-soon">
       <div class="coming-soon-icon">🚀</div>
-      <h1>Coming Soon</h1>
-      <p>
-        Discover ページは現在制作中です。<br>
-        公開されたゲームを探索できる機能を準備しています。
-      </p>
-      <a href="/create.html" class="create-link">ゲームを作る</a>
+      <h1 data-i18n="page.discover.comingSoon">Coming Soon</h1>
+      <p data-i18n="page.discover.comingSoonDesc">The Explore page is under construction. We're getting ready for you to find amazing games.</p>
+      <a href="/create.html" class="create-link" data-i18n="page.discover.makeGame">Make a Game</a>
     </div>
   </div>
 
@@ -129,34 +127,34 @@
         <circle cx="11" cy="11" r="8"></circle>
         <path d="m21 21-4.35-4.35"></path>
       </svg>
-      <span>発見</span>
+      <span data-i18n="nav.discover">Explore</span>
     </button>
     <button class="nav-item" data-tab="create">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="12" y1="5" x2="12" y2="19"></line>
         <line x1="5" y1="12" x2="19" y2="12"></line>
       </svg>
-      <span>作る</span>
+      <span data-i18n="nav.create">Create</span>
     </button>
     <button class="nav-item nav-zapping" id="navZappingBtn">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="9 18 15 12 9 6"></polyline>
       </svg>
-      <span>次へ</span>
+      <span data-i18n="nav.next">Next</span>
     </button>
     <button class="nav-item" data-tab="notifications">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
         <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
       </svg>
-      <span>通知</span>
+      <span data-i18n="nav.notifications">Notifications</span>
     </button>
     <button class="nav-item" data-tab="profile">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
         <circle cx="12" cy="7" r="4"></circle>
       </svg>
-      <span>マイ</span>
+      <span data-i18n="nav.myPage">My Page</span>
     </button>
   </nav>
 
@@ -171,6 +169,9 @@
   <script>
     // Simple navigation handler for coming soon page
     document.addEventListener('DOMContentLoaded', async function() {
+      // Initialize i18n
+      await DreamCoreI18n.init();
+      document.title = DreamCoreI18n.t('page.discover.title');
       // V2 Waitlist: Check access permission
       const session = await DreamCoreAuth.getSession();
       if (!session) {

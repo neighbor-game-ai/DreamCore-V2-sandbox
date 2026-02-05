@@ -23,7 +23,9 @@
     "change": "保存",
     "ok": "OK",
     "editProfile": "プロフィールを編集",
-    "logout": "ログアウト"
+    "logout": "ログアウト",
+    "more": "もっと見る",
+    "less": "とじる"
   },
   "filter": {
     "all": "すべて",
@@ -46,6 +48,23 @@
       "title": "マイページ - DreamCore",
       "header": "マイページ",
       "description": "あなたのゲームとプロフィール"
+    },
+    "discover": {
+      "title": "さがす - DreamCore",
+      "header": "さがす",
+      "description": "みんなのゲームを見つけよう",
+      "comingSoon": "Coming Soon",
+      "comingSoonDesc": "「さがす」ページは準備中です。もうすぐみんなのゲームを見つけられるようになります。",
+      "makeGame": "ゲームを作る"
+    },
+    "notifications": {
+      "title": "おしらせ - DreamCore",
+      "header": "おしらせ",
+      "description": "あなたへのおしらせ",
+      "noNotifications": "おしらせはありません",
+      "markAllRead": "すべて読んだことにする",
+      "system": "システム",
+      "project": "プロジェクト"
     }
   },
   "modal": {

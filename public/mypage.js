@@ -161,11 +161,11 @@ class MyPageApp {
 
     const moreBtn = document.createElement('button');
     moreBtn.className = 'bio-more-btn';
-    moreBtn.textContent = 'more';
+    moreBtn.textContent = DreamCoreI18n.t('button.more');
     moreBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const isExpanded = this.bioEl.classList.toggle('expanded');
-      moreBtn.textContent = isExpanded ? 'less' : 'more';
+      moreBtn.textContent = isExpanded ? DreamCoreI18n.t('button.less') : DreamCoreI18n.t('button.more');
     });
     container.appendChild(moreBtn);
   }

@@ -23,7 +23,9 @@
     "change": "保存",
     "ok": "好的",
     "editProfile": "编辑资料",
-    "logout": "退出"
+    "logout": "退出",
+    "more": "展开",
+    "less": "收起"
   },
   "filter": {
     "all": "全部",
@@ -46,6 +48,23 @@
       "title": "我的 - DreamCore",
       "header": "我的",
       "description": "你的游戏和资料"
+    },
+    "discover": {
+      "title": "发现 - DreamCore",
+      "header": "发现",
+      "description": "找找大家做的游戏",
+      "comingSoon": "Coming Soon",
+      "comingSoonDesc": "「发现」页面正在建设中，很快你就能发现更多好玩的游戏啦。",
+      "makeGame": "去做游戏"
+    },
+    "notifications": {
+      "title": "消息 - DreamCore",
+      "header": "消息",
+      "description": "你的消息",
+      "noNotifications": "还没有消息",
+      "markAllRead": "全部已读",
+      "system": "系统",
+      "project": "项目"
     }
   },
   "modal": {

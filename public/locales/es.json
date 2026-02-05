@@ -23,7 +23,9 @@
     "change": "Guardar",
     "ok": "OK",
     "editProfile": "Editar perfil",
-    "logout": "Salir"
+    "logout": "Salir",
+    "more": "ver más",
+    "less": "ver menos"
   },
   "filter": {
     "all": "Todo",
@@ -46,6 +48,23 @@
       "title": "Mi página - DreamCore",
       "header": "Mi página",
       "description": "Tus juegos y tu perfil"
+    },
+    "discover": {
+      "title": "Explorar - DreamCore",
+      "header": "Explorar",
+      "description": "Encuentra juegos que otros han creado",
+      "comingSoon": "Muy pronto",
+      "comingSoonDesc": "La página de Explorar está en construcción. Pronto podrás descubrir juegos increíbles.",
+      "makeGame": "Crear un juego"
+    },
+    "notifications": {
+      "title": "Avisos - DreamCore",
+      "header": "Avisos",
+      "description": "Tus avisos",
+      "noNotifications": "No hay avisos todavía",
+      "markAllRead": "Marcar todo como leído",
+      "system": "Sistema",
+      "project": "Proyecto"
     }
   },
   "modal": {
