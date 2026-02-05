@@ -4,8 +4,8 @@
  * - Push notification handling
  */
 
-const SW_VERSION = '2026.02.05.f';
-const CACHE_NAME = 'dreamcore-v5';
+const SW_VERSION = '2026.02.05.g';
+const CACHE_NAME = 'dreamcore-v6';
 
 console.log('[SW] Version:', SW_VERSION);
 const PRECACHE_ASSETS = [
@@ -104,20 +104,37 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  // Handle both payload formats:
+  // Format A: { data: { url, projectId, type } }  - nested (current server format)
+  // Format B: { url, projectId, type }            - top-level (fallback)
+  const notificationData = data.data || {
+    url: data.url || '/notifications.html',
+    projectId: data.projectId || null,
+    type: data.type || 'system'
+  };
+
+  // Ensure url exists even if data.data was present but incomplete
+  if (!notificationData.url) {
+    notificationData.url = data.url || '/notifications.html';
+  }
+  if (!notificationData.projectId && data.projectId) {
+    notificationData.projectId = data.projectId;
+  }
+
+  console.log('[SW] Final notificationData:', JSON.stringify(notificationData));
+
   const options = {
     body: data.body,
     icon: data.icon || '/icons/icon-192.png',
     badge: data.badge || '/icons/icon-192.png',
     tag: data.tag || 'dreamcore-notification',
     renotify: true,
-    data: data.data || { url: '/notifications.html' },
+    data: notificationData,
     actions: [
       { action: 'open', title: 'Open' },
       { action: 'dismiss', title: 'Dismiss' }
     ]
   };
-
-  console.log('[SW] Notification options.data:', JSON.stringify(options.data));
 
   event.waitUntil(
     self.registration.showNotification(data.title, options)
