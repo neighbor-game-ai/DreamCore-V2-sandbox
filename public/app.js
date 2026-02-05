@@ -589,12 +589,28 @@ class GameCreatorApp {
         this.handleGameLoaded(event.data);
       } else if (event.data && event.data.type === 'NOTIFICATION_CLICK') {
         // Handle notification click from Service Worker (fallback when navigate() not supported)
+        console.log('[App] Received NOTIFICATION_CLICK from window message:', event.data);
         const url = event.data.url;
         if (url) {
+          console.log('[App] Navigating to:', url);
           window.location.href = url;
         }
       }
     });
+
+    // Also listen for messages specifically from Service Worker (more reliable on iOS PWA)
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        console.log('[App] Received SW message via serviceWorker listener:', event.data);
+        if (event.data && event.data.type === 'NOTIFICATION_CLICK') {
+          const url = event.data.url;
+          if (url) {
+            console.log('[App] SW listener: Navigating to:', url);
+            window.location.href = url;
+          }
+        }
+      });
+    }
 
     // Error panel controls
     this.closeErrorPanel?.addEventListener('click', () => {

@@ -4,7 +4,7 @@
  * - Push notification handling
  */
 
-const CACHE_NAME = 'dreamcore-v2';
+const CACHE_NAME = 'dreamcore-v3';
 const PRECACHE_ASSETS = [
   '/manifest.json',
   '/icons/icon-192.png',
@@ -119,6 +119,7 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Notification click:', event.action);
   console.log('[SW] Notification data:', JSON.stringify(event.notification.data));
+  console.log('[SW] self.location.origin:', self.location.origin);
   event.notification.close();
 
   if (event.action === 'dismiss') {
@@ -141,31 +142,45 @@ self.addEventListener('notificationclick', (event) => {
   }
 
   // Convert to absolute URL for PWA scope matching
+  // IMPORTANT: Use exact origin without trailing slash to match manifest scope
   const absoluteUrl = new URL(targetUrl, self.location.origin).href;
+  console.log('[SW] Opening URL:', absoluteUrl);
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((windowClients) => {
+        console.log('[SW] Found', windowClients.length, 'window clients');
+
         // Try to find an existing PWA/browser window to focus
         for (const client of windowClients) {
+          const clientOrigin = new URL(client.url).origin;
+          console.log('[SW] Checking client:', client.url, 'origin:', clientOrigin);
+
           // Check if client is from our origin
-          if (new URL(client.url).origin === self.location.origin) {
+          if (clientOrigin === self.location.origin) {
+            console.log('[SW] Found matching client, focusing...');
             // Focus existing window and navigate to target
             return client.focus().then(() => {
-              // Navigate if possible (not supported in all browsers)
-              if ('navigate' in client) {
-                return client.navigate(absoluteUrl);
-              }
-              // Fallback: post message to let the page handle navigation
+              // Always send postMessage (more reliable, especially on iOS PWA)
               client.postMessage({
                 type: 'NOTIFICATION_CLICK',
                 url: absoluteUrl
               });
+              // Also try navigate() as it works on some browsers
+              if ('navigate' in client) {
+                return client.navigate(absoluteUrl).catch((err) => {
+                  console.log('[SW] navigate() failed:', err.message);
+                  // navigate() failed, but postMessage should handle it
+                });
+              }
             });
           }
         }
+
         // No existing window - open new one
-        // Using absolute URL helps PWA scope matching
+        // On Android, this may open in Chrome instead of the PWA when PWA is not running
+        // This is a known platform limitation
+        console.log('[SW] No matching client found, opening new window');
         if (clients.openWindow) {
           return clients.openWindow(absoluteUrl);
         }
