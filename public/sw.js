@@ -4,8 +4,8 @@
  * - Push notification handling
  */
 
-const SW_VERSION = '2026.02.05.n';
-const CACHE_NAME = 'dreamcore-v13';
+const SW_VERSION = '2026.02.05.o';
+const CACHE_NAME = 'dreamcore-v14';
 
 console.log('[SW] Version:', SW_VERSION);
 const PRECACHE_ASSETS = [
@@ -186,10 +186,7 @@ self.addEventListener('notificationclick', (event) => {
     (async () => {
       try {
         // Store pending navigation URL in IndexedDB
-        const db = await openNavigationDB();
-        const tx = db.transaction('pending', 'readwrite');
-        await tx.objectStore('pending').put({ url: absoluteUrl, timestamp: Date.now() }, 'navigation');
-        await tx.done;
+        await storeNavigationUrl(absoluteUrl);
 
         fetch('/api/push/debug-click', {
           method: 'POST',
@@ -212,17 +209,32 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// IndexedDB helper for pending navigation
-function openNavigationDB() {
+// Store navigation URL in IndexedDB (proper Promise wrapper)
+function storeNavigationUrl(url) {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('dreamcore-navigation', 1);
+
     request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
+
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
       if (!db.objectStoreNames.contains('pending')) {
         db.createObjectStore('pending');
       }
     };
+
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction('pending', 'readwrite');
+      const store = tx.objectStore('pending');
+      const putRequest = store.put({ url: url, timestamp: Date.now() }, 'navigation');
+
+      putRequest.onerror = () => reject(putRequest.error);
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => reject(tx.error);
+    };
   });
-});
+}
