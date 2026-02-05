@@ -65,6 +65,11 @@
       "markAllRead": "모두 읽음으로 표시",
       "system": "시스템",
       "project": "프로젝트"
+    },
+    "profile": {
+      "title": "프로필 - DreamCore",
+      "header": "프로필",
+      "description": "사용자 프로필"
     }
   },
   "modal": {

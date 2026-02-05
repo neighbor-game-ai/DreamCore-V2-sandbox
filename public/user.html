@@ -1,15 +1,16 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>プロフィール - DreamCore</title>
+  <title>Profile - DreamCore</title>
+  <script src="/i18n.js?v=20260205"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
   <link rel="stylesheet" href="/style.css?v=20260205">
   <link rel="stylesheet" href="/css/modules/profile.css">
-  <meta name="description" content="DreamCore - ユーザープロフィール">
+  <meta name="description" content="DreamCore - User Profile">
 
   <!--
     Supabase lazy loader - CRITICAL: No hardcoding, fetch from /api/config
@@ -50,13 +51,29 @@
   <div class="mypage-view" id="mypageView">
     <!-- Floating Header -->
     <header class="mypage-header">
+      <div class="lang-selector" id="langSelector" style="position: absolute; right: 48px; top: 50%; transform: translateY(-50%);">
+        <button class="lang-selector-btn" id="langSelectorBtn">
+          <span id="currentLang">EN</span>
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 4.5L6 7.5L9 4.5"/>
+          </svg>
+        </button>
+        <div class="lang-selector-dropdown">
+          <button class="lang-option" data-lang="en">English</button>
+          <button class="lang-option" data-lang="ja">日本語</button>
+          <button class="lang-option" data-lang="zh">中文</button>
+          <button class="lang-option" data-lang="es">Español</button>
+          <button class="lang-option" data-lang="pt">Português</button>
+          <button class="lang-option" data-lang="ko">한국어</button>
+        </div>
+      </div>
       <button class="mypage-back-btn" id="backBtn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="19" y1="12" x2="5" y2="12"></line>
           <polyline points="12 19 5 12 12 5"></polyline>
         </svg>
       </button>
-      <div class="mypage-header-title" id="headerTitle">プロフィール</div>
+      <div class="mypage-header-title" id="headerTitle" data-i18n="page.profile.header">Profile</div>
       <div class="mypage-header-spacer"></div>
     </header>
 
@@ -77,15 +94,15 @@
         <div class="mypage-profile-stats">
           <div class="mypage-stat-item">
             <span class="mypage-stat-number" id="gameCount">0</span>
-            <span class="mypage-stat-label">games</span>
+            <span class="mypage-stat-label" data-i18n="stats.games">games</span>
           </div>
           <div class="mypage-stat-item">
             <span class="mypage-stat-number" id="playCount">0</span>
-            <span class="mypage-stat-label">plays</span>
+            <span class="mypage-stat-label" data-i18n="stats.plays">plays</span>
           </div>
           <div class="mypage-stat-item">
             <span class="mypage-stat-number" id="likeCount">0</span>
-            <span class="mypage-stat-label">likes</span>
+            <span class="mypage-stat-label" data-i18n="stats.likes">likes</span>
           </div>
         </div>
       </div>
@@ -114,7 +131,7 @@
 
     <!-- Footer (owner only) -->
     <div class="mypage-footer" id="footerSection" style="display: none;">
-      <button class="mypage-logout-btn" id="logoutBtn">ログアウト</button>
+      <button class="mypage-logout-btn" id="logoutBtn" data-i18n="button.logout">Log out</button>
     </div>
 
     <!-- Bottom Navigation -->
@@ -124,34 +141,34 @@
           <circle cx="11" cy="11" r="8"></circle>
           <path d="m21 21-4.35-4.35"></path>
         </svg>
-        <span>発見</span>
+        <span data-i18n="nav.discover">Explore</span>
       </button>
       <button class="nav-item" data-tab="create">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
-        <span>作る</span>
+        <span data-i18n="nav.create">Create</span>
       </button>
       <button class="nav-item nav-zapping" id="navZappingBtn">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="9 18 15 12 9 6"></polyline>
         </svg>
-        <span>次へ</span>
+        <span data-i18n="nav.next">Next</span>
       </button>
       <button class="nav-item" data-tab="notifications">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
           <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
         </svg>
-        <span>通知</span>
+        <span data-i18n="nav.notifications">Notifications</span>
       </button>
       <button class="nav-item active" data-tab="profile">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
           <circle cx="12" cy="7" r="4"></circle>
         </svg>
-        <span>マイ</span>
+        <span data-i18n="nav.myPage">My Page</span>
       </button>
     </nav>
   </div>
@@ -165,5 +182,46 @@
     }
   </script>
   <script src="/profile.js" defer></script>
+  <script defer>
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Initialize i18n
+      await DreamCoreI18n.init();
+      document.title = DreamCoreI18n.t('page.profile.title');
+
+      // Language selector setup
+      const selector = document.getElementById('langSelector');
+      const btn = document.getElementById('langSelectorBtn');
+      const currentLangEl = document.getElementById('currentLang');
+      const options = selector.querySelectorAll('.lang-option');
+
+      const langLabels = { en: 'EN', ja: 'JA', zh: 'ZH', es: 'ES', pt: 'PT', ko: 'KO' };
+      const currentLang = DreamCoreI18n.getLanguage();
+      currentLangEl.textContent = langLabels[currentLang] || 'EN';
+
+      options.forEach(opt => {
+        if (opt.dataset.lang === currentLang) opt.classList.add('active');
+      });
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selector.classList.toggle('open');
+      });
+
+      options.forEach(opt => {
+        opt.addEventListener('click', () => {
+          const lang = opt.dataset.lang;
+          DreamCoreI18n.setLanguage(lang, false);
+          currentLangEl.textContent = langLabels[lang];
+          options.forEach(o => o.classList.remove('active'));
+          opt.classList.add('active');
+          selector.classList.remove('open');
+          DreamCoreI18n.updateDOM();
+          document.title = DreamCoreI18n.t('page.profile.title');
+        });
+      });
+
+      document.addEventListener('click', () => selector.classList.remove('open'));
+    });
+  </script>
 </body>
 </html>

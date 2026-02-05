@@ -65,6 +65,11 @@
       "markAllRead": "すべて読んだことにする",
       "system": "システム",
       "project": "プロジェクト"
+    },
+    "profile": {
+      "title": "プロフィール - DreamCore",
+      "header": "プロフィール",
+      "description": "ユーザープロフィール"
     }
   },
   "modal": {

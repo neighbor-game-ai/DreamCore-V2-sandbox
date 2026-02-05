@@ -65,6 +65,11 @@
       "markAllRead": "Marcar todo como leído",
       "system": "Sistema",
       "project": "Proyecto"
+    },
+    "profile": {
+      "title": "Perfil - DreamCore",
+      "header": "Perfil",
+      "description": "Perfil de usuario"
     }
   },
   "modal": {

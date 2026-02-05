@@ -65,6 +65,11 @@
       "markAllRead": "全部已读",
       "system": "系统",
       "project": "项目"
+    },
+    "profile": {
+      "title": "个人资料 - DreamCore",
+      "header": "个人资料",
+      "description": "用户资料"
     }
   },
   "modal": {
