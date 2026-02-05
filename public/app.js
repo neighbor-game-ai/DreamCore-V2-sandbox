@@ -342,6 +342,7 @@ class GameCreatorApp {
           this.isAuthenticated = true;
           this.connectWebSocket();
           this.loadPageData();
+          this.ensurePushSubscription();
           return;
         }
 
@@ -382,6 +383,10 @@ class GameCreatorApp {
 
       // Load page-specific data
       this.loadPageData();
+
+      // BACKGROUND: Ensure push subscription is registered (if permission granted)
+      // This handles users who granted permission but subscription wasn't saved
+      this.ensurePushSubscription();
 
       // BACKGROUND: Verify session with SDK (refresh if needed)
       DreamCoreAuth.getSession().then(async session => {
@@ -3109,6 +3114,18 @@ class GameCreatorApp {
     }
 
     return false;
+  }
+
+  /**
+   * Ensure push subscription is registered (called on page load after auth)
+   * Silently subscribes if permission is already granted
+   */
+  ensurePushSubscription() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+
+    console.log('[Notification] Permission granted, ensuring subscription on page load...');
+    this.subscribeToPush();
   }
 
   /**
