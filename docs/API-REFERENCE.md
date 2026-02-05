@@ -2617,6 +2617,171 @@ ws.send(JSON.stringify({
 
 ---
 
+### Push Notifications (PWA)
+
+#### `GET /api/push/vapid-key`
+
+VAPID 公開鍵を取得。フロントエンドでの Push 購読に必要。
+
+**認証:** 不要
+
+**レスポンス:**
+```json
+{
+  "publicKey": "BCV48CDVrIjhBEfKtp2-cx8GAYBYu1ajf0Upa5XZmmwuAzFtWf3Myeqfn8d0w2g7itXnjEcbwcR16xyHOX9MjOQ"
+}
+```
+
+**エラー:**
+- 503: `{ "error": "Push notifications not configured" }` - VAPID 未設定
+
+---
+
+#### `POST /api/push/subscribe`
+
+Push 通知を購読。ブラウザの PushSubscription をサーバーに保存。
+
+**認証:** 必須
+
+**リクエストボディ:**
+```json
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+  "keys": {
+    "p256dh": "base64-encoded-public-key",
+    "auth": "base64-encoded-auth-secret"
+  },
+  "userAgent": "Mozilla/5.0..."
+}
+```
+
+**レスポンス:**
+```json
+{
+  "success": true
+}
+```
+
+**エラー:**
+- 400: `{ "error": "Invalid subscription data" }`
+- 500: `{ "error": "Failed to save subscription" }`
+
+---
+
+#### `DELETE /api/push/unsubscribe`
+
+Push 通知の購読を解除。
+
+**認証:** 必須
+
+**リクエストボディ:**
+```json
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/..."
+}
+```
+
+**レスポンス:**
+```json
+{
+  "success": true
+}
+```
+
+**エラー:**
+- 400: `{ "error": "Endpoint required" }`
+- 500: `{ "error": "Failed to remove subscription" }`
+
+---
+
+### Notifications (In-App)
+
+#### `GET /api/notifications`
+
+通知履歴を取得（ページネーション対応）。
+
+**認証:** 必須
+
+**クエリパラメータ:**
+- `limit` (オプション): 取得件数 (default: 50, max: 100)
+- `offset` (オプション): オフセット (default: 0)
+- `type` (オプション): フィルタ (`project`, `system`, `social`)
+
+**レスポンス:**
+```json
+{
+  "notifications": [
+    {
+      "id": "uuid",
+      "user_id": "uuid",
+      "type": "project",
+      "title": "Game generation complete!",
+      "message": "Your game has been updated successfully.",
+      "icon": "success",
+      "project_id": "uuid",
+      "job_id": "uuid",
+      "read": false,
+      "read_at": null,
+      "created_at": "2026-02-05T12:00:00.000Z"
+    }
+  ],
+  "total": 10,
+  "unreadCount": 3
+}
+```
+
+---
+
+#### `GET /api/notifications/unread-count`
+
+未読通知数を取得。
+
+**認証:** 必須
+
+**レスポンス:**
+```json
+{
+  "count": 3
+}
+```
+
+---
+
+#### `POST /api/notifications/:id/read`
+
+通知を既読にマーク。`read_at` はサーバー側で設定。
+
+**認証:** 必須
+
+**レスポンス:**
+```json
+{
+  "success": true
+}
+```
+
+**エラー:**
+- 400: `{ "error": "Invalid notification ID" }`
+- 500: `{ "error": "Failed to mark as read" }`
+
+---
+
+#### `POST /api/notifications/read-all`
+
+全通知を既読にマーク。
+
+**認証:** 必須
+
+**レスポンス:**
+```json
+{
+  "success": true,
+  "count": 5
+}
+```
+
+---
+
 ## 参照ファイル
 
 | ファイル | 説明 |
@@ -2631,3 +2796,7 @@ ws.send(JSON.stringify({
 | `server/database-supabase.js` | Supabase DB 操作 |
 | `server/geminiClient.js` | Gemini API クライアント |
 | `server/remixService.js` | Remix API + 系譜 API |
+| `server/pushService.js` | Web Push 通知送信 |
+| `server/notificationService.js` | 通知作成・管理 |
+| `server/routes/pushApi.js` | Push API ルート |
+| `server/routes/notificationsApi.js` | Notifications API ルート |

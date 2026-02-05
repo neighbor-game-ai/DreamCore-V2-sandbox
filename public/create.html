@@ -32,6 +32,15 @@
     body { visibility: hidden; }
   </style>
   <meta name="description" content="Create original games just by chatting.">
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#FF3B30">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="DreamCore">
+
   <!-- Early auth check + Supabase lazy loader -->
   <script>
     (function() {
@@ -361,6 +370,7 @@
       DreamCoreAnalytics.init();
     }
   </script>
+  <script src="/push.js" defer></script>
   <script src="/app.js" defer></script>
   <script defer>
     // Language selector initialization

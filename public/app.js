@@ -1,3 +1,16 @@
+// Service Worker Registration (PWA)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('[PWA] Service Worker registered:', registration.scope);
+      })
+      .catch((error) => {
+        console.error('[PWA] Service Worker registration failed:', error);
+      });
+  });
+}
+
 class GameCreatorApp {
   constructor() {
     this.ws = null;
@@ -2233,8 +2246,9 @@ class GameCreatorApp {
     this.stopButton.classList.remove('hidden');
     this.showStreaming();
 
-    // Ask for notification permission on first job
-    this.askNotificationPermission();
+    // Show notification banner only if permission hasn't been asked yet
+    // iOS requires user gesture (button click) to request permission
+    this.showNotificationBannerIfNeeded();
 
     if (isExisting) {
       this.updateStreamingStatus(`Resuming job... ${job.progress || 0}%`);
@@ -3079,16 +3093,88 @@ class GameCreatorApp {
 
     if (Notification.permission === 'granted') {
       this.notificationPermission = 'granted';
+      // Also subscribe to push notifications
+      await this.subscribeToPush();
       return true;
     }
 
     if (Notification.permission !== 'denied') {
       const permission = await Notification.requestPermission();
       this.notificationPermission = permission;
+      if (permission === 'granted') {
+        // Subscribe to push notifications after permission granted
+        await this.subscribeToPush();
+      }
       return permission === 'granted';
     }
 
     return false;
+  }
+
+  /**
+   * Show notification banner if permission hasn't been asked yet
+   * iOS Safari requires notification permission to be requested from user gesture
+   */
+  showNotificationBannerIfNeeded() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'default') return;
+    if (this._notificationBannerShown) return;
+
+    this._notificationBannerShown = true;
+
+    // Create banner element
+    const banner = document.createElement('div');
+    banner.id = 'notification-banner';
+    banner.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:linear-gradient(135deg,#FF3B30,#FF6B5B);color:white;border-radius:12px;margin:8px;box-shadow:0 4px 12px rgba(255,59,48,0.3);">
+        <span style="font-size:20px;">🔔</span>
+        <span style="flex:1;font-size:14px;">${this.t('notification.enablePrompt') || 'Enable notifications to know when your game is ready!'}</span>
+        <button id="enable-notifications-btn" style="background:white;color:#FF3B30;border:none;padding:8px 16px;border-radius:8px;font-weight:600;cursor:pointer;white-space:nowrap;">
+          ${this.t('notification.enableButton') || 'Enable'}
+        </button>
+        <button id="dismiss-notification-banner" style="background:transparent;border:none;color:white;opacity:0.8;cursor:pointer;padding:4px;font-size:18px;">×</button>
+      </div>
+    `;
+
+    // Insert before chat messages
+    const chatContainer = document.querySelector('.chat-container') || document.querySelector('#chatMessages')?.parentElement;
+    if (chatContainer) {
+      chatContainer.insertBefore(banner, chatContainer.firstChild);
+    } else {
+      document.body.appendChild(banner);
+    }
+
+    // Enable button click handler (user gesture - required for iOS)
+    document.getElementById('enable-notifications-btn').addEventListener('click', async () => {
+      const granted = await this.askNotificationPermission();
+      banner.remove();
+      if (granted) {
+        console.log('[Notification] Permission granted via banner');
+      }
+    });
+
+    // Dismiss button
+    document.getElementById('dismiss-notification-banner').addEventListener('click', () => {
+      banner.remove();
+    });
+  }
+
+  /**
+   * Subscribe to push notifications (if supported and not already subscribed)
+   */
+  async subscribeToPush() {
+    if (typeof DreamCorePush === 'undefined') return;
+    if (!DreamCorePush.isSupported()) return;
+
+    try {
+      const isSubscribed = await DreamCorePush.isSubscribed();
+      if (!isSubscribed) {
+        await DreamCorePush.subscribe();
+        console.log('[Notification] Push subscription successful');
+      }
+    } catch (err) {
+      console.log('[Notification] Push subscription failed:', err.message);
+    }
   }
 
   showNotification(title, options = {}) {
@@ -3109,8 +3195,8 @@ class GameCreatorApp {
     console.log('[Notification] Showing notification!');
 
     const notification = new Notification(title, {
-      icon: '/favicon.ico',
-      badge: '/favicon.ico',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
       tag: 'game-creator',
       renotify: true,
       ...options

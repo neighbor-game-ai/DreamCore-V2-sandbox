@@ -397,6 +397,58 @@ CREATE TRIGGER on_auth_user_created
 
 ---
 
+### 10. push_subscriptions
+
+**目的:** Web Push 通知の購読エンドポイントを保存
+
+| カラム | 型 | 説明 |
+|--------|-----|------|
+| id | UUID | PK (gen_random_uuid) |
+| user_id | UUID FK | users.id |
+| endpoint | TEXT | Push サービスエンドポイント URL |
+| p256dh | TEXT | クライアント公開鍵 (base64) |
+| auth | TEXT | 認証シークレット (base64) |
+| user_agent | TEXT | ブラウザ情報（デバッグ用） |
+| created_at | TIMESTAMPTZ | 作成日時 |
+| last_used_at | TIMESTAMPTZ | 最終送信成功日時 |
+
+**制約:**
+- UNIQUE(user_id, endpoint) - ユーザー×デバイスで一意
+
+**RLS:**
+- SELECT: `user_id = auth.uid()` - 自分の購読のみ閲覧可能
+- INSERT/UPDATE/DELETE: service_role のみ（サーバー側で実行）
+
+---
+
+### 11. notifications
+
+**目的:** アプリ内通知履歴を保存
+
+| カラム | 型 | 説明 |
+|--------|-----|------|
+| id | UUID | PK (gen_random_uuid) |
+| user_id | UUID FK | users.id |
+| type | TEXT | 通知タイプ ('project', 'system', 'social') |
+| title | TEXT | 通知タイトル |
+| message | TEXT | 通知本文 |
+| icon | TEXT | アイコンタイプ (default, success, warning) |
+| project_id | UUID FK | projects.id (オプション) |
+| job_id | UUID | 重複防止用ジョブID |
+| read | BOOLEAN | 既読フラグ |
+| read_at | TIMESTAMPTZ | 既読日時（分析用） |
+| created_at | TIMESTAMPTZ | 作成日時 |
+
+**制約:**
+- UNIQUE(user_id, job_id) - 同じジョブで2回通知しない
+
+**RLS:**
+- SELECT: `user_id = auth.uid()` - 自分の通知のみ閲覧可能
+- UPDATE: `user_id = auth.uid()` - 自分の通知のみ更新可能
+- INSERT: service_role のみ（サーバー側で作成）
+
+---
+
 ## マイグレーション履歴
 
 | ファイル | 内容 |
@@ -405,6 +457,7 @@ CREATE TRIGGER on_auth_user_created
 | `002_assets_is_deleted_not_null.sql` | assets.is_deleted NOT NULL 化 |
 | `003_sync_schema.sql` | RLS最適化、TO authenticated、WITH CHECK追加、FKインデックス |
 | `004_schema_improvements.sql` | NOT NULL追加、INTEGER→BIGINT、users.updated_at、gamesインデックス |
+| `022_push_notifications.sql` | push_subscriptions, notifications テーブル追加（PWA Push通知） |
 
 ---
 
@@ -445,6 +498,7 @@ CREATE TRIGGER on_auth_user_created
 
 | 日付 | 変更内容 |
 |------|----------|
+| 2026-02-05 | push_subscriptions, notifications テーブル追加（022_push_notifications.sql） |
 | 2026-02-04 | published_games.user_id FK を auth.users → public.users に変更 |
 | 2026-01-23 | 初版作成（Phase 1完了時点のスキーマを文書化） |
 | 2026-01-23 | 004_schema_improvements.sql追加（PostgreSQLベストプラクティス対応） |

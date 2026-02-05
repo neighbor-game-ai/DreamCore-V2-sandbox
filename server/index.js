@@ -25,6 +25,7 @@ const crypto = require('crypto');
 const { supabaseAdmin } = require('./supabaseClient');
 const { ErrorCodes, createWsError, sendHttpError } = require('./errorResponse');
 const config = require('./config');
+const notificationService = require('./notificationService');
 const { injectGameHtml, injectPublicGameHtml, rewriteUserAssets } = require('./gameHtmlUtils');
 const r2Publisher = require('./r2Publisher');
 const r2Client = require('./r2Client');
@@ -43,6 +44,10 @@ const assetsPublicRouter = require('./routes/assetsPublic');
 const publishApiRouter = require('./routes/publishApi');
 // Auth routes (custom magic link emails)
 const authApiRouter = require('./routes/authApi');
+// Push notification routes
+const pushApiRouter = require('./routes/pushApi');
+// Notifications routes
+const notificationsApiRouter = require('./routes/notificationsApi');
 // Shared middleware/utils (extracted for modularization)
 const { checkProjectOwnership } = require('./middleware/projectChecks');
 const { gitCommitAsync } = require('./utils/git');
@@ -341,6 +346,14 @@ app.use('/api/projects', publishApiRouter);
 // ==================== Auth Routes ====================
 // /api/auth/magic-link - Custom branded magic link emails
 app.use('/api/auth', authApiRouter);
+
+// ==================== Push Notification Routes ====================
+// /api/push/vapid-key, subscribe, unsubscribe
+app.use('/api/push', pushApiRouter);
+
+// ==================== Notifications Routes ====================
+// /api/notifications - In-app notification history
+app.use('/api/notifications', notificationsApiRouter);
 
 // ==================== Skills 配信 ====================
 // Claude Code Skills の配信（自動更新用）
@@ -2319,6 +2332,54 @@ app.get('/zap/:id', (req, res) => {
 // Must be last route - catches all unmatched requests
 app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, '..', 'public', '404.html'));
+});
+
+// ==================== Job Completion Notifications ====================
+
+// Send push notification when game generation completes
+jobManager.on('jobCompleted', async (job) => {
+  if (!job?.user_id || !job?.project_id) return;
+
+  try {
+    // Use supabaseAdmin for background job (no user context)
+    const project = await db.getProjectById(supabaseAdmin, job.project_id);
+    const projectName = project?.name || 'Your game';
+
+    await notificationService.createNotification({
+      userId: job.user_id,
+      type: 'project',
+      title: 'Game generation complete!',
+      message: `${projectName} has been updated successfully.`,
+      icon: 'success',
+      projectId: job.project_id,
+      jobId: job.id
+    });
+  } catch (err) {
+    console.error('[Notification] Failed to send completion notification:', err);
+  }
+});
+
+// Send push notification when game generation fails
+jobManager.on('jobFailed', async (job) => {
+  if (!job?.user_id || !job?.project_id) return;
+
+  try {
+    // Use supabaseAdmin for background job (no user context)
+    const project = await db.getProjectById(supabaseAdmin, job.project_id);
+    const projectName = project?.name || 'Your game';
+
+    await notificationService.createNotification({
+      userId: job.user_id,
+      type: 'project',
+      title: 'Game generation failed',
+      message: `There was an error updating ${projectName}. Please try again.`,
+      icon: 'warning',
+      projectId: job.project_id,
+      jobId: job.id
+    });
+  } catch (err) {
+    console.error('[Notification] Failed to send failure notification:', err);
+  }
 });
 
 // ==================== Server Start ====================

@@ -41,6 +41,7 @@ AI でブラウザゲームを作成するプラットフォーム。Modal Sandb
 | `public/admin/` | 管理者ページ |
 | `public/css/` | スタイルシート |
 | `public/demo/` | デモページ（系譜表示等） |
+| `public/icons/` | PWA アイコン（2026-02-05） |
 | `public/images/` | 静的画像 |
 | `public/js/` | JavaScript モジュール |
 | `public/lib/` | サードパーティライブラリ |
