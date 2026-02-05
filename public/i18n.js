@@ -115,11 +115,17 @@
    * Update all DOM elements with data-i18n attribute
    */
   function updateDOM() {
-    // Update text content
+    // Update text content (supports data-i18n-html="true" for HTML content like <br>)
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.dataset.i18n;
       const vars = el.dataset.i18nVars ? JSON.parse(el.dataset.i18nVars) : {};
-      el.textContent = t(key, vars);
+      const translated = t(key, vars);
+      // Use innerHTML only if explicitly allowed (for trusted content like <br>)
+      if (el.dataset.i18nHtml === 'true') {
+        el.innerHTML = translated;
+      } else {
+        el.textContent = translated;
+      }
     });
 
     // Update placeholders
@@ -130,6 +136,16 @@
     // Update titles
     document.querySelectorAll('[data-i18n-title]').forEach(el => {
       el.title = t(el.dataset.i18nTitle);
+    });
+
+    // Update aria-label attributes
+    document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+      el.setAttribute('aria-label', t(el.dataset.i18nAria));
+    });
+
+    // Update alt attributes for images
+    document.querySelectorAll('[data-i18n-alt]').forEach(el => {
+      el.alt = t(el.dataset.i18nAlt);
     });
 
     // Update page title if specified
@@ -185,7 +201,8 @@
     setLanguage,
     getLanguage,
     getSupportedLanguages,
-    updateDOM
+    updateDOM,
+    get currentLang() { return currentLang; }
   };
 
   // Auto-init on DOMContentLoaded if translations exist

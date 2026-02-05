@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ゲーム - DreamCore</title>
+    <title data-i18n="game.title">Game - DreamCore</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/i18n.js?v=20260205"></script>
     <style>
         /* ============================================
            Game Play Page - "Kashiwa Sato × Nintendo" Vision
@@ -1943,21 +1944,21 @@
                 <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
         </div>
-        <h2 class="error-title">ゲームが見つかりません</h2>
-        <p class="error-message">このゲームは存在しないか、削除された可能性があります。</p>
-        <button class="error-back-btn" onclick="goBack()">戻る</button>
+        <h2 class="error-title" data-i18n="game.errorNotFound">Game not found</h2>
+        <p class="error-message" data-i18n="game.errorNotFoundMessage">This game may not exist or has been deleted.</p>
+        <button class="error-back-btn" onclick="goBack()" data-i18n="game.errorGoBack">Go Back</button>
     </div>
 
     <!-- Top Bar -->
     <header class="top-bar">
-        <button class="back-button" onclick="goBack()" aria-label="戻る">
+        <button class="back-button" onclick="goBack()" aria-label="Back" data-i18n-aria="game.ariaBack">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m15 18-6-6 6-6"/>
             </svg>
         </button>
         <div class="action-buttons">
             <div class="reaction-container" id="reactionContainer">
-                <button class="action-btn" id="reactionBtn" aria-label="いいね">
+                <button class="action-btn" id="reactionBtn" aria-label="Like" data-i18n-aria="game.ariaLike">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                     </svg>
@@ -1971,19 +1972,19 @@
                     <div class="reaction-item" data-reaction="clap">👏</div>
                 </div>
             </div>
-            <button class="action-btn" id="commentBtn" aria-label="コメント">
+            <button class="action-btn" id="commentBtn" aria-label="Comment" data-i18n-aria="game.ariaComment">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
             </button>
-            <button class="action-btn" id="shareBtn" aria-label="シェア">
+            <button class="action-btn" id="shareBtn" aria-label="Share" data-i18n-aria="game.ariaShare">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
                     <polyline points="16 6 12 2 8 6"/>
                     <line x1="12" y1="2" x2="12" y2="15"/>
                 </svg>
             </button>
-            <button class="action-btn remix-btn" id="remixBtn" aria-label="リミックス" title="Remix">
+            <button class="action-btn remix-btn" id="remixBtn" aria-label="Remix" title="Remix">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="16 3 21 3 21 8"/>
                     <line x1="4" y1="20" x2="21" y2="3"/>
@@ -1991,9 +1992,9 @@
                     <line x1="15" y1="15" x2="21" y2="21"/>
                     <line x1="4" y1="4" x2="9" y2="9"/>
                 </svg>
-                <span>Remix</span>
+                <span data-i18n="game.remix">Remix</span>
             </button>
-            <button class="action-btn" id="infoBtn" aria-label="情報">
+            <button class="action-btn" id="infoBtn" aria-label="Info" data-i18n-aria="game.ariaInfo">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="10"/>
                     <line x1="12" y1="16" x2="12" y2="12"/>
@@ -2024,28 +2025,28 @@
                 <circle cx="11" cy="11" r="8"></circle>
                 <path d="m21 21-4.35-4.35"></path>
             </svg>
-            <span>発見</span>
+            <span data-i18n="nav.discover">Discover</span>
         </a>
         <a href="/create.html" class="nav-item" data-tab="create">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-            <span>作る</span>
+            <span data-i18n="nav.create">Create</span>
         </a>
         <a href="/create.html" class="nav-item" data-tab="notifications">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
             </svg>
-            <span>通知</span>
+            <span data-i18n="nav.notifications">Notifications</span>
         </a>
         <a href="/mypage.html" class="nav-item" data-tab="profile">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                 <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            <span>マイ</span>
+            <span data-i18n="nav.myPage">My Page</span>
         </a>
     </nav>
 
@@ -2069,25 +2070,25 @@
                 <p class="info-description" id="infoDescription"></p>
 
                 <div class="info-row" id="infoHowToPlaySection" style="display: none;">
-                    <div class="info-section-title">遊び方</div>
+                    <div class="info-section-title" data-i18n="publish.howToPlay">How to Play</div>
                     <div class="info-how-to-play" id="infoHowToPlay"></div>
                 </div>
 
                 <div class="info-row" id="infoTagsSection" style="display: none;">
-                    <div class="info-section-title">タグ</div>
+                    <div class="info-section-title" data-i18n="publish.tags">Tags</div>
                     <div class="info-tags" id="infoTags"></div>
                 </div>
 
                 <!-- Owner Section (shown only to game owner) -->
                 <div class="info-owner-section" id="infoOwnerSection">
-                    <div class="info-owner-label">あなたのゲーム</div>
+                    <div class="info-owner-label" id="infoOwnerLabel">Your game</div>
                     <div class="info-owner-actions">
                         <button class="info-owner-btn info-btn-edit" id="infoEditBtn">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                             </svg>
-                            編集
+                            <span data-i18n="editor.edit">Edit</span>
                         </button>
                         <a href="?view=lineage" class="info-owner-btn info-btn-lineage" id="infoLineageBtnOwner">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2095,7 +2096,7 @@
                                 <circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/>
                                 <line x1="12" y1="14" x2="6" y2="16"/><line x1="12" y1="14" x2="18" y2="16"/>
                             </svg>
-                            系譜
+                            <span id="infoLineageText">Lineage</span>
                         </a>
                     </div>
                 </div>
@@ -2111,7 +2112,7 @@
                             <line x1="12" y1="14" x2="6" y2="16"/>
                             <line x1="12" y1="14" x2="18" y2="16"/>
                         </svg>
-                        <span>系譜を見る (<span id="lineageCountBadge">0</span> リミックス)</span>
+                        <span id="lineageLinkText">View lineage (<span id="lineageCountBadge">0</span> remixes)</span>
                     </a>
                 </div>
             </div>
@@ -2122,7 +2123,7 @@
     <div class="panel-overlay" id="sharePanelOverlay">
         <div class="panel share-panel">
             <div class="panel-handle"></div>
-            <div class="panel-title">シェア</div>
+            <div class="panel-title" data-i18n="game.share">Share</div>
             <div class="share-buttons-grid">
                 <!-- X -->
                 <button class="share-btn-game share-x" id="shareBtnX" title="X">
@@ -2179,7 +2180,7 @@
                     </svg>
                 </button>
                 <!-- QR -->
-                <button class="share-btn-game share-qr" id="shareBtnQR" title="QRコード">
+                <button class="share-btn-game share-qr" id="shareBtnQR" title="QR Code" data-i18n-title="game.qrCode">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="7" height="7"></rect>
                         <rect x="14" y="3" width="7" height="7"></rect>
@@ -2191,14 +2192,14 @@
                     </svg>
                 </button>
                 <!-- Copy -->
-                <button class="share-btn-game share-copy" id="shareBtnCopy" title="URLをコピー">
+                <button class="share-btn-game share-copy" id="shareBtnCopy" title="Copy URL" data-i18n-title="game.copyUrl">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
                         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
                     </svg>
                 </button>
                 <!-- Native Share -->
-                <button class="share-btn-game share-native" id="shareBtnNative" title="その他">
+                <button class="share-btn-game share-native" id="shareBtnNative" title="More" data-i18n-title="game.shareMore">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
                         <polyline points="16 6 12 2 8 6"></polyline>
@@ -2210,8 +2211,8 @@
             <div class="qr-modal-game hidden" id="qrModalGame">
                 <div class="qr-modal-content-game">
                     <canvas id="qrCanvasGame"></canvas>
-                    <p>スマホでスキャン</p>
-                    <button class="qr-close-btn-game" id="qrCloseBtnGame">閉じる</button>
+                    <p data-i18n="game.scanWithPhone">Scan with your phone</p>
+                    <button class="qr-close-btn-game" id="qrCloseBtnGame" data-i18n="game.closeModal">Close</button>
                 </div>
             </div>
         </div>
@@ -2493,34 +2494,34 @@
     <!-- Lineage View -->
     <div class="lineage-view hidden" id="lineageView">
         <div class="lineage-header">
-            <button class="lineage-back-btn" onclick="backToGame()" aria-label="戻る">
+            <button class="lineage-back-btn" onclick="backToGame()" aria-label="Back" data-i18n-aria="game.ariaBack">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="m15 18-6-6 6-6"/>
                 </svg>
             </button>
-            <h1 class="lineage-title">系譜</h1>
+            <h1 class="lineage-title" id="lineageViewTitle">Lineage</h1>
         </div>
 
         <div class="lineage-stats">
             <div class="lineage-stat">
                 <span class="lineage-stat-value" id="lineageRemixCount">-</span>
-                <span class="lineage-stat-label">リミックス</span>
+                <span class="lineage-stat-label" id="lineageRemixLabel">Remixes</span>
             </div>
             <div class="lineage-stat">
                 <span class="lineage-stat-value" id="lineageDepth">-</span>
-                <span class="lineage-stat-label">世代</span>
+                <span class="lineage-stat-label" id="lineageDepthLabel">Generations</span>
             </div>
         </div>
 
         <div class="lineage-section" id="ancestorSection">
-            <div class="lineage-section-title">先祖</div>
+            <div class="lineage-section-title" id="lineageAncestorTitle">Ancestors</div>
             <div class="lineage-chain" id="ancestorChain"></div>
         </div>
 
         <div id="currentGameSection"></div>
 
         <div class="lineage-section" id="descendantSection">
-            <div class="lineage-section-title">子孫</div>
+            <div class="lineage-section-title" id="lineageDescendantTitle">Descendants</div>
             <div class="lineage-tree" id="descendantTree"></div>
         </div>
     </div>
@@ -2534,6 +2535,14 @@
         const gameId = window.location.pathname.split('/')[2];
         let gameData = null;
         let publicGameBaseUrl = 'https://play.dreamcore.gg';
+
+        // ===== i18n Helper =====
+        function t(key, vars) {
+            if (typeof DreamCoreI18n !== 'undefined') {
+                return DreamCoreI18n.t(key, vars);
+            }
+            return key.split('.').pop();
+        }
 
         // ===== Toast Notification =====
         function showToast(message, duration = 3000) {
@@ -2567,9 +2576,9 @@
                 if (!response.ok) {
                     const error = await response.json();
                     if (response.status === 403) {
-                        showToast('このゲームはリミックスが許可されていません');
+                        showToast(t('game.remixNotAllowed'));
                     } else {
-                        showToast(error.error || 'リミックスに失敗しました');
+                        showToast(error.error || t('game.remixFailed'));
                     }
                     return;
                 }
@@ -2579,7 +2588,7 @@
                 window.location.href = `/project/${result.project.id}?remixed=true`;
             } catch (error) {
                 console.error('Remix error:', error);
-                showToast('リミックスに失敗しました');
+                showToast(t('game.remixFailed'));
             } finally {
                 remixBtn.classList.remove('loading');
             }
@@ -2630,7 +2639,7 @@
                 document.getElementById('ancestorChain').innerHTML = '';
                 document.getElementById('currentGameSection').innerHTML = '';
                 document.getElementById('descendantTree').innerHTML =
-                    '<div class="lineage-empty">系譜データを読み込めませんでした</div>';
+                    '<div class="lineage-empty">' + t('game.lineageLoadError') + '</div>';
                 document.getElementById('lineageRemixCount').textContent = '-';
                 document.getElementById('lineageDepth').textContent = '-';
                 return;
@@ -2695,11 +2704,11 @@
             descendantTree.innerHTML = '';
 
             if (descendants.length === 0) {
-                descendantTree.innerHTML = '<div class="lineage-empty">まだリミックスはありません</div>';
+                descendantTree.innerHTML = '<div class="lineage-empty">' + t('game.noRemixesYet') + '</div>';
             } else {
                 renderDescendants(descendants, descendantTree);
                 if (stats.depthCapped) {
-                    descendantTree.innerHTML += '<div class="lineage-more">さらに多くのリミックスがあります</div>';
+                    descendantTree.innerHTML += '<div class="lineage-more">' + t('game.moreRemixes') + '</div>';
                 }
             }
         }
@@ -3100,7 +3109,7 @@
         // Share buttons setup
         (function setupShareButtons() {
             const gameTitle = gameData ? gameData.title : 'DreamCore Game';
-            const shareText = `${gameTitle} で遊んでみて！`;
+            const shareText = t('game.shareText', { title: gameTitle });
             const baseUrl = window.location.href.split('?')[0]; // Remove existing params
 
             const getShareUrl = (source, medium = 'social') => {
@@ -3221,7 +3230,7 @@
                             const label = nativeBtn.querySelector('.share-btn-label');
                             if (label) {
                                 const original = label.textContent;
-                                label.textContent = 'コピー!';
+                                label.textContent = t('game.copied');
                                 setTimeout(() => { label.textContent = original; }, 1500);
                             }
                         } catch (err) {
@@ -3392,6 +3401,17 @@
         if (typeof DreamCoreAnalytics !== 'undefined') {
             DreamCoreAnalytics.init();
         }
+    </script>
+    <script>
+    // Initialize i18n
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof DreamCoreI18n !== 'undefined') {
+        DreamCoreI18n.init().then(function() {
+          document.documentElement.lang = DreamCoreI18n.currentLang;
+          document.title = DreamCoreI18n.t('game.title');
+        });
+      }
+    });
     </script>
 </body>
 </html>
