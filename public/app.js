@@ -3114,9 +3114,22 @@ class GameCreatorApp {
   /**
    * Show notification banner if permission hasn't been asked yet
    * iOS Safari requires notification permission to be requested from user gesture
+   *
+   * If permission is already granted, silently ensure push subscription is registered
+   * (handles users who granted permission before the fix)
    */
   showNotificationBannerIfNeeded() {
     if (!('Notification' in window)) return;
+
+    // If permission already granted, silently ensure subscription is registered
+    // This handles users who granted permission before the server registration fix
+    if (Notification.permission === 'granted') {
+      console.log('[Notification] Permission already granted, ensuring subscription...');
+      this.subscribeToPush();
+      return;
+    }
+
+    // Only show banner if permission not yet asked
     if (Notification.permission !== 'default') return;
     if (this._notificationBannerShown) return;
 
