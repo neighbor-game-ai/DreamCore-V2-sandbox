@@ -2337,7 +2337,7 @@ app.use((req, res) => {
 // ==================== Job Completion Notifications ====================
 
 // Send push notification when game generation completes
-jobManager.on('jobCompleted', async (job) => {
+jobManager.on('jobCompleted', async ({ job, result }) => {
   if (!job?.user_id || !job?.project_id) return;
 
   try {
@@ -2345,11 +2345,19 @@ jobManager.on('jobCompleted', async (job) => {
     const project = await db.getProjectById(supabaseAdmin, job.project_id);
     const projectName = project?.name || 'Your game';
 
+    // Use AI message as notification body, truncate if too long
+    let message = result?.message || `${projectName} has been updated successfully.`;
+    // Remove markdown formatting and truncate for notification
+    message = message.replace(/[#*`]/g, '').trim();
+    if (message.length > 100) {
+      message = message.substring(0, 97) + '...';
+    }
+
     await notificationService.createNotification({
       userId: job.user_id,
       type: 'project',
-      title: 'Game generation complete!',
-      message: `${projectName} has been updated successfully.`,
+      title: projectName,
+      message,
       icon: 'success',
       projectId: job.project_id,
       jobId: job.id

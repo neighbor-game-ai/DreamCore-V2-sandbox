@@ -176,7 +176,7 @@ class JobManager extends EventEmitter {
   async completeJob(jobId, result = null) {
     const job = await db.completeJob(jobId, result);
     this.runningJobs.delete(jobId);
-    this.emit('jobCompleted', job);
+    this.emit('jobCompleted', { job, result });  // Include result for notification message
     this.notifySubscribers(jobId, { type: 'completed', job, result });
     console.log(`Job completed: ${jobId}`);
     return job;
