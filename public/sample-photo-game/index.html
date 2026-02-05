@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photo Game Creator - Sample</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Photo Game Creator</h1>
+      <p class="subtitle">あなたの写真でゲームを作ろう</p>
+    </header>
+
+    <!-- Step 1: Upload -->
+    <section id="step-upload" class="step active">
+      <div class="step-header">
+        <span class="step-number">1</span>
+        <h2>写真をアップロード</h2>
+      </div>
+      <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📷</div>
+        <p>クリックまたはドラッグ&ドロップ</p>
+        <input type="file" id="fileInput" accept="image/*" hidden>
+      </div>
+      <div class="preview-container hidden" id="previewContainer">
+        <img id="previewImage" alt="Preview">
+        <button class="btn-secondary" id="changePhotoBtn">別の写真を選ぶ</button>
+      </div>
+    </section>
+
+    <!-- Step 2: Crop Mode -->
+    <section id="step-crop" class="step hidden">
+      <div class="step-header">
+        <span class="step-number">2</span>
+        <h2>どの部分を使いますか？</h2>
+      </div>
+      <div class="crop-options">
+        <button class="crop-option" data-mode="full">
+          <div class="option-icon">🧍</div>
+          <div class="option-label">人物全体</div>
+          <div class="option-desc">背景を除去して全身を使用</div>
+        </button>
+        <button class="crop-option" data-mode="face">
+          <div class="option-icon">😊</div>
+          <div class="option-label">顔だけ</div>
+          <div class="option-desc">顔を検出して切り取り</div>
+        </button>
+      </div>
+      <div class="processing-status hidden" id="processingStatus">
+        <div class="spinner"></div>
+        <p id="processingText">処理中...</p>
+      </div>
+      <div class="processed-preview hidden" id="processedPreview">
+        <h3>処理結果</h3>
+        <div class="before-after">
+          <div class="preview-box">
+            <p>元画像</p>
+            <img id="originalThumb" alt="Original">
+          </div>
+          <div class="arrow">→</div>
+          <div class="preview-box">
+            <p>処理後</p>
+            <img id="processedThumb" alt="Processed">
+          </div>
+        </div>
+        <button class="btn-primary" id="confirmCropBtn">この画像を使う</button>
+        <button class="btn-secondary" id="retryCropBtn">やり直す</button>
+      </div>
+    </section>
+
+    <!-- Step 3: Game Type -->
+    <section id="step-game" class="step hidden">
+      <div class="step-header">
+        <span class="step-number">3</span>
+        <h2>どんなゲームを作りますか？</h2>
+      </div>
+      <div class="game-options">
+        <button class="game-option" data-type="shooting">
+          <div class="option-icon">🚀</div>
+          <div class="option-label">シューティング</div>
+          <div class="option-desc">敵を撃って倒すゲーム</div>
+        </button>
+        <button class="game-option" data-type="action">
+          <div class="option-icon">🏃</div>
+          <div class="option-label">アクション</div>
+          <div class="option-desc">ジャンプして障害物を避けるゲーム</div>
+        </button>
+        <button class="game-option" data-type="puzzle">
+          <div class="option-icon">🧩</div>
+          <div class="option-label">パズル</div>
+          <div class="option-desc">頭を使って解くゲーム</div>
+        </button>
+        <button class="game-option" data-type="custom">
+          <div class="option-icon">✨</div>
+          <div class="option-label">その他</div>
+          <div class="option-desc">自由にリクエスト</div>
+        </button>
+      </div>
+      <div class="custom-input hidden" id="customInput">
+        <textarea id="customRequest" placeholder="どんなゲームを作りたいですか？（例：釣りゲーム、レースゲームなど）"></textarea>
+      </div>
+    </section>
+
+    <!-- Step 4: Result -->
+    <section id="step-result" class="step hidden">
+      <div class="step-header">
+        <span class="step-number">4</span>
+        <h2>準備完了！</h2>
+      </div>
+      <div class="result-summary">
+        <div class="summary-item">
+          <span class="label">使用画像:</span>
+          <img id="resultImage" alt="Result" class="result-thumb">
+        </div>
+        <div class="summary-item">
+          <span class="label">切り取りモード:</span>
+          <span id="resultCropMode">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">ゲームタイプ:</span>
+          <span id="resultGameType">-</span>
+        </div>
+      </div>
+      <div class="generated-prompt">
+        <h3>生成されるプロンプト</h3>
+        <pre id="generatedPrompt"></pre>
+      </div>
+      <div class="action-buttons">
+        <button class="btn-primary btn-large" id="createGameBtn">ゲームを作成する</button>
+        <button class="btn-secondary" id="startOverBtn">最初からやり直す</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- face-api.js for face detection (vladmandic fork - maintained version) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
