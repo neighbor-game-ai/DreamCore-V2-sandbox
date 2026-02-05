@@ -28,6 +28,18 @@ class ProfileEditor {
   }
 
   /**
+   * Helper to get translated text
+   * Falls back to key if i18n not available
+   */
+  t(key, vars) {
+    if (typeof DreamCoreI18n !== 'undefined') {
+      return DreamCoreI18n.t(key, vars);
+    }
+    // Fallback to last part of key
+    return key.split('.').pop();
+  }
+
+  /**
    * Open profile editor modal
    */
   async open() {
@@ -35,7 +47,7 @@ class ProfileEditor {
       // Fetch current profile
       this.userData = await this.fetchProfile();
       if (!this.userData) {
-        alert('プロフィールの取得に失敗しました');
+        alert(this.t('error.systemError'));
         return;
       }
 
@@ -45,7 +57,7 @@ class ProfileEditor {
       this.showModal();
     } catch (err) {
       console.error('[ProfileEditor] Failed to open:', err);
-      alert('プロフィールの読み込みに失敗しました');
+      alert(this.t('error.systemError'));
     }
   }
 
@@ -75,7 +87,7 @@ class ProfileEditor {
     backdrop.innerHTML = `
       <div class="profile-modal">
         <div class="profile-modal-header">
-          <h2 class="profile-modal-title">プロフィール編集</h2>
+          <h2 class="profile-modal-title">${this.escapeAttr(this.t('profileEditor.title'))}</h2>
           <button class="profile-modal-close" id="profileCloseBtn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -95,23 +107,23 @@ class ProfileEditor {
                 <circle cx="12" cy="7" r="4"></circle>
               </svg>
             </div>
-            <button class="profile-avatar-upload-btn" id="avatarUploadBtn">画像を変更</button>
+            <button class="profile-avatar-upload-btn" id="avatarUploadBtn">${this.escapeAttr(this.t('profileEditor.changePhoto'))}</button>
           </div>
 
           <!-- Username -->
           <div class="profile-form-group">
-            <label class="profile-form-label" for="editUsername">ユーザー名</label>
+            <label class="profile-form-label" for="editUsername">${this.escapeAttr(this.t('profileEditor.username'))}</label>
             <div class="profile-username-input-wrapper">
               <span class="profile-username-prefix">@</span>
               <input type="text" id="editUsername" class="profile-form-input profile-username-input"
-                     placeholder="username" maxlength="20" pattern="[a-z0-9_]{3,20}">
+                     placeholder="${this.escapeAttr(this.t('profileEditor.usernamePlaceholder').replace('@', ''))}" maxlength="20" pattern="[a-z0-9_]{3,20}">
               <span class="profile-username-status" id="usernameStatus"></span>
             </div>
             <div class="profile-form-hint">
-              3〜20文字、英小文字・数字・アンダースコアのみ
+              <span id="usernameHintText">${this.escapeAttr(this.t('profileEditor.usernameHint'))}</span>
               <span id="usernameUrl" class="profile-username-url" style="display: none;">
                 <span id="usernameUrlText"></span>
-                <button type="button" class="profile-username-copy" id="usernameUrlCopy" title="URLをコピー">
+                <button type="button" class="profile-username-copy" id="usernameUrlCopy" title="Copy URL">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -123,21 +135,21 @@ class ProfileEditor {
 
           <!-- Display Name -->
           <div class="profile-form-group">
-            <label class="profile-form-label" for="editDisplayName">表示名</label>
-            <input type="text" id="editDisplayName" class="profile-form-input" placeholder="ユーザー名" maxlength="50">
-            <div class="profile-form-hint">最大50文字</div>
+            <label class="profile-form-label" for="editDisplayName">${this.escapeAttr(this.t('profileEditor.displayName'))}</label>
+            <input type="text" id="editDisplayName" class="profile-form-input" placeholder="${this.escapeAttr(this.t('profileEditor.displayNamePlaceholder'))}" maxlength="50">
+            <div class="profile-form-hint">Max 50 characters</div>
           </div>
 
           <!-- Bio -->
           <div class="profile-form-group">
-            <label class="profile-form-label" for="editBio">自己紹介</label>
-            <textarea id="editBio" class="profile-form-input profile-form-textarea" placeholder="自己紹介を入力..." maxlength="160"></textarea>
-            <div class="profile-form-hint"><span id="bioCharCount">0</span>/160文字</div>
+            <label class="profile-form-label" for="editBio">${this.escapeAttr(this.t('profileEditor.bio'))}</label>
+            <textarea id="editBio" class="profile-form-input profile-form-textarea" placeholder="${this.escapeAttr(this.t('profileEditor.bioPlaceholder'))}" maxlength="160"></textarea>
+            <div class="profile-form-hint"><span id="bioCharCount">0</span>/160</div>
           </div>
 
           <!-- Social Links -->
           <div class="profile-social-section">
-            <div class="profile-social-title">SNSリンク</div>
+            <div class="profile-social-title">${this.escapeAttr(this.t('profileEditor.socialLinks'))}</div>
             <div class="profile-social-grid" id="socialLinksGrid">
               <!-- Generated by JS -->
             </div>
@@ -146,13 +158,13 @@ class ProfileEditor {
             <div class="profile-custom-links" id="customLinksContainer">
               <!-- Generated by JS -->
             </div>
-            <button class="profile-add-custom-link" id="addCustomLinkBtn">+ カスタムリンクを追加</button>
+            <button class="profile-add-custom-link" id="addCustomLinkBtn">+ Custom link</button>
           </div>
         </div>
 
         <div class="profile-modal-footer">
-          <button class="profile-btn profile-btn-cancel" id="profileCancelBtn">キャンセル</button>
-          <button class="profile-btn profile-btn-save" id="profileSaveBtn">保存</button>
+          <button class="profile-btn profile-btn-cancel" id="profileCancelBtn">${this.escapeAttr(this.t('button.cancel'))}</button>
+          <button class="profile-btn profile-btn-save" id="profileSaveBtn">${this.escapeAttr(this.t('button.change'))}</button>
         </div>
       </div>
     `;
@@ -228,7 +240,7 @@ class ProfileEditor {
     if (this.userData.username) {
       usernameInput.value = this.userData.username;
       this.updateUsernameUrl(this.userData.username);
-      this.setUsernameStatus('current', '現在使用中');
+      this.setUsernameStatus('current', this.t('profileEditor.usernameInUse'));
     }
 
     // Display name
@@ -269,7 +281,7 @@ class ProfileEditor {
     const container = this.modal.querySelector('#customLinksContainer');
     container.innerHTML = this.customLinks.map((link, index) => `
       <div class="profile-custom-link-item" data-index="${index}">
-        <input type="text" class="profile-custom-link-label" placeholder="ラベル"
+        <input type="text" class="profile-custom-link-label" placeholder="Label"
                value="${this.escapeAttr(link.label || '')}" maxlength="30">
         <input type="text" class="profile-custom-link-url" placeholder="https://..."
                value="${this.escapeAttr(link.url || '')}">
@@ -396,11 +408,11 @@ class ProfileEditor {
 
     // Client-side validation
     if (data.display_name && data.display_name.length > 50) {
-      this.showError('表示名は50文字以内にしてください');
+      this.showError(this.t('error.systemError'));
       return;
     }
     if (data.bio && data.bio.length > 160) {
-      this.showError('自己紹介は160文字以内にしてください');
+      this.showError(this.t('error.systemError'));
       return;
     }
 
@@ -417,7 +429,7 @@ class ProfileEditor {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || 'プロフィールの更新に失敗しました');
+        throw new Error(errData.error || this.t('error.systemError'));
       }
 
       // Success - clear username cache and reload to show changes
@@ -466,13 +478,13 @@ class ProfileEditor {
   async uploadAvatar(file) {
     // Check file size (2MB limit)
     if (file.size > 2 * 1024 * 1024) {
-      this.showError('画像サイズは2MB以下にしてください');
+      this.showError(this.t('error.systemError'));
       return;
     }
 
     // Check file type
     if (!file.type.startsWith('image/')) {
-      this.showError('画像ファイルを選択してください');
+      this.showError(this.t('error.systemError'));
       return;
     }
 
@@ -481,7 +493,7 @@ class ProfileEditor {
 
     const uploadBtn = this.modal.querySelector('#avatarUploadBtn');
     const originalText = uploadBtn.textContent;
-    uploadBtn.textContent = 'アップロード中...';
+    uploadBtn.textContent = this.t('common.loading');
     uploadBtn.disabled = true;
 
     try {
@@ -495,7 +507,7 @@ class ProfileEditor {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || 'アバターのアップロードに失敗しました');
+        throw new Error(errData.error || this.t('error.systemError'));
       }
 
       const { avatar_url } = await res.json();
@@ -533,7 +545,7 @@ class ProfileEditor {
 
     // If same as current username, show "current" status
     if (normalized === this.userData.username) {
-      this.setUsernameStatus('current', '現在使用中');
+      this.setUsernameStatus('current', this.t('profileEditor.usernameInUse'));
       this.updateUsernameUrl(normalized);
       return;
     }
@@ -542,18 +554,18 @@ class ProfileEditor {
     const formatValid = /^[a-z0-9_]{3,20}$/.test(normalized);
     if (!formatValid) {
       if (normalized.length < 3) {
-        this.setUsernameStatus('error', '3文字以上必要です');
+        this.setUsernameStatus('error', this.t('profileEditor.usernameUnavailable'));
       } else if (normalized.length > 20) {
-        this.setUsernameStatus('error', '20文字以下にしてください');
+        this.setUsernameStatus('error', this.t('profileEditor.usernameUnavailable'));
       } else {
-        this.setUsernameStatus('error', '使用できない文字があります');
+        this.setUsernameStatus('error', this.t('profileEditor.usernameUnavailable'));
       }
       this.updateUsernameUrl('');
       return;
     }
 
     // Show checking status
-    this.setUsernameStatus('checking', '確認中...');
+    this.setUsernameStatus('checking', this.t('profileEditor.usernameChecking'));
 
     // Debounced API check
     this.usernameCheckTimeout = setTimeout(() => {
@@ -574,17 +586,17 @@ class ProfileEditor {
       if (currentValue !== username) return;
 
       if (data.available) {
-        this.setUsernameStatus('available', '利用可能');
+        this.setUsernameStatus('available', this.t('profileEditor.usernameAvailable'));
         this.updateUsernameUrl(username);
         this.usernameAvailable = true;
       } else {
-        this.setUsernameStatus('error', data.error || '使用できません');
+        this.setUsernameStatus('error', data.error || this.t('profileEditor.usernameUnavailable'));
         this.updateUsernameUrl('');
         this.usernameAvailable = false;
       }
     } catch (err) {
       console.error('[ProfileEditor] Username check error:', err);
-      this.setUsernameStatus('error', 'エラー');
+      this.setUsernameStatus('error', this.t('error.systemError'));
       this.usernameAvailable = false;
     }
   }
