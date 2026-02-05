@@ -12,9 +12,18 @@ AI-powered browser game creation platform with Modal Sandbox integration.
 
 ## プロジェクト概要
 
+> **「夢をゲームにする」** - 話すだけでゲームが作れるプラットフォーム
+
 AI でブラウザゲームを作成するプラットフォーム。Claude CLI の実行環境として Modal Sandbox を使用。
 
 **本番URL**: https://v2.dreamcore.gg
+
+### ミッション
+
+- **ゲーム開発の民主化** - 誰でも、どこでも、高性能PCなしでもゲームが作れる
+- **クリエイターの味方** - 技術的ハードルを取り除き、収益化の機会を提供
+
+詳細: `docs/PRODUCT-VISION.md`
 
 ### 品質基準
 
@@ -330,6 +339,7 @@ git push origin main
 
 ## 重要ファイル
 
+- `docs/PRODUCT-VISION.md` - **プロダクトビジョン・思想（必読）**
 - `docs/ENGINEER-HANDOFF.md` - **Modal統合の引き継ぎ文書（必読）**
 - `docs/MODAL-MIGRATION-PLAN.md` - Modal移行計画
 - `docs/MODAL-DESIGN.md` - Modal技術設計
