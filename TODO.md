@@ -10,7 +10,7 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ### 2026-02-05: PWA / Push Notifications 実装 ✅
 
-**詳細:** `.claude/logs/2026-02-05-pwa-push-notifications.md`
+**詳細:** `.claude/logs/2026-02-05-pwa-push.md`
 
 DreamCoreをPWA化し、プッシュ通知機能を実装:
 
@@ -21,19 +21,23 @@ DreamCoreをPWA化し、プッシュ通知機能を実装:
 | **通知トリガー** | ゲーム生成完了/失敗時に自動送信 |
 | **iOS対応** | ユーザージェスチャー必須、ホーム追加後のみ |
 
-**新規ファイル:**
-- `public/manifest.json`, `sw.js`, `push.js`, `icons/`
-- `server/pushService.js`, `notificationService.js`
-- `server/routes/pushApi.js`, `notificationsApi.js`
-- `supabase/migrations/022_push_notifications.sql`
+**E2E テスト結果:**
+| デバイス | 購読 | 手動通知 | ゲーム完成通知 |
+|----------|-----|---------|---------------|
+| Android 10 | ✅ | ✅ | ✅ |
+| iOS 18.5 (PWA) | ✅ | ✅ | ✅ |
 
-**CTOレビュー対応:**
-- `gen_random_uuid()` 使用（uuid_generate_v7ではなく）
-- 通知許可はボタンクリックから（iOS要件）
-- `unreadCount` は全体件数で計算
-- `push_subscriptions` 書き込みは `supabaseAdmin` 経由
+**修正した問題:**
+- ブラウザキャッシュで新コードが読み込まれない → キャッシュバスター追加
+- `DreamCorePush` が未ロード → 動的ローダー追加
+- 認証後に購読されない → `ensurePushSubscription()` 追加
 
-**ステータス:** デプロイ完了、手動E2E検証待ち
+**残課題（バックログ）:**
+- 通知タップ → プロジェクトページに遷移（現状は `/create.html`）
+- 通知種別ごとのリンク先対応（コメント、Remix 等）
+- PWA で開く（現状はブラウザが開く）
+
+**ステータス:** E2E完了、改善項目は別途対応
 
 ---
 
