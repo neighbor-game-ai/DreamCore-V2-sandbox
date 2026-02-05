@@ -112,8 +112,11 @@ async function createNotification(options) {
       await pushService.sendPushToUser(userId, {
         title,
         body: message,
-        url,
-        projectId,
+        data: {
+          type,           // 'project', 'system', 'social'
+          url,            // Primary: SW uses this URL
+          projectId       // Fallback: SW can generate URL from this
+        },
         tag: `notification-${notification.id}`
       });
     }

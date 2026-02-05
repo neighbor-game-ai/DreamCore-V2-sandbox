@@ -125,34 +125,46 @@ self.addEventListener('notificationclick', (event) => {
   }
 
   // Determine URL based on notification data
-  let url = '/notifications.html';
+  // Priority: 1. url (explicit), 2. projectId (generate URL), 3. fallback
   const notificationData = event.notification.data || {};
+  let targetUrl = '/notifications.html';  // Default fallback
 
-  if (notificationData.projectId) {
-    // Project notification with projectId -> go to create page
-    url = `/create.html?project=${notificationData.projectId}`;
-  } else if (notificationData.url) {
-    // Custom URL provided
-    url = notificationData.url;
+  if (notificationData.url) {
+    // Primary: Use explicit URL from notification payload
+    targetUrl = notificationData.url;
+  } else if (notificationData.projectId) {
+    // Fallback: Generate URL from projectId
+    targetUrl = `/create.html?project=${notificationData.projectId}`;
   }
-  // Fallback: notifications.html (already set as default)
+
+  // Convert to absolute URL for PWA scope matching
+  const absoluteUrl = new URL(targetUrl, self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((windowClients) => {
-        // Focus existing window if available
+        // Try to find an existing PWA/browser window to focus
         for (const client of windowClients) {
-          if (client.url.includes(self.location.origin) && 'focus' in client) {
+          // Check if client is from our origin
+          if (new URL(client.url).origin === self.location.origin) {
+            // Focus existing window and navigate to target
             return client.focus().then(() => {
+              // Navigate if possible (not supported in all browsers)
               if ('navigate' in client) {
-                return client.navigate(url);
+                return client.navigate(absoluteUrl);
               }
+              // Fallback: post message to let the page handle navigation
+              client.postMessage({
+                type: 'NOTIFICATION_CLICK',
+                url: absoluteUrl
+              });
             });
           }
         }
-        // Open new window
+        // No existing window - open new one
+        // Using absolute URL helps PWA scope matching
         if (clients.openWindow) {
-          return clients.openWindow(url);
+          return clients.openWindow(absoluteUrl);
         }
       })
   );

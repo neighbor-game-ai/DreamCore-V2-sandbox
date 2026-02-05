@@ -581,12 +581,18 @@ class GameCreatorApp {
   // ==================== Error Detection ====================
 
   setupErrorListeners() {
-    // Listen for messages from game iframe
+    // Listen for messages from game iframe and service worker
     window.addEventListener('message', (event) => {
       if (event.data && event.data.type === 'gameError') {
         this.handleGameErrors(event.data.errors);
       } else if (event.data && event.data.type === 'gameLoaded') {
         this.handleGameLoaded(event.data);
+      } else if (event.data && event.data.type === 'NOTIFICATION_CLICK') {
+        // Handle notification click from Service Worker (fallback when navigate() not supported)
+        const url = event.data.url;
+        if (url) {
+          window.location.href = url;
+        }
       }
     });
 
