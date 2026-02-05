@@ -3120,7 +3120,37 @@ class GameCreatorApp {
    * Ensure push subscription is registered (called on page load after auth)
    * Silently subscribes if permission is already granted
    */
-  ensurePushSubscription() {
+  async ensurePushSubscription() {
+    // Debug: Send client state to server for troubleshooting
+    const debugState = {
+      hasPush: !!window.DreamCorePush,
+      permission: ('Notification' in window) ? Notification.permission : 'N/A',
+      hasSW: 'serviceWorker' in navigator,
+      hasSubscription: false,
+      error: null
+    };
+
+    try {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) {
+          const sub = await reg.pushManager?.getSubscription();
+          debugState.hasSubscription = !!sub;
+        }
+      }
+    } catch (e) {
+      debugState.error = e.message;
+    }
+
+    // Send debug state to server (fire and forget)
+    fetch('/api/push/debug', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(debugState)
+    }).catch(() => {});
+
+    console.log('[Push Debug]', debugState);
+
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
 

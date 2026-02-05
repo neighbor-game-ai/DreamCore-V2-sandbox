@@ -12,6 +12,23 @@ const pushService = require('../pushService');
 const { isAllowedPushUser } = require('../notificationService');
 
 /**
+ * POST /api/push/debug
+ * Debug endpoint to log client push state (temporary)
+ */
+router.post('/debug', (req, res) => {
+  const { hasPush, permission, hasSW, hasSubscription, error } = req.body;
+  console.log('[Push Debug] Client state:', JSON.stringify({
+    hasPush,
+    permission,
+    hasSW,
+    hasSubscription,
+    error,
+    ua: req.headers['user-agent']?.substring(0, 50)
+  }));
+  res.json({ ok: true });
+});
+
+/**
  * GET /api/push/vapid-key
  * Returns VAPID public key for frontend subscription
  * No authentication required (public endpoint)
