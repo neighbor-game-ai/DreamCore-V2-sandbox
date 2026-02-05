@@ -824,10 +824,69 @@
 
   <script src="/auth.js"></script>
   <script>
-    // Basic Auth credentials for admin API
-    const ADMIN_BASIC_USER = 'admin';
-    const ADMIN_BASIC_PASS = 'dc-ops-f1f0c1ad';
-    const BASIC_AUTH_HEADER = 'Basic ' + btoa(ADMIN_BASIC_USER + ':' + ADMIN_BASIC_PASS);
+    // Admin credentials from sessionStorage (never hardcode!)
+    function getAdminCredentials() {
+      const stored = sessionStorage.getItem('admin_credentials');
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch (e) {
+          sessionStorage.removeItem('admin_credentials');
+        }
+      }
+      return null;
+    }
+
+    function promptAdminCredentials() {
+      return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.innerHTML = `
+          <div style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;">
+            <div style="background:white;padding:24px;border-radius:12px;max-width:360px;width:90%;">
+              <h3 style="margin:0 0 16px;font-size:1.125rem;font-weight:600;">管理者ログイン</h3>
+              <form id="adminLoginForm">
+                <div style="margin-bottom:12px;">
+                  <label style="display:block;font-size:0.875rem;margin-bottom:4px;">ユーザー名</label>
+                  <input type="text" id="adminUser" required style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:16px;">
+                  <label style="display:block;font-size:0.875rem;margin-bottom:4px;">パスワード</label>
+                  <input type="password" id="adminPass" required style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;box-sizing:border-box;">
+                </div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                  <button type="button" id="adminCancel" style="padding:8px 16px;border:1px solid #ddd;background:white;border-radius:6px;cursor:pointer;">キャンセル</button>
+                  <button type="submit" style="padding:8px 16px;border:none;background:#4F46E5;color:white;border-radius:6px;cursor:pointer;">ログイン</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('adminCancel').onclick = () => {
+          modal.remove();
+          window.location.href = '/create.html';
+        };
+
+        document.getElementById('adminLoginForm').onsubmit = (e) => {
+          e.preventDefault();
+          const user = document.getElementById('adminUser').value;
+          const pass = document.getElementById('adminPass').value;
+          const credentials = { user, pass };
+          sessionStorage.setItem('admin_credentials', JSON.stringify(credentials));
+          modal.remove();
+          resolve(credentials);
+        };
+      });
+    }
+
+    async function getBasicAuthHeader() {
+      let creds = getAdminCredentials();
+      if (!creds) {
+        creds = await promptAdminCredentials();
+      }
+      return 'Basic ' + btoa(creds.user + ':' + creds.pass);
+    }
 
     // State
     let retentionData = null;
@@ -841,12 +900,20 @@
 
       try {
         const session = await DreamCoreAuth.getSession();
+        const basicAuthHeader = await getBasicAuthHeader();
         const response = await fetch('/api/analytics/admin/retention', {
           headers: {
-            'Authorization': BASIC_AUTH_HEADER,
+            'Authorization': basicAuthHeader,
             'X-Auth-Token': session?.access_token || ''
           }
         });
+
+        if (response.status === 401) {
+          // Invalid credentials - clear and retry
+          sessionStorage.removeItem('admin_credentials');
+          loadRetention();
+          return;
+        }
 
         if (response.status === 403) {
           document.getElementById('mainContainer').innerHTML = `
