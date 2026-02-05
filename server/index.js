@@ -2346,9 +2346,16 @@ jobManager.on('jobCompleted', async ({ job, result }) => {
     const projectName = project?.name || 'Your game';
 
     // Use AI message as notification body, truncate if too long
-    let message = result?.message || `${projectName} has been updated successfully.`;
-    // Remove markdown formatting and truncate for notification
-    message = message.replace(/[#*`]/g, '').trim();
+    let message = result?.message;
+    // Safety: ensure message is a string
+    if (typeof message !== 'string') {
+      message = message ? JSON.stringify(message) : `${projectName} has been updated successfully.`;
+    }
+    // Clean up for notification: remove markdown, newlines, and truncate
+    message = message
+      .replace(/[#*`]/g, '')      // Remove markdown
+      .replace(/[\r\n]+/g, ' ')   // Replace newlines with space
+      .trim();
     if (message.length > 100) {
       message = message.substring(0, 97) + '...';
     }
