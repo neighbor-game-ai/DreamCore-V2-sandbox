@@ -617,9 +617,16 @@ class GameCreatorApp {
       const channel = new BroadcastChannel('dreamcore-notifications');
       channel.onmessage = (event) => {
         console.log('[App] BroadcastChannel message:', event.data);
+        // Debug: notify server that message was received
+        fetch('/api/push/debug-click', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phase: 'app_received_broadcast', data: event.data })
+        }).catch(() => {});
+
         if (event.data && event.data.type === 'NAVIGATE') {
           const url = event.data.url;
-          if (url) {
+          if (url && url !== window.location.href) {
             console.log('[App] BroadcastChannel: Navigating to:', url);
             window.location.href = url;
           }

@@ -4,8 +4,8 @@
  * - Push notification handling
  */
 
-const SW_VERSION = '2026.02.05.l';
-const CACHE_NAME = 'dreamcore-v11';
+const SW_VERSION = '2026.02.05.m';
+const CACHE_NAME = 'dreamcore-v12';
 
 console.log('[SW] Version:', SW_VERSION);
 const PRECACHE_ASSETS = [
@@ -181,24 +181,33 @@ self.addEventListener('notificationclick', (event) => {
   }).catch(() => {});
 
   // iOS PWA: openWindow() focuses the window but doesn't navigate.
-  // Solution: Use BroadcastChannel to send URL to the app, then openWindow to focus.
+  // Solution: First focus the PWA, then send BroadcastChannel messages with delays.
   event.waitUntil(
     (async () => {
       try {
-        // Send URL via BroadcastChannel (more reliable than postMessage)
-        const channel = new BroadcastChannel('dreamcore-notifications');
-        channel.postMessage({ type: 'NAVIGATE', url: absoluteUrl });
-        channel.close();
-
-        // Also try openWindow to focus the PWA
+        // First, focus the PWA window
         if (clients.openWindow) {
           await clients.openWindow(absoluteUrl);
         }
 
+        // Helper to send broadcast message
+        const sendBroadcast = () => {
+          const channel = new BroadcastChannel('dreamcore-notifications');
+          channel.postMessage({ type: 'NAVIGATE', url: absoluteUrl });
+          channel.close();
+        };
+
+        // Send messages with delays to ensure PWA has time to wake up
+        sendBroadcast();  // Immediate
+        setTimeout(sendBroadcast, 100);   // 100ms
+        setTimeout(sendBroadcast, 300);   // 300ms
+        setTimeout(sendBroadcast, 500);   // 500ms
+        setTimeout(sendBroadcast, 1000);  // 1s
+
         fetch('/api/push/debug-click', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phase: 'broadcast_sent', url: absoluteUrl })
+          body: JSON.stringify({ phase: 'broadcasts_scheduled', url: absoluteUrl })
         }).catch(() => {});
       } catch (err) {
         fetch('/api/push/debug-click', {
