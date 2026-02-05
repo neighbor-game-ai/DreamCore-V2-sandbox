@@ -4,8 +4,8 @@
  * - Push notification handling
  */
 
-const SW_VERSION = '2026.02.05.h';
-const CACHE_NAME = 'dreamcore-v7';
+const SW_VERSION = '2026.02.05.i';
+const CACHE_NAME = 'dreamcore-v8';
 
 console.log('[SW] Version:', SW_VERSION);
 const PRECACHE_ASSETS = [
@@ -150,20 +150,6 @@ self.addEventListener('notificationclick', (event) => {
     return;
   }
 
-  // Debug: Send notification data to server for logging
-  const rawData = event.notification.data;
-  fetch('/api/push/debug-click', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      version: SW_VERSION,
-      rawData: rawData,
-      hasData: !!rawData,
-      dataType: typeof rawData,
-      dataKeys: rawData ? Object.keys(rawData) : []
-    })
-  }).catch(() => {});
-
   // Determine URL based on notification data
   // Priority: 1. url (explicit), 2. projectId (generate URL), 3. fallback
   const notificationData = event.notification.data || {};
@@ -178,45 +164,94 @@ self.addEventListener('notificationclick', (event) => {
   }
 
   // Convert to absolute URL for PWA scope matching
-  // IMPORTANT: Use exact origin without trailing slash to match manifest scope
   const absoluteUrl = new URL(targetUrl, self.location.origin).href;
-  console.log('[SW] Opening URL:', absoluteUrl);
+
+  // Debug: Send all computed values to server
+  fetch('/api/push/debug-click', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      version: SW_VERSION,
+      rawDataUrl: notificationData.url,
+      rawDataProjectId: notificationData.projectId,
+      targetUrl: targetUrl,
+      absoluteUrl: absoluteUrl,
+      origin: self.location.origin
+    })
+  }).catch(() => {});
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((windowClients) => {
-        console.log('[SW] Found', windowClients.length, 'window clients');
+        // Debug: Log client info
+        fetch('/api/push/debug-click', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phase: 'clients',
+            clientCount: windowClients.length,
+            clients: windowClients.map(c => ({ url: c.url, focused: c.focused })),
+            absoluteUrl: absoluteUrl
+          })
+        }).catch(() => {});
 
         // Try to find an existing PWA/browser window to focus
         for (const client of windowClients) {
           const clientOrigin = new URL(client.url).origin;
-          console.log('[SW] Checking client:', client.url, 'origin:', clientOrigin);
 
           // Check if client is from our origin
           if (clientOrigin === self.location.origin) {
-            console.log('[SW] Found matching client, focusing...');
+            // Debug: Found matching client
+            fetch('/api/push/debug-click', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                phase: 'found_client',
+                clientUrl: client.url,
+                willNavigateTo: absoluteUrl
+              })
+            }).catch(() => {});
+
             // Focus existing window and navigate to target
             return client.focus().then(() => {
-              // Always send postMessage (more reliable, especially on iOS PWA)
+              // Send postMessage for iOS PWA
               client.postMessage({
                 type: 'NOTIFICATION_CLICK',
                 url: absoluteUrl
               });
-              // Also try navigate() as it works on some browsers
+              // Also try navigate()
               if ('navigate' in client) {
-                return client.navigate(absoluteUrl).catch((err) => {
-                  console.log('[SW] navigate() failed:', err.message);
-                  // navigate() failed, but postMessage should handle it
+                return client.navigate(absoluteUrl).then(() => {
+                  fetch('/api/push/debug-click', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phase: 'navigate_success', url: absoluteUrl })
+                  }).catch(() => {});
+                }).catch((err) => {
+                  fetch('/api/push/debug-click', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phase: 'navigate_failed', error: err.message })
+                  }).catch(() => {});
                 });
+              } else {
+                fetch('/api/push/debug-click', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ phase: 'no_navigate_method' })
+                }).catch(() => {});
               }
             });
           }
         }
 
         // No existing window - open new one
-        // On Android, this may open in Chrome instead of the PWA when PWA is not running
-        // This is a known platform limitation
-        console.log('[SW] No matching client found, opening new window');
+        fetch('/api/push/debug-click', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phase: 'open_new_window', url: absoluteUrl })
+        }).catch(() => {});
+
         if (clients.openWindow) {
           return clients.openWindow(absoluteUrl);
         }
