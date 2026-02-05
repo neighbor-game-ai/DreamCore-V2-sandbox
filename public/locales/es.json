@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "DreamCore",
+    "gameCreator": "Creador de Juegos",
     "loading": "Cargando...",
     "retry": "Intentar de nuevo",
     "or": "o"
@@ -48,7 +49,9 @@
     "mypage": {
       "title": "Mi página - DreamCore",
       "header": "Mi página",
-      "description": "Tus juegos y tu perfil"
+      "description": "Tus juegos y tu perfil",
+      "defaultUser": "Usuario",
+      "shareProfileTitle": "Perfil de {name}"
     },
     "discover": {
       "title": "Explorar - DreamCore",

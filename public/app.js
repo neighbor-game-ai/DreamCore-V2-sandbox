@@ -1745,7 +1745,7 @@ class GameCreatorApp {
     if (!game) return;
 
     // TODO: Implement remix functionality
-    alert(`リミックス機能は近日公開予定です！`);
+    alert(this.t('remix.comingSoon'));
   }
 
   shareCurrentGame() {
@@ -1759,7 +1759,7 @@ class GameCreatorApp {
     if (navigator.share) {
       navigator.share({
         title: game.name,
-        text: `${game.name} - Game Creator で作られたゲーム`,
+        text: this.t('share.madeWithGameCreator', { name: game.name }),
         url: shareUrl
       }).catch(() => {});
     } else {
@@ -1968,7 +1968,7 @@ class GameCreatorApp {
         // Update preview title and page title
         const selectedProject = this.projects.find(p => p.id === this.currentProjectId);
         if (selectedProject) {
-          document.title = `${selectedProject.name} - ゲームクリエイター`;
+          document.title = `${selectedProject.name} - ${this.t('common.gameCreator')}`;
           this.currentProjectName = selectedProject.name;
           this.updateProjectTitle(selectedProject.name);
         }
@@ -2010,7 +2010,7 @@ class GameCreatorApp {
         }
         // Update current project if it was renamed
         if (data.project && this.currentProjectId === data.project.id) {
-          document.title = `${data.project.name} - ゲームクリエイター`;
+          document.title = `${data.project.name} - ${this.t('common.gameCreator')}`;
           this.currentProjectName = data.project.name;
           this.updateProjectTitle(data.project.name, true); // Animate title update
           // Also update in projects array
@@ -2077,7 +2077,7 @@ class GameCreatorApp {
         // Update project name if changed (from auto-rename)
         if (data.project && this.currentProjectId === data.project.id) {
           if (this.currentProjectName !== data.project.name) {
-            document.title = `${data.project.name} - ゲームクリエイター`;
+            document.title = `${data.project.name} - ${this.t('common.gameCreator')}`;
             this.currentProjectName = data.project.name;
             this.updateProjectTitle(data.project.name, true);
             // Update in projects array
@@ -2195,7 +2195,7 @@ class GameCreatorApp {
             projectId: this.currentProjectId,
             versionId: previousVersion.id
           }));
-          this.addMessage(`前のバージョン（${previousVersion.message}）に戻しています...`, 'system');
+          this.addMessage(this.t('editor.restoringToPrevious', { message: previousVersion.message }), 'system');
         } else if (this.pendingRestore) {
           this.pendingRestore = false;
           this.addMessage(this.t('editor.noVersionToRestore'), 'system');
@@ -2214,7 +2214,7 @@ class GameCreatorApp {
         this.hideRestoreModal();
         this.resetRestoreModal();
         this.currentVersionId = data.versionId;
-        this.addMessage(`バージョン ${data.versionId} に戻しました`, 'system');
+        this.addMessage(this.t('editor.restoredToVersion', { versionId: data.versionId }), 'system');
         this.hideVersionPanel();
         this.refreshPreview();
         break;
@@ -2250,7 +2250,7 @@ class GameCreatorApp {
     this.sendButton.disabled = true;
     this.stopButton.classList.remove('hidden');
     this.showStreaming();
-    this.updateStreamingStatus(`処理中... ${job.progress || 0}%`);
+    this.updateStreamingStatus(this.t('editor.processingPercent', { progress: job.progress || 0 }));
 
     if (job.progress_message) {
       this.appendToStream(`\n[${job.progress_message}]\n`);
@@ -2264,7 +2264,7 @@ class GameCreatorApp {
         break;
 
       case 'progress':
-        this.updateStreamingStatus(`処理中... ${update.progress}%`);
+        this.updateStreamingStatus(this.t('editor.processingPercent', { progress: update.progress }));
         if (update.message) {
           this.appendToStream(`\n[${update.message}]\n`);
         }
@@ -2285,7 +2285,7 @@ class GameCreatorApp {
         this.sendButton.disabled = false;
         this.stopButton.classList.add('hidden');
         // Browser notification
-        this.showNotification('🎮 ゲーム完成！', {
+        this.showNotification('🎮 ' + this.t('editor.gameCompleted'), {
           body: this.currentProjectName || this.t('editor.gameUpdatedNotification'),
         });
         break;
@@ -2294,7 +2294,7 @@ class GameCreatorApp {
         this.hideStreaming();
         // Use userMessage (user-friendly) if available, fallback to raw error
         const errorMessage = update.userMessage || update.error || this.t('editor.errorOccurred');
-        this.addMessage(`エラー: ${errorMessage}`, 'error');
+        this.addMessage(`${this.t('error.error')}: ${errorMessage}`, 'error');
 
         // Show recovery hint for recoverable errors
         if (update.recoverable) {
@@ -2307,7 +2307,7 @@ class GameCreatorApp {
         this.sendButton.disabled = false;
         this.stopButton.classList.add('hidden');
         // Browser notification
-        this.showNotification('⚠️ エラーが発生', {
+        this.showNotification('⚠️ ' + this.t('editor.errorNotification'), {
           body: errorMessage,
         });
         // Log error code for debugging (console only)
@@ -2453,7 +2453,7 @@ class GameCreatorApp {
               <line x1="16" y1="13" x2="8" y2="13"></line>
               <line x1="16" y1="17" x2="8" y2="17"></line>
             </svg>
-            変更箇所を見る
+            ${this.t('editor.viewChanges')}
           `;
           const versionHash = version.hash;
           changesBtn.addEventListener('click', () => {
@@ -2768,7 +2768,7 @@ class GameCreatorApp {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
-            ゲームを遊ぶ
+            ${this.t('editor.playGame')}
           `;
           playBtn.addEventListener('click', () => {
             this.showPreviewPanel();
@@ -2788,7 +2788,7 @@ class GameCreatorApp {
               <line x1="16" y1="13" x2="8" y2="13"></line>
               <line x1="16" y1="17" x2="8" y2="17"></line>
             </svg>
-            変更箇所を見る
+            ${this.t('editor.viewChanges')}
           `;
           const changeData = geminiChange;
           changesBtn.addEventListener('click', () => {
@@ -2809,7 +2809,7 @@ class GameCreatorApp {
               <line x1="16" y1="13" x2="8" y2="13"></line>
               <line x1="16" y1="17" x2="8" y2="17"></line>
             </svg>
-            変更箇所を見る
+            ${this.t('editor.viewChanges')}
           `;
           const versionHash = options.versionHash;
           changesBtn.addEventListener('click', () => {
@@ -2908,14 +2908,14 @@ class GameCreatorApp {
           <path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
         </svg>
       </div>
-      <h3>リミックス完了！</h3>
-      <p>ゲームをリミックスしました。<br>自由にカスタマイズしてください。</p>
+      <h3>${this.t('remix.complete')}</h3>
+      <p>${this.t('remix.successMessage')}</p>
       <div class="remix-tips">
-        <span class="example-label">例えば...</span>
+        <span class="example-label">${this.t('editor.exampleLabel')}</span>
         <div class="example-chips">
-          <button class="example-chip" data-prompt="キャラクターを変えて">キャラ変更</button>
-          <button class="example-chip" data-prompt="難易度を上げて">難易度UP</button>
-          <button class="example-chip" data-prompt="新しいステージを追加して">ステージ追加</button>
+          <button class="example-chip" data-prompt="${this.t('remix.changeCharacterPrompt')}">${this.t('remix.changeCharacter')}</button>
+          <button class="example-chip" data-prompt="${this.t('remix.increaseDifficultyPrompt')}">${this.t('remix.increaseDifficulty')}</button>
+          <button class="example-chip" data-prompt="${this.t('remix.addStagePrompt')}">${this.t('remix.addStage')}</button>
         </div>
       </div>
     `;
@@ -2982,7 +2982,7 @@ class GameCreatorApp {
     if (existingWelcome && examplesContainer) {
       // Update only the examples part (keep icon/title/desc static)
       examplesContainer.innerHTML = `
-        <span class="example-label">例えば...</span>
+        <span class="example-label">${this.t('editor.exampleLabel')}</span>
         <div class="example-chips">
           ${selected.map(s => `<button class="example-chip" data-prompt="${s.prompt}">${s.label}</button>`).join('')}
         </div>
@@ -3012,10 +3012,10 @@ class GameCreatorApp {
           <line x1="12" y1="17" x2="12" y2="21"></line>
         </svg>
       </div>
-      <h3>ようこそ！</h3>
-      <p>どんなゲームを作りたいですか？<br>自由に話しかけてください。</p>
+      <h3>${this.t('editor.welcome')}</h3>
+      <p>${this.t('editor.welcomeMessage')}</p>
       <div class="welcome-examples" id="welcomeExamples">
-        <span class="example-label">例えば...</span>
+        <span class="example-label">${this.t('editor.exampleLabel')}</span>
         <div class="example-chips">
           ${selected.map(s => `<button class="example-chip" data-prompt="${s.prompt}">${s.label}</button>`).join('')}
         </div>
@@ -3136,7 +3136,7 @@ class GameCreatorApp {
         <div class="changes-modal-backdrop"></div>
         <div class="changes-modal-content">
           <div class="changes-modal-header">
-            <h3>変更内容</h3>
+            <h3>${this.t('editor.changes')}</h3>
             <button class="changes-modal-close">&times;</button>
           </div>
           <div class="changes-modal-body"></div>
@@ -3582,13 +3582,13 @@ class GameCreatorApp {
       const projectsRemaining = quota.projects.remaining;
 
       quotaEl.innerHTML = `
-        <span class="quota-item" title="メッセージ残り">
+        <span class="quota-item" title="${this.t('quota.messagesRemaining')}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
           </svg>
           ${messagesRemaining === -1 ? '∞' : messagesRemaining}
         </span>
-        <span class="quota-item" title="プロジェクト作成残り">
+        <span class="quota-item" title="${this.t('quota.projectsRemaining')}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -3690,9 +3690,9 @@ class GameCreatorApp {
 
     if (!modal) return;
 
-    title.textContent = `本日の${limitType}上限に達しました`;
-    message.textContent = `1日${limit}回までご利用いただけます`;
-    reset.textContent = `リセット時刻: 明日 ${resetTimeStr}（日本時間）`;
+    title.textContent = this.t('quota.limitReached', { type: limitType });
+    message.textContent = this.t('quota.limitDetail', { limit: limit });
+    reset.textContent = this.t('quota.resetTimeDetail', { time: resetTimeStr });
 
     modal.classList.remove('hidden');
 
@@ -3803,15 +3803,15 @@ class GameCreatorApp {
             <polyline points="12 6 12 12 16 14"></polyline>
           </svg>
         </div>
-        <h2>セッションが切れました</h2>
-        <p>セキュリティのため、一定時間でセッションが終了します。<br>再度ログインしてください。</p>
+        <h2>${this.t('session.expired')}</h2>
+        <p>${this.t('session.expiredMessage')}</p>
         <button class="btn-primary relogin-button" id="reloginButton">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
             <polyline points="10 17 15 12 10 7"></polyline>
             <line x1="15" y1="12" x2="3" y2="12"></line>
           </svg>
-          再ログイン
+          ${this.t('session.reLogin')}
         </button>
       </div>
     `;
@@ -3948,7 +3948,7 @@ class GameCreatorApp {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
-        コピー完了
+        ${this.t('editor.copiedToClipboard')}
       `;
       setTimeout(() => {
         if (!this.copyCodeButton) return;
@@ -3958,7 +3958,7 @@ class GameCreatorApp {
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
-          コピー
+          ${this.t('editor.copy')}
         `;
       }, 2000);
     } else {
@@ -3994,7 +3994,7 @@ class GameCreatorApp {
       notice.className = 'version-notice';
       notice.innerHTML = `
         <span class="version-notice-icon">ℹ️</span>
-        <span>履歴が復元されました。以前の変更履歴は利用できません。</span>
+        <span>${this.t('editor.historyRestored')}</span>
       `;
       this.versionList.appendChild(notice);
     }
@@ -4025,7 +4025,7 @@ class GameCreatorApp {
           <span class="version-time">${time}</span>
         </div>
         <div class="version-message">${this.escapeHtml(v.message)}</div>
-        ${isCurrent ? '<span class="version-current-badge">現在</span>' : `<button class="version-restore" data-version="${v.id}">復元</button>`}
+        ${isCurrent ? `<span class="version-current-badge">${this.t('editor.current')}</span>` : `<button class="version-restore" data-version="${v.id}">${this.t('editor.restore')}</button>`}
       `;
 
       const restoreBtn = item.querySelector('.version-restore');
@@ -4045,7 +4045,7 @@ class GameCreatorApp {
 
     // Show custom restore modal
     this.pendingRestoreVersionId = versionId;
-    this.restoreModalMessage.textContent = `バージョン ${versionId} に戻しますか？`;
+    this.restoreModalMessage.textContent = this.t('editor.restoreVersionConfirm', { versionId: versionId });
     this.restoreModal.classList.remove('hidden');
   }
 
@@ -4081,8 +4081,8 @@ class GameCreatorApp {
     // Restore modal to original state for next use
     if (this.restoreModalBody) {
       this.restoreModalBody.innerHTML = `
-        <p id="restoreModalMessage">このバージョンに戻しますか？</p>
-        <p class="restore-modal-hint">現在のバージョンにもいつでも戻れます</p>
+        <p id="restoreModalMessage">${this.t('editor.restoreVersionConfirm', { versionId: '' })}</p>
+        <p class="restore-modal-hint">${this.t('editor.restoreHint')}</p>
       `;
       this.restoreModalMessage = document.getElementById('restoreModalMessage');
     }
@@ -4423,7 +4423,7 @@ class GameCreatorApp {
           <div class="asset-group-header">
             <span class="asset-group-icon">📂</span>
             <span class="asset-group-name">${projectName}</span>
-            <span class="asset-group-badge current">作業中</span>
+            <span class="asset-group-badge current">${this.t('editor.working')}</span>
             <span class="asset-group-count">${currentProjectAssets.length}</span>
           </div>
           <div class="asset-group-grid">
@@ -4455,7 +4455,7 @@ class GameCreatorApp {
         <div class="asset-group unassigned">
           <div class="asset-group-header">
             <span class="asset-group-icon">📎</span>
-            <span class="asset-group-name">未分類</span>
+            <span class="asset-group-name">${this.t('editor.uncategorized')}</span>
             <span class="asset-group-count">${unassignedAssets.length}</span>
           </div>
           <div class="asset-group-grid">
@@ -4577,7 +4577,7 @@ class GameCreatorApp {
       const asset = this.selectedAssets[0];
       this.selectedAssetInfo.textContent = asset.name;
       this.selectedAssetInfo.title = asset.name;
-      this.insertAssetButton.innerHTML = `挿入 ${arrowIcon}`;
+      this.insertAssetButton.innerHTML = `${this.t('button.insert')} ${arrowIcon}`;
       this.insertAssetButton.classList.remove('hidden');
 
       // Show edit button only for single image owned by user
@@ -4600,9 +4600,9 @@ class GameCreatorApp {
       // Keep selectedAsset for backward compatibility (edit)
       this.selectedAsset = asset;
     } else {
-      this.selectedAssetInfo.textContent = `${count}件選択中`;
+      this.selectedAssetInfo.textContent = this.t('editor.selectedCount', { count: count });
       this.selectedAssetInfo.title = this.selectedAssets.map(a => a.name).join('\n');
-      this.insertAssetButton.innerHTML = `挿入 (${count}) ${arrowIcon}`;
+      this.insertAssetButton.innerHTML = `${this.t('editor.insertCount', { count: count })} ${arrowIcon}`;
       this.insertAssetButton.classList.remove('hidden');
 
       // Hide edit/publish for multiple selection
@@ -4968,7 +4968,7 @@ class GameCreatorApp {
       <div class="attached-asset-item" data-id="${asset.id}">
         <span class="attached-asset-number">【${index + 1}】</span>
         <img src="${this.getAuthenticatedAssetUrl(asset.url)}" alt="${asset.name}" />
-        <button class="attached-asset-remove" data-id="${asset.id}" title="削除">×</button>
+        <button class="attached-asset-remove" data-id="${asset.id}" title="${this.t('button.delete')}">×</button>
       </div>
     `).join('');
 
@@ -5611,7 +5611,7 @@ class GameCreatorApp {
     const hasMore = styles.length > initialCount;
 
     let html = `
-      <div class="message-content">ビジュアルスタイルを選んでください</div>
+      <div class="message-content">${this.t('editor.chooseVisualStyle')}</div>
       <div class="style-scroll-container">
         <div class="style-scroll-track" id="${messageId}">
     `;
@@ -5638,7 +5638,7 @@ class GameCreatorApp {
     if (hasMore) {
       html += `
         <div class="style-card-more" id="${messageId}-more">
-          <button class="style-more-btn">+${styles.length - initialCount}<br><span>もっと見る</span></button>
+          <button class="style-more-btn">+${styles.length - initialCount}<br><span>${this.t('editor.moreStyles')}</span></button>
         </div>
       `;
     }
@@ -5647,7 +5647,7 @@ class GameCreatorApp {
         </div>
       </div>
       <div class="style-custom-chat">
-        <button class="style-custom-btn-chat" data-original-message="${this.escapeHtml(originalMessage)}">スキップ</button>
+        <button class="style-custom-btn-chat" data-original-message="${this.escapeHtml(originalMessage)}">${this.t('editor.skip')}</button>
       </div>
     `;
 
@@ -5685,7 +5685,7 @@ class GameCreatorApp {
         card.classList.add('selected');
 
         // Add user message showing selection
-        this.addMessage(`スタイル: ${styleName}`, 'user');
+        this.addMessage(`${this.t('editor.style')}: ${styleName}`, 'user');
 
         // Send message with selected style
         this.ws.send(JSON.stringify({

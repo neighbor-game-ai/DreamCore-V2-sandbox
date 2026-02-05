@@ -127,7 +127,7 @@ class MyPageApp {
       this.displayNameEl.textContent = profile?.display_name ||
                                         this.currentUser?.user_metadata?.full_name ||
                                         this.currentUser?.email?.split('@')[0] ||
-                                        'ユーザー';
+                                        DreamCoreI18n.t('mypage.defaultUser');
     }
 
     if (this.bioEl) {
@@ -325,7 +325,7 @@ class MyPageApp {
             </div>
           </div>
           <div class="mypage-case-info">
-            <div class="mypage-empty-case-text">ゲームを公開</div>
+            <div class="mypage-empty-case-text">${DreamCoreI18n.t('editor.publishGame')}</div>
           </div>
         </div>
       `;
@@ -424,7 +424,7 @@ class MyPageApp {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `${this.displayNameEl?.textContent || 'ユーザー'}のプロフィール`,
+          title: DreamCoreI18n.t('mypage.shareProfileTitle', { name: this.displayNameEl?.textContent || DreamCoreI18n.t('mypage.defaultUser') }),
           url: shareUrl
         });
       } catch (e) {
