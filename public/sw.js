@@ -4,7 +4,7 @@
  * - Push notification handling
  */
 
-const CACHE_NAME = 'dreamcore-v1';
+const CACHE_NAME = 'dreamcore-v2';
 const PRECACHE_ASSETS = [
   '/manifest.json',
   '/icons/icon-192.png',
@@ -118,6 +118,7 @@ self.addEventListener('push', (event) => {
 // Notification click handler
 self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Notification click:', event.action);
+  console.log('[SW] Notification data:', JSON.stringify(event.notification.data));
   event.notification.close();
 
   if (event.action === 'dismiss') {
@@ -127,6 +128,8 @@ self.addEventListener('notificationclick', (event) => {
   // Determine URL based on notification data
   // Priority: 1. url (explicit), 2. projectId (generate URL), 3. fallback
   const notificationData = event.notification.data || {};
+  console.log('[SW] notificationData.url:', notificationData.url);
+  console.log('[SW] notificationData.projectId:', notificationData.projectId);
   let targetUrl = '/notifications.html';  // Default fallback
 
   if (notificationData.url) {
