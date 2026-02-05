@@ -37,7 +37,14 @@ const { supabaseAdmin } = require('./server/supabaseClient');
       });
       console.log('Result:', JSON.stringify(result, null, 2));
     } else {
-      console.log('No project found');
+      console.log('No project found, sending to notifications page');
+      const result = await pushService.sendPushToUser(user.id, {
+        title: 'Test Notification',
+        body: 'Android test - tap to open notifications',
+        url: '/notifications.html',
+        type: 'system'
+      });
+      console.log('Result:', JSON.stringify(result, null, 2));
     }
   } catch (err) {
     console.error('Error:', err.message);
