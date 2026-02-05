@@ -29,6 +29,15 @@ router.post('/debug', (req, res) => {
 });
 
 /**
+ * POST /api/push/debug-click
+ * Debug endpoint to log notification click data from SW (temporary)
+ */
+router.post('/debug-click', (req, res) => {
+  console.log('[Push Debug Click] SW notification data:', JSON.stringify(req.body));
+  res.json({ ok: true });
+});
+
+/**
  * GET /api/push/vapid-key
  * Returns VAPID public key for frontend subscription
  * No authentication required (public endpoint)

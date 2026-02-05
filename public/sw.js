@@ -4,8 +4,8 @@
  * - Push notification handling
  */
 
-const SW_VERSION = '2026.02.05.g';
-const CACHE_NAME = 'dreamcore-v6';
+const SW_VERSION = '2026.02.05.h';
+const CACHE_NAME = 'dreamcore-v7';
 
 console.log('[SW] Version:', SW_VERSION);
 const PRECACHE_ASSETS = [
@@ -144,19 +144,29 @@ self.addEventListener('push', (event) => {
 // Notification click handler
 self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Notification click, version:', SW_VERSION, 'action:', event.action);
-  console.log('[SW] Notification data:', JSON.stringify(event.notification.data));
-  console.log('[SW] self.location.origin:', self.location.origin);
   event.notification.close();
 
   if (event.action === 'dismiss') {
     return;
   }
 
+  // Debug: Send notification data to server for logging
+  const rawData = event.notification.data;
+  fetch('/api/push/debug-click', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      version: SW_VERSION,
+      rawData: rawData,
+      hasData: !!rawData,
+      dataType: typeof rawData,
+      dataKeys: rawData ? Object.keys(rawData) : []
+    })
+  }).catch(() => {});
+
   // Determine URL based on notification data
   // Priority: 1. url (explicit), 2. projectId (generate URL), 3. fallback
   const notificationData = event.notification.data || {};
-  console.log('[SW] notificationData.url:', notificationData.url);
-  console.log('[SW] notificationData.projectId:', notificationData.projectId);
   let targetUrl = '/notifications.html';  // Default fallback
 
   if (notificationData.url) {
