@@ -4,7 +4,7 @@
  * - Push notification handling
  */
 
-const CACHE_NAME = 'dreamcore-v3';
+const CACHE_NAME = 'dreamcore-v4';
 const PRECACHE_ASSETS = [
   '/manifest.json',
   '/icons/icon-192.png',
@@ -79,7 +79,7 @@ self.addEventListener('fetch', (event) => {
 
 // Push notification handler
 self.addEventListener('push', (event) => {
-  console.log('[SW] Push received:', event);
+  console.log('[SW] Push received');
 
   let data = {
     title: 'DreamCore',
@@ -91,7 +91,11 @@ self.addEventListener('push', (event) => {
 
   if (event.data) {
     try {
-      data = { ...data, ...event.data.json() };
+      const payload = event.data.json();
+      console.log('[SW] Push payload:', JSON.stringify(payload));
+      data = { ...data, ...payload };
+      console.log('[SW] Merged data:', JSON.stringify(data));
+      console.log('[SW] data.data:', JSON.stringify(data.data));
     } catch (e) {
       console.error('[SW] Failed to parse push data:', e);
     }
@@ -109,6 +113,8 @@ self.addEventListener('push', (event) => {
       { action: 'dismiss', title: 'Dismiss' }
     ]
   };
+
+  console.log('[SW] Notification options.data:', JSON.stringify(options.data));
 
   event.waitUntil(
     self.registration.showNotification(data.title, options)

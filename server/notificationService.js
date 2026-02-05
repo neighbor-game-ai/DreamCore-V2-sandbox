@@ -109,6 +109,7 @@ async function createNotification(options) {
     // Send push notification
     if (sendPush && pushService.isPushEnabled()) {
       const url = projectId ? `/create.html?project=${projectId}` : '/notifications.html';
+      console.log(`[Notification] Push URL: ${url}, projectId: ${projectId}`);
       await pushService.sendPushToUser(userId, {
         title,
         body: message,
