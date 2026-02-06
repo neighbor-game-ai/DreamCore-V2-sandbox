@@ -41,7 +41,7 @@ const { supabaseAdmin } = require('./server/supabaseClient');
       const result = await pushService.sendPushToUser(user.id, {
         title: 'Test Notification',
         body: 'Android test - tap to open notifications',
-        url: '/notifications.html',
+        url: '/notifications',
         type: 'system'
       });
       console.log('Result:', JSON.stringify(result, null, 2));

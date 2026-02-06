@@ -306,48 +306,36 @@ class GameCreatorApp {
       const cachedSession = DreamCoreAuth.getSessionSync();
 
       if (!cachedSession) {
-        // Check if this is an OAuth callback
-        const url = new URL(window.location.href);
-        const hasOAuthParams =
-          url.searchParams.has('code') ||
-          url.searchParams.has('error') ||
-          url.searchParams.has('state') ||
-          window.location.hash.includes('access_token=');
-
-        if (hasOAuthParams) {
-          // OAuth callback - wait for Supabase to process
-          const session = await DreamCoreAuth.getSession();
-          if (!session) {
-            window.location.href = '/';
-            return;
-          }
-
-          // V2 Waitlist: Check access permission
-          const { allowed, authError } = await DreamCoreAuth.checkAccess();
-          if (authError) {
-            window.location.href = '/';  // Auth error → login page
-            return;
-          }
-          if (!allowed) {
-            window.location.href = '/waitlist';  // Not approved → waitlist
-            return;
-          }
-
-          // Access granted - reveal page
-          this.revealPage();
-
-          this.accessToken = session.access_token;
-          this.currentUser = session.user;
-          this.userId = session.user.id;
-          this.isAuthenticated = true;
-          this.connectWebSocket();
-          this.loadPageData();
-          this.ensurePushSubscription();
+        // No sessionStorage cache - try async session restoration
+        // This handles: notification deep links (new tab), cross-tab navigation,
+        // cache TTL expiry while localStorage still has a valid Supabase session
+        const session = await DreamCoreAuth.getSession();
+        if (!session) {
+          window.location.href = '/login';
           return;
         }
 
-        // No cached session and not OAuth - redirect immediately
-        window.location.href = '/';
+        // V2 Waitlist: Check access permission
+        const { allowed, authError } = await DreamCoreAuth.checkAccess();
+        if (authError) {
+          window.location.href = '/login';  // Auth error → login page
+          return;
+        }
+        if (!allowed) {
+          window.location.href = '/waitlist';  // Not approved → waitlist
+          return;
+        }
+
+        // Access granted - reveal page
+        this.revealPage();
+
+        this.accessToken = session.access_token;
+        this.currentUser = session.user;
+        this.userId = session.user.id;
+        this.isAuthenticated = true;
+        this.connectWebSocket();
+        this.loadPageData();
+        this.ensurePushSubscription();
         return;
       }
 
@@ -360,7 +348,7 @@ class GameCreatorApp {
       // V2 Waitlist: Check access permission BEFORE revealing page
       const { allowed, authError } = await DreamCoreAuth.checkAccess();
       if (authError) {
-        window.location.href = '/';  // Auth error → login page
+        window.location.href = '/login';  // Auth error → login page
         return;
       }
       if (!allowed) {
@@ -392,7 +380,7 @@ class GameCreatorApp {
       DreamCoreAuth.getSession().then(async session => {
         if (!session) {
           // Session expired - redirect to login
-          window.location.href = '/';
+          window.location.href = '/login';
           return;
         }
         if (session.access_token !== cachedSession.access_token) {
@@ -404,7 +392,7 @@ class GameCreatorApp {
       });
     } catch (error) {
       console.error('[Auth] Init error:', error);
-      window.location.href = '/';
+      window.location.href = '/login';
     }
   }
 
@@ -540,7 +528,7 @@ class GameCreatorApp {
     } catch (error) {
       console.error('Logout error:', error);
       // Redirect anyway
-      window.location.href = '/';
+      window.location.href = '/login';
     }
   }
 
@@ -1424,7 +1412,7 @@ class GameCreatorApp {
       this.connectWebSocket();
     } else {
       console.log('[forceReconnect] No valid session, redirecting to login');
-      window.location.href = '/';
+      window.location.href = '/login';
     }
   }
 
@@ -1437,7 +1425,7 @@ class GameCreatorApp {
       this.connectWebSocket();
     } else {
       console.log('[reconnectWithFreshToken] No valid session, redirecting to login');
-      window.location.href = '/';
+      window.location.href = '/login';
     }
   }
 

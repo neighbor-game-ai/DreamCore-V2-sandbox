@@ -30,7 +30,7 @@ class NotificationsApp {
     // V2 Waitlist: Check access permission
     const { allowed, authError } = await DreamCoreAuth.checkAccess();
     if (authError) {
-      window.location.href = '/';  // Auth error → login page
+      window.location.href = '/login';  // Auth error → login page
       return;
     }
     if (!allowed) {
@@ -46,7 +46,7 @@ class NotificationsApp {
   }
 
   redirectToLogin() {
-    window.location.href = '/';
+    window.location.href = '/login';
   }
 
   setupListeners() {

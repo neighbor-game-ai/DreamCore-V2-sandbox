@@ -454,7 +454,7 @@ class MyPageApp {
 
   async logout() {
     await DreamCoreAuth.signOut();
-    window.location.href = '/';
+    window.location.href = '/login';
   }
 }
 

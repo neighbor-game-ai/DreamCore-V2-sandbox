@@ -38,7 +38,7 @@ class PublishPage {
     const session = await DreamCoreAuth.getSession();
     if (!session) {
       alert(DreamCoreI18n.t('publish.loginRequired'));
-      window.location.href = '/';
+      window.location.href = '/login';
       return;
     }
 

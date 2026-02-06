@@ -271,7 +271,7 @@ async function signOut() {
   sessionStorage.removeItem('sessionId');  // Migrated from localStorage
 
   // Redirect to login
-  window.location.href = '/';
+  window.location.href = '/login';
 }
 
 /**
@@ -502,7 +502,7 @@ async function checkAccess() {
 async function requireAuth() {
   const authenticated = await isAuthenticated();
   if (!authenticated) {
-    window.location.href = '/';
+    window.location.href = '/login';
     return false;
   }
   return true;
@@ -516,7 +516,7 @@ async function requireAuth() {
 async function requireAuthAndAccess() {
   const authenticated = await isAuthenticated();
   if (!authenticated) {
-    window.location.href = '/';
+    window.location.href = '/login';
     return false;
   }
 

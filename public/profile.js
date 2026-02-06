@@ -159,7 +159,7 @@ class ProfileApp {
       if (typeof DreamCoreAuth !== 'undefined') {
         await DreamCoreAuth.signOut();
       }
-      window.location.href = '/';
+      window.location.href = '/login';
     });
 
     // Bottom navigation
