@@ -162,36 +162,16 @@ class ProfileApp {
       window.location.href = '/login';
     });
 
-    // Bottom navigation
-    document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tab = btn.dataset.tab;
-        switch (tab) {
-          case 'discover':
-            window.location.href = '/discover';
-            break;
-          case 'create':
-            window.location.href = '/create';
-            break;
-          case 'notifications':
-            window.location.href = '/notifications';
-            break;
-          case 'profile':
-            // If logged in and viewing another's profile, go to own profile
-            if (this.currentUser?.id && !this.isOwner) {
-              DreamCoreAuth.getMyProfileUrl().then(url => {
-                window.location.href = url;
-              });
-            }
-            // If viewing own profile, stay here
-            break;
+    // Bottom navigation (shared module)
+    const self = this;
+    setupBottomNav({
+      onProfile: function() {
+        if (self.currentUser?.id && !self.isOwner) {
+          DreamCoreAuth.getMyProfileUrl().then(function(url) {
+            window.location.href = url;
+          });
         }
-      });
-    });
-
-    // Zapping button
-    document.getElementById('navZappingBtn')?.addEventListener('click', () => {
-      window.location.href = '/discover?zap=1';
+      }
     });
   }
 

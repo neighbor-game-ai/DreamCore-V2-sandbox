@@ -66,34 +66,8 @@ class NotificationsApp {
       });
     });
 
-    // Bottom navigation
-    document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tab = btn.dataset.tab;
-        switch (tab) {
-          case 'discover':
-            window.location.href = '/discover';
-            break;
-          case 'create':
-            window.location.href = '/create';
-            break;
-          case 'notifications':
-            // Already on notifications
-            break;
-          case 'profile':
-            // Use /@username if available, otherwise /mypage
-            DreamCoreAuth.getMyProfileUrl().then(url => {
-              window.location.href = url;
-            });
-            break;
-        }
-      });
-    });
-
-    // Zapping button
-    document.getElementById('navZappingBtn')?.addEventListener('click', () => {
-      window.location.href = '/discover?zap=1';
-    });
+    // Bottom navigation (shared module)
+    setupBottomNav({ onProfile: null /* default: navigate to /@username */ });
   }
 
   setFilter(filter) {
