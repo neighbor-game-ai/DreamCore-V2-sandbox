@@ -51,22 +51,6 @@
   <div class="mypage-view" id="mypageView">
     <!-- Floating Header -->
     <header class="mypage-header">
-      <div class="lang-selector" id="langSelector" style="position: absolute; right: 48px; top: 50%; transform: translateY(-50%);">
-        <button class="lang-selector-btn" id="langSelectorBtn">
-          <span id="currentLang">EN</span>
-          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 4.5L6 7.5L9 4.5"/>
-          </svg>
-        </button>
-        <div class="lang-selector-dropdown">
-          <button class="lang-option" data-lang="en">English</button>
-          <button class="lang-option" data-lang="ja">日本語</button>
-          <button class="lang-option" data-lang="zh">中文</button>
-          <button class="lang-option" data-lang="es">Español</button>
-          <button class="lang-option" data-lang="pt">Português</button>
-          <button class="lang-option" data-lang="ko">한국어</button>
-        </div>
-      </div>
       <button class="mypage-back-btn" id="backBtn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -190,39 +174,6 @@
       await DreamCoreI18n.init();
       document.title = DreamCoreI18n.t('page.profile.title');
 
-      // Language selector setup
-      const selector = document.getElementById('langSelector');
-      const btn = document.getElementById('langSelectorBtn');
-      const currentLangEl = document.getElementById('currentLang');
-      const options = selector.querySelectorAll('.lang-option');
-
-      const langLabels = { en: 'EN', ja: 'JA', zh: 'ZH', es: 'ES', pt: 'PT', ko: 'KO' };
-      const currentLang = DreamCoreI18n.getLanguage();
-      currentLangEl.textContent = langLabels[currentLang] || 'EN';
-
-      options.forEach(opt => {
-        if (opt.dataset.lang === currentLang) opt.classList.add('active');
-      });
-
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        selector.classList.toggle('open');
-      });
-
-      options.forEach(opt => {
-        opt.addEventListener('click', () => {
-          const lang = opt.dataset.lang;
-          DreamCoreI18n.setLanguage(lang, false);
-          currentLangEl.textContent = langLabels[lang];
-          options.forEach(o => o.classList.remove('active'));
-          opt.classList.add('active');
-          selector.classList.remove('open');
-          DreamCoreI18n.updateDOM();
-          document.title = DreamCoreI18n.t('page.profile.title');
-        });
-      });
-
-      document.addEventListener('click', () => selector.classList.remove('open'));
     });
   </script>
   <script src="/pwa-install.js?v=20260206h" defer></script>
