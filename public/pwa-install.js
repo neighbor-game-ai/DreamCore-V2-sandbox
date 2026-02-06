@@ -45,6 +45,10 @@
       iosStep2: 'Scroll down and tap <strong>"Add to Home Screen"</strong>',
       iosStep3: 'Tap <strong>"Add"</strong> in the top right',
       iosOk: 'Got it',
+      androidTitle: 'Install App',
+      androidStep1: 'Tap the <strong>menu ⋮</strong> button in the top right',
+      androidStep2: 'Tap <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>',
+      androidOk: 'Got it',
     },
     ja: {
       title: 'DreamCoreをインストール',
@@ -57,6 +61,10 @@
       iosStep2: '<strong>「ホーム画面に追加」</strong>を選択',
       iosStep3: '右上の<strong>「追加」</strong>をタップ',
       iosOk: 'わかった',
+      androidTitle: 'アプリをインストール',
+      androidStep1: '右上の<strong>メニュー ⋮</strong> をタップ',
+      androidStep2: '<strong>「アプリをインストール」</strong>または<strong>「ホーム画面に追加」</strong>をタップ',
+      androidOk: 'わかった',
     },
     zh: {
       title: '安装 DreamCore',
@@ -69,6 +77,10 @@
       iosStep2: '选择<strong>"添加到主屏幕"</strong>',
       iosStep3: '点击右上角的<strong>"添加"</strong>',
       iosOk: '知道了',
+      androidTitle: '安装应用',
+      androidStep1: '点击右上角的<strong>菜单 ⋮</strong>',
+      androidStep2: '点击<strong>"安装应用"</strong>或<strong>"添加到主屏幕"</strong>',
+      androidOk: '知道了',
     },
     ko: {
       title: 'DreamCore 설치',
@@ -81,6 +93,10 @@
       iosStep2: '<strong>"홈 화면에 추가"</strong>를 선택',
       iosStep3: '오른쪽 상단의 <strong>"추가"</strong>를 탭',
       iosOk: '확인',
+      androidTitle: '앱 설치',
+      androidStep1: '오른쪽 상단의 <strong>메뉴 ⋮</strong>를 탭',
+      androidStep2: '<strong>"앱 설치"</strong> 또는 <strong>"홈 화면에 추가"</strong>를 탭',
+      androidOk: '확인',
     },
     es: {
       title: 'Instalar DreamCore',
@@ -93,6 +109,10 @@
       iosStep2: 'Selecciona <strong>"Añadir a pantalla de inicio"</strong>',
       iosStep3: 'Toca <strong>"Añadir"</strong> en la esquina superior derecha',
       iosOk: 'Entendido',
+      androidTitle: 'Instalar aplicación',
+      androidStep1: 'Toca el <strong>menú ⋮</strong> en la esquina superior derecha',
+      androidStep2: 'Toca <strong>"Instalar aplicación"</strong> o <strong>"Añadir a pantalla de inicio"</strong>',
+      androidOk: 'Entendido',
     },
     pt: {
       title: 'Instalar DreamCore',
@@ -105,6 +125,10 @@
       iosStep2: 'Selecione <strong>"Adicionar à Tela Inicial"</strong>',
       iosStep3: 'Toque em <strong>"Adicionar"</strong> no canto superior direito',
       iosOk: 'Entendi',
+      androidTitle: 'Instalar aplicativo',
+      androidStep1: 'Toque no <strong>menu ⋮</strong> no canto superior direito',
+      androidStep2: 'Toque em <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>',
+      androidOk: 'Entendi',
     },
   };
 
@@ -445,12 +469,12 @@
   var bannerEl = null;
   var deferredPrompt = null;
 
-  function createBanner(mode) {
+  function createBanner() {
     var banner = document.createElement('div');
     banner.className = 'pwa-install-banner';
     banner.setAttribute('role', 'alert');
 
-    var actionLabel = mode === 'ios' ? t('howTo') : t('install');
+    var actionLabel = isIOS() ? t('howTo') : t('install');
 
     banner.innerHTML = [
       '<div class="pwa-install-icon"><img src="/icons/icon-192.png" width="32" height="32" alt="DreamCore" style="border-radius:8px"></div>',
@@ -460,7 +484,7 @@
       '</div>',
       '<div class="pwa-install-actions">',
       '  <button class="pwa-install-btn" id="pwaInstallBtn">' + actionLabel + '</button>',
-      '  <button class="pwa-dismiss-btn" id="pwaDismissBtn" aria-label="' + t('dismiss') + '">&times;</button>',
+      '  <button class="pwa-dismiss-btn" id="pwaDismissBtn" aria-label="Close">&times;</button>',
       '</div>',
     ].join('');
 
@@ -472,10 +496,12 @@
     });
 
     document.getElementById('pwaInstallBtn').addEventListener('click', function () {
-      if (mode === 'ios') {
+      if (deferredPrompt) {
+        triggerInstall();
+      } else if (isIOS()) {
         showIOSModal();
       } else {
-        triggerInstall();
+        showAndroidModal();
       }
     });
   }
@@ -633,6 +659,67 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Android Modal
+  // ---------------------------------------------------------------------------
+  function showAndroidModal() {
+    var previousFocus = document.activeElement;
+    var overlay = document.createElement('div');
+    overlay.className = 'pwa-ios-overlay';
+
+    overlay.innerHTML = [
+      '<div class="pwa-ios-modal" role="dialog" aria-modal="true" aria-label="' + t('androidTitle') + '">',
+      '  <h3>' + t('androidTitle') + '</h3>',
+      '  <ol class="pwa-ios-steps">',
+      '    <li>',
+      '      <span class="pwa-ios-step-num">1</span>',
+      '      <div class="pwa-ios-step-content">',
+      '        <div class="pwa-ios-step-label">' + t('androidStep1') + '</div>',
+      '        <div class="pwa-ios-illust">',
+      '          <svg width="24" height="24" viewBox="0 0 24 24" fill="#333"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>',
+      '          <span class="pwa-ios-illust-text">Menu</span>',
+      '        </div>',
+      '      </div>',
+      '    </li>',
+      '    <li>',
+      '      <span class="pwa-ios-step-num">2</span>',
+      '      <div class="pwa-ios-step-content">',
+      '        <div class="pwa-ios-step-label">' + t('androidStep2') + '</div>',
+      '        <div class="pwa-ios-menu-item">',
+      '          <div class="pwa-ios-menu-row">' + SVG.bookmark + ' <span>Bookmark</span></div>',
+      '          <div class="pwa-ios-menu-row pwa-highlight">' + SVG.addHome + ' <span style="color:#333;font-weight:600">Install app</span></div>',
+      '        </div>',
+      '      </div>',
+      '    </li>',
+      '  </ol>',
+      '  <button class="pwa-ios-ok-btn">' + t('androidOk') + '</button>',
+      '  <button class="pwa-ios-dismiss-link">' + t('dismiss') + '</button>',
+      '</div>',
+    ].join('');
+
+    document.body.appendChild(overlay);
+
+    var okBtn = overlay.querySelector('.pwa-ios-ok-btn');
+    var dismissLink = overlay.querySelector('.pwa-ios-dismiss-link');
+    okBtn.focus();
+
+    function closeModal() {
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      okBtn.removeEventListener('click', onOk);
+      dismissLink.removeEventListener('click', onDismiss);
+      overlay.removeEventListener('click', onOverlay);
+      if (previousFocus && previousFocus.focus) previousFocus.focus();
+    }
+
+    function onOk() { closeModal(); }
+    function onDismiss() { closeModal(); dismiss(); }
+    function onOverlay(e) { if (e.target === overlay) closeModal(); }
+
+    okBtn.addEventListener('click', onOk);
+    dismissLink.addEventListener('click', onDismiss);
+    overlay.addEventListener('click', onOverlay);
+  }
+
+  // ---------------------------------------------------------------------------
   // Init
   // ---------------------------------------------------------------------------
   function shouldShow() {
@@ -648,12 +735,10 @@
 
     injectStyles();
 
+    // Capture beforeinstallprompt if available (Chromium)
     window.addEventListener('beforeinstallprompt', function (e) {
       e.preventDefault();
       deferredPrompt = e;
-      if (!bannerEl) {
-        createBanner('chromium');
-      }
     });
 
     window.addEventListener('appinstalled', function () {
@@ -662,13 +747,8 @@
       deferredPrompt = null;
     });
 
-    if (isIOS() && !window.navigator.standalone) {
-      setTimeout(function () {
-        if (!bannerEl) {
-          createBanner('ios');
-        }
-      }, 2000);
-    }
+    // Show banner immediately on all mobile
+    createBanner();
   }
 
   // Debug: force show banner (for testing on desktop)
@@ -677,7 +757,9 @@
     lsRemove(LS_DISMISSED);
     lsRemove(LS_INSTALLED);
     if (!document.getElementById('pwa-install-styles')) { injectStyles(); }
-    createBanner(mode || 'ios');
+    createBanner();
+    if (mode === 'ios') { showIOSModal(); }
+    else if (mode === 'android') { showAndroidModal(); }
   };
 
   if (document.readyState === 'loading') {
