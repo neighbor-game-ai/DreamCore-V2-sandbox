@@ -22,6 +22,7 @@
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
     deferredPrompt = e;
+    console.log('[PWA] beforeinstallprompt captured - native install available');
   });
 
   // ---------------------------------------------------------------------------
@@ -143,10 +144,15 @@
   // Helpers
   // ---------------------------------------------------------------------------
   function getLang() {
+    // 1. DreamCoreI18n (if initialized)
     if (window.DreamCoreI18n && window.DreamCoreI18n.currentLang) {
       var lang = window.DreamCoreI18n.currentLang;
       if (TEXTS[lang]) return lang;
     }
+    // 2. Saved language preference
+    var saved = lsGet('dreamcore_lang');
+    if (saved && TEXTS[saved]) return saved;
+    // 3. Browser language
     var nav = (navigator.language || '').slice(0, 2).toLowerCase();
     return TEXTS[nav] ? nav : 'en';
   }
