@@ -14,7 +14,7 @@
   // Config
   // ---------------------------------------------------------------------------
   var DISMISS_DAYS = 7;
-  var LS_DISMISSED = 'pwa-install-dismissed';
+  var LS_DISMISSED = 'pwa-install-dismissed-v2';
   var LS_INSTALLED = 'pwa-installed';
 
   // ---------------------------------------------------------------------------
@@ -39,7 +39,7 @@
       description: 'Fullscreen play & get notified when your game is ready',
       install: 'Install',
       howTo: 'Learn How',
-      dismiss: 'Not Now',
+      dismiss: "Don't show again",
       iosTitle: 'Add to Home Screen',
       iosStep1: 'Tap the <strong>Share</strong> button at the bottom',
       iosStep2: 'Scroll down and tap <strong>"Add to Home Screen"</strong>',
@@ -51,7 +51,7 @@
       description: '全画面でプレイ & ゲーム完成を通知でお知らせ',
       install: 'インストール',
       howTo: '追加方法',
-      dismiss: '今はしない',
+      dismiss: '今後表示しない',
       iosTitle: 'ホーム画面に追加する方法',
       iosStep1: '画面下部の<strong>共有ボタン</strong>をタップ',
       iosStep2: '<strong>「ホーム画面に追加」</strong>を選択',
@@ -63,7 +63,7 @@
       description: '全屏游玩 & 游戏完成时收到通知',
       install: '安装',
       howTo: '了解方法',
-      dismiss: '暂时不用',
+      dismiss: '不再显示',
       iosTitle: '添加到主屏幕',
       iosStep1: '点击底部的<strong>分享按钮</strong>',
       iosStep2: '选择<strong>"添加到主屏幕"</strong>',
@@ -75,7 +75,7 @@
       description: '전체 화면 플레이 & 게임 완성 알림 받기',
       install: '설치',
       howTo: '방법 보기',
-      dismiss: '나중에',
+      dismiss: '다시 표시 안 함',
       iosTitle: '홈 화면에 추가하는 방법',
       iosStep1: '하단의 <strong>공유 버튼</strong>을 탭',
       iosStep2: '<strong>"홈 화면에 추가"</strong>를 선택',
@@ -87,7 +87,7 @@
       description: 'Pantalla completa & recibe avisos cuando tu juego esté listo',
       install: 'Instalar',
       howTo: 'Cómo añadir',
-      dismiss: 'Ahora no',
+      dismiss: 'No mostrar de nuevo',
       iosTitle: 'Añadir a pantalla de inicio',
       iosStep1: 'Toca el botón <strong>Compartir</strong> en la parte inferior',
       iosStep2: 'Selecciona <strong>"Añadir a pantalla de inicio"</strong>',
@@ -99,7 +99,7 @@
       description: 'Tela cheia & receba avisos quando seu jogo estiver pronto',
       install: 'Instalar',
       howTo: 'Como adicionar',
-      dismiss: 'Agora não',
+      dismiss: 'Não mostrar novamente',
       iosTitle: 'Adicionar à Tela Inicial',
       iosStep1: 'Toque no botão <strong>Compartilhar</strong> na parte inferior',
       iosStep2: 'Selecione <strong>"Adicionar à Tela Inicial"</strong>',
@@ -321,6 +321,17 @@
       '.pwa-ios-ok-btn:active {',
       '  transform: scale(0.97);',
       '}',
+      '.pwa-ios-dismiss-link {',
+      '  display: block;',
+      '  text-align: center;',
+      '  margin-top: 12px;',
+      '  font-size: 13px;',
+      '  color: #8e8e93;',
+      '  background: none;',
+      '  border: none;',
+      '  cursor: pointer;',
+      '  padding: 4px;',
+      '}',
 
       /* Step illustration containers */
       '.pwa-ios-step-content {',
@@ -457,7 +468,7 @@
     bannerEl = banner;
 
     document.getElementById('pwaDismissBtn').addEventListener('click', function () {
-      dismiss();
+      hideBanner();
     });
 
     document.getElementById('pwaInstallBtn').addEventListener('click', function () {
@@ -499,9 +510,6 @@
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     deferredPrompt.userChoice.then(function (result) {
-      if (result.outcome === 'dismissed') {
-        lsSet(LS_DISMISSED, String(Date.now()));
-      }
       deferredPrompt = null;
       hideBanner();
     });
@@ -581,6 +589,7 @@
       '    </li>',
       '  </ol>',
       '  <button class="pwa-ios-ok-btn">' + t('iosOk') + '</button>',
+      '  <button class="pwa-ios-dismiss-link">' + t('dismiss') + '</button>',
       '</div>',
     ].join('');
 
@@ -588,16 +597,16 @@
 
     // Focus the OK button for accessibility
     var okBtn = overlay.querySelector('.pwa-ios-ok-btn');
+    var dismissLink = overlay.querySelector('.pwa-ios-dismiss-link');
     okBtn.focus();
 
     function closeModal() {
       if (overlay.parentNode) {
         overlay.parentNode.removeChild(overlay);
       }
-      // Remove listeners
       okBtn.removeEventListener('click', onOk);
+      dismissLink.removeEventListener('click', onDismiss);
       overlay.removeEventListener('click', onOverlay);
-      // Restore focus
       if (previousFocus && previousFocus.focus) {
         previousFocus.focus();
       }
@@ -605,17 +614,21 @@
 
     function onOk() {
       closeModal();
+    }
+
+    function onDismiss() {
+      closeModal();
       dismiss();
     }
 
     function onOverlay(e) {
       if (e.target === overlay) {
         closeModal();
-        dismiss();
       }
     }
 
     okBtn.addEventListener('click', onOk);
+    dismissLink.addEventListener('click', onDismiss);
     overlay.addEventListener('click', onOverlay);
   }
 
