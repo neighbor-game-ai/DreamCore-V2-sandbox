@@ -1408,71 +1408,6 @@ const getOrCreateUser = async () => {
   throw new Error('getOrCreateUser is not supported - use Supabase Auth');
 };
 
-/**
- * @deprecated Use Supabase Auth instead
- */
-const getUserByVisitorId = async () => {
-  throw new Error('getUserByVisitorId is not supported - use Supabase Auth');
-};
-
-/**
- * @deprecated Login users handled by Supabase Auth
- */
-const getLoginUserByUsername = async () => {
-  throw new Error('getLoginUserByUsername is not supported - use Supabase Auth');
-};
-
-const createLoginUser = async () => {
-  throw new Error('createLoginUser is not supported - use Supabase Auth');
-};
-
-const getAllLoginUsers = async () => {
-  throw new Error('getAllLoginUsers is not supported - use Supabase Auth');
-};
-
-const getLoginUserById = async () => {
-  throw new Error('getLoginUserById is not supported - use Supabase Auth');
-};
-
-const getLoginUserByUserId = async () => {
-  throw new Error('getLoginUserByUserId is not supported - use Supabase Auth');
-};
-
-const updateLoginUserLastLogin = async () => {
-  throw new Error('updateLoginUserLastLogin is not supported - use Supabase Auth');
-};
-
-/**
- * @deprecated Sessions handled by Supabase Auth
- */
-const createSession = async () => {
-  throw new Error('createSession is not supported - use Supabase Auth');
-};
-
-const getSessionById = async () => {
-  throw new Error('getSessionById is not supported - use Supabase Auth');
-};
-
-const deleteSession = async () => {
-  throw new Error('deleteSession is not supported - use Supabase Auth');
-};
-
-const deleteSessionsByLoginUserId = async () => {
-  throw new Error('deleteSessionsByLoginUserId is not supported - use Supabase Auth');
-};
-
-const cleanupExpiredSessions = async () => {
-  throw new Error('cleanupExpiredSessions is not supported - use Supabase Auth');
-};
-
-/**
- * @deprecated Migration not needed
- */
-const migrateFromJsonFiles = async () => {
-  console.warn('[DB] migrateFromJsonFiles is not supported in Supabase version');
-  return { migrated: 0 };
-};
-
 // ==================== Published Games Operations ====================
 
 /**
@@ -1826,7 +1761,6 @@ module.exports = {
   getUserByPublicId,
   getUserByUsername,
   checkUsernameAvailable,
-  getUserByVisitorId,
   getProfileById,
   getProfileByEmail,
 
@@ -1886,24 +1820,6 @@ module.exports = {
   completeJob,
   failJob,
   cancelJob,
-
-  // Login user operations (deprecated)
-  getLoginUserByUsername,
-  getLoginUserById,
-  getLoginUserByUserId,
-  createLoginUser,
-  updateLoginUserLastLogin,
-  getAllLoginUsers,
-
-  // Session operations (deprecated)
-  createSession,
-  getSessionById,
-  deleteSession,
-  deleteSessionsByLoginUserId,
-  cleanupExpiredSessions,
-
-  // Migration (deprecated)
-  migrateFromJsonFiles,
 
   // Activity log operations
   logActivity,
