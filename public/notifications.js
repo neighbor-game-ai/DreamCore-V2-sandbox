@@ -67,7 +67,7 @@ class NotificationsApp {
     });
 
     // Bottom navigation (shared module)
-    setupBottomNav({ onProfile: null /* default: navigate to /@username */ });
+    setupBottomNav({ currentTab: 'notifications' });
   }
 
   setFilter(filter) {
