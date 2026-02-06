@@ -197,7 +197,6 @@ body::before {
   align-items: center;
   gap: var(--s-16);
   min-width: 0;
-  overflow: hidden;
 }
 
 .connection-dot {
