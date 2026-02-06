@@ -129,12 +129,16 @@ body::before {
 .container {
   display: flex;
   height: 100%;
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
 }
 
 /* ===== Project List View - Nintendo × Kashiwa Sato ===== */
 .project-list-view {
   height: 100%;
+  width: 100%;
+  max-width: 100%;
   background: var(--white);
   display: flex;
   flex-direction: column;
@@ -396,6 +400,7 @@ body::before {
   padding: 4px;
   margin-bottom: var(--s-24);
   gap: 4px;
+  overflow: hidden;
 }
 
 /* Animated Slider - Glassmorphism Water/Slime */
@@ -2370,6 +2375,7 @@ body::before {
 
   .chat-panel {
     width: 100%;
+    min-width: 0;
     flex: 1;
     min-height: 0;
     border-right: none;
