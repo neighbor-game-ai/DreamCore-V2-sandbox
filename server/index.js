@@ -1337,6 +1337,10 @@ wss.on('connection', (ws) => {
         case 'ping':
           // Respond to ping for connection health check
           safeSend({ type: 'pong' });
+          // Keep lastSeenAt alive for push suppression during idle editor
+          if (ws.activeProjectId) {
+            ws.lastSeenAt = Date.now();
+          }
           break;
 
         case 'deselectProject':

@@ -843,6 +843,7 @@ class GameCreatorApp {
     this.updateProjectTitle(null);
 
     // Notify server that user left the editor (for push suppression)
+    this.stopEditorHeartbeat();
     this.sendViewState('deselectProject');
   }
 
@@ -853,6 +854,24 @@ class GameCreatorApp {
     this.discoverView?.classList.add('hidden');
     this.zappingMode?.classList.add('hidden');
     this.hideBottomNav();
+    this.startEditorHeartbeat();
+  }
+
+  // Heartbeat keeps lastSeenAt alive on server for push suppression
+  startEditorHeartbeat() {
+    this.stopEditorHeartbeat();
+    this._editorHeartbeat = setInterval(() => {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN && document.visibilityState === 'visible') {
+        this.ws.send(JSON.stringify({ type: 'ping' }));
+      }
+    }, 10000);
+  }
+
+  stopEditorHeartbeat() {
+    if (this._editorHeartbeat) {
+      clearInterval(this._editorHeartbeat);
+      this._editorHeartbeat = null;
+    }
   }
 
   updateNavActive(tab) {
