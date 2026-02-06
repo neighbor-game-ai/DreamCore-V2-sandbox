@@ -1,6 +1,6 @@
 # Game Creation Engine v2 — Final Design Document
 
-**Status:** Frozen (design review complete, rev.2 — 5 findings fixed)
+**Status:** Frozen (design review complete, rev.3 — all 10 findings fixed)
 **Created:** 2026-02-06
 **Reviewers:** CTO + Engineering
 
@@ -348,12 +348,15 @@ return this._runClaudeLocal(jobId, userId, projectId, projectDir, prompt, userMe
 
 // MODIFIED (minimal change):
 if (config.USE_MODAL) {
-  const verifiedUser = { id: userId, email: this._getUserEmail(userId) };
+  // ★ userEmail is passed down from index.js → runClaudeAsJob() → processJob()
+  // ★ It originates from ws.userEmail (JWT-verified at WebSocket init)
+  const verifiedUser = { id: userId, email: userEmail };
   if (engineV2.shouldUseV2(verifiedUser)) {
     try {
       return await engineV2.run(userId, projectId, userMessage, {
         jobId, prompt, detectedSkills,
-        onEvent: (event) => jobManager.emit(jobId, event),
+        // ★ Use existing jobManager.notifySubscribers pattern (not emit)
+        onEvent: (event) => jobManager.notifySubscribers(jobId, event),
       });
     } catch (err) {
       console.warn('[EngineV2] Fallback to v1:', err.message);
@@ -735,7 +738,14 @@ async def v2_detect_intent(request: Request):
     message = body.get("message", "")
     # Calls existing helper directly (same as v1 uses internally)
     result = await run_haiku_in_sandbox(f"Intent detection prompt: {message}")
-    return JSONResponse({"intent": parse_intent(result)})
+    # parse_intent is NOT an existing function — inline JSON parsing here
+    # (v1 also parses intent inline in detect_intent at line 1645)
+    import json
+    try:
+        intent = json.loads(result)
+    except (json.JSONDecodeError, TypeError):
+        intent = {"type": "unknown", "raw": result}
+    return JSONResponse({"intent": intent})
 
 @app.function(image=web_image, secrets=[...], volumes={...})
 @modal.fastapi_endpoint(method="POST")
@@ -860,6 +870,8 @@ function validateOutput(result) {
   if (typeof result.summary !== 'string' || result.summary.length === 0) return false;
   if (!result.files.some(f => f.path === 'index.html')) return false;
   // images array is optional (text-only games have no images)
+  // qa is required — qa_review task always runs before publish_prep
+  if (!result.qa || typeof result.qa.issues !== 'number') return false;
   return true;
 }
 ```
