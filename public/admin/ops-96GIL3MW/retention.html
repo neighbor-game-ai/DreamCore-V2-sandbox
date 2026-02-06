@@ -646,7 +646,7 @@
         <p class="last-updated" id="lastUpdated">読み込み中...</p>
       </div>
       <div class="header-controls">
-        <a href="/create.html" class="back-link">
+        <a href="/create" class="back-link">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
@@ -865,7 +865,7 @@
 
         document.getElementById('adminCancel').onclick = () => {
           modal.remove();
-          window.location.href = '/create.html';
+          window.location.href = '/create';
         };
 
         document.getElementById('adminLoginForm').onsubmit = (e) => {
@@ -925,7 +925,7 @@
               </svg>
               <h2 style="font-size: 1.25rem; color: var(--gray-900);">アクセス権限がありません</h2>
               <p style="color: var(--gray-600);">このページは管理者のみアクセスできます。</p>
-              <a href="/create.html" class="back-link" style="margin-top: var(--s-16);">
+              <a href="/create" class="back-link" style="margin-top: var(--s-16);">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
