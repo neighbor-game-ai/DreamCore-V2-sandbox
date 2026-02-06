@@ -36,7 +36,7 @@
   var TEXTS = {
     en: {
       title: 'Install DreamCore',
-      description: 'Add to home screen for a better experience',
+      description: 'Fullscreen play & get notified when your game is ready',
       install: 'Install',
       howTo: 'Learn How',
       dismiss: 'Not Now',
@@ -48,7 +48,7 @@
     },
     ja: {
       title: 'DreamCoreをインストール',
-      description: 'ホーム画面に追加してもっと快適に',
+      description: '全画面でプレイ & ゲーム完成を通知でお知らせ',
       install: 'インストール',
       howTo: '追加方法',
       dismiss: '今はしない',
@@ -60,7 +60,7 @@
     },
     zh: {
       title: '安装 DreamCore',
-      description: '添加到主屏幕以获得更好的体验',
+      description: '全屏游玩 & 游戏完成时收到通知',
       install: '安装',
       howTo: '了解方法',
       dismiss: '暂时不用',
@@ -72,7 +72,7 @@
     },
     ko: {
       title: 'DreamCore 설치',
-      description: '홈 화면에 추가하여 더 편리하게',
+      description: '전체 화면 플레이 & 게임 완성 알림 받기',
       install: '설치',
       howTo: '방법 보기',
       dismiss: '나중에',
@@ -84,7 +84,7 @@
     },
     es: {
       title: 'Instalar DreamCore',
-      description: 'Añade a la pantalla de inicio para una mejor experiencia',
+      description: 'Pantalla completa & recibe avisos cuando tu juego esté listo',
       install: 'Instalar',
       howTo: 'Cómo añadir',
       dismiss: 'Ahora no',
@@ -96,7 +96,7 @@
     },
     pt: {
       title: 'Instalar DreamCore',
-      description: 'Adicione à tela inicial para uma experiência melhor',
+      description: 'Tela cheia & receba avisos quando seu jogo estiver pronto',
       install: 'Instalar',
       howTo: 'Como adicionar',
       dismiss: 'Agora não',
