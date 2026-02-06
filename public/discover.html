@@ -19,45 +19,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="DreamCore">
 
-  <!-- Early auth check + Supabase lazy loader -->
+  <!-- Early auth check -->
+  <script src="/preauth.js?v=20260206c"></script>
+  <!-- Supabase lazy loader -->
   <script>
-    (function() {
-      // Check our session cache (sessionStorage) OR Supabase's session (localStorage)
-      var cached = sessionStorage.getItem('dreamcore_session_cache');
-      // Find Supabase session by pattern (sb-*-auth-token) to avoid hardcoding project ID
-      var supabaseSession = null;
-      for (var i = 0; i < localStorage.length; i++) {
-        var key = localStorage.key(i);
-        if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
-          supabaseSession = localStorage.getItem(key);
-          break;
-        }
-      }
-      if (!cached && !supabaseSession) { window.location.href = '/login'; return; }
-      if (!cached && supabaseSession) { return; } // Let auth.js restore session
-      try {
-        var data = JSON.parse(cached);
-        // Check cache TTL (5 min)
-        if (Date.now() - data.timestamp > 300000) {
-          sessionStorage.removeItem('dreamcore_session_cache');
-          if (supabaseSession) return; // localStorage has session, let auth.js handle
-          window.location.href = '/login';
-          return;
-        }
-        // Check session token expiry
-        var session = data.session;
-        if (session && session.expires_at && Date.now() / 1000 > session.expires_at - 60) {
-          sessionStorage.removeItem('dreamcore_session_cache');
-          if (supabaseSession) return; // localStorage has session, let auth.js handle
-          window.location.href = '/login';
-          return;
-        }
-      } catch(e) {
-        sessionStorage.removeItem('dreamcore_session_cache');
-        if (supabaseSession) return; // localStorage has session, let auth.js handle
-        window.location.href = '/login';
-      }
-    })();
     window.__SUPABASE__ = {
       url: 'https://tcynrijrovktirsvwiqb.supabase.co',
       anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjeW5yaWpyb3ZrdGlyc3Z3aXFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjY5OTAsImV4cCI6MjA4NDYwMjk5MH0.y-_E-vuQg84t8BGISdPL18oaYcayS8ip1OLJsZwM3hI'
