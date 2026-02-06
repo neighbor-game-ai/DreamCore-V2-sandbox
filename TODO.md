@@ -8,6 +8,32 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-06: PWA インストールプロンプト実装 ✅
+
+**詳細:** `.claude/logs/2026-02-06-pwa-install-prompt.md`
+
+- モバイルブラウザでアクセスしたユーザーに PWA インストールを促すバナーを実装
+- iOS: Safari の「ホーム画面に追加」手順を SVG イラスト付きモーダルで案内
+- Android: Chrome `beforeinstallprompt` でネイティブインストール / フォールバックモーダル
+- 6言語対応（en, ja, zh, ko, es, pt）、既存ファイル変更最小限
+- 全ページ（create, discover, notifications, mypage, user）に対応
+- Push 通知の全ユーザー開放（テスト用 Allowlist 解除）
+- ドキュメント更新: `docs/PUSH-NOTIFICATION-ARCHITECTURE.md`
+
+---
+
+### 2026-02-06: iOS横スクロール修正（createページ） ✅
+
+**詳細:** `.claude/logs/2026-02-06-ios-horizontal-scroll-fix.md`
+
+- iPhoneで `/create` ページが左右にスワイプできる問題を修正
+- **根本原因**: キャッシュバスター `?v=20260205` が未更新で、13回のCSS修正が全てキャッシュにより無効だった
+- キャッシュバスター更新後、有効な修正（`.project-list-view` の `overflow-x: clip` + `touch-action: pan-y` 等）が反映され解決
+- 冗長に積み重なった防御的CSS/JSを掃除し、必要な修正のみ残した
+- 教訓: CSSを変更したら必ず `?v=` を更新すること
+
+---
+
 ### 2026-02-06: URL構造リファクタ Phase 2 — ルート意味切替 ✅
 
 **詳細:** `.claude/logs/2026-02-06-url-restructure-phase2.md`

@@ -316,6 +316,130 @@ CREATE TABLE notifications (
 );
 ```
 
+## Push Notification Access Control
+
+### Allowlist（テスト用制限）
+
+開発中はテスト対象ユーザーのみに通知を送る制限が可能:
+
+```bash
+# .env で設定（コメントアウトで全ユーザー有効）
+#PUSH_ALLOWLIST_USER_IDS=ed58dfd0-03c8-4617-ae86-f28df6f562ff
+```
+
+- 設定あり → 指定ユーザーのみ Push 送信
+- 設定なし / コメントアウト → **全ユーザーに送信**（本番推奨）
+- 判定ロジック: `server/notificationService.js` の `isAllowedPushUser()`
+
+**注意**: 本番/ローカル両方の `.env` を確認すること。
+
+---
+
+## PWA Install Prompt
+
+### 概要
+
+モバイルブラウザでアクセスしたユーザーに PWA インストールを促すバナーを表示する。完全自己完結型モジュール `public/pwa-install.js` で実装。
+
+### アーキテクチャ
+
+```
+pwa-install.js (self-contained IIFE)
+├── CSS injection (style tag)
+├── Banner HTML injection (DOM)
+├── beforeinstallprompt capture (Chromium)
+├── Service Worker registration
+├── 6-language translations (built-in)
+└── localStorage state management
+```
+
+### 動作フロー
+
+```
+ページロード (DOMContentLoaded + 100ms)
+│
+├─ standalone mode? → 終了（PWA内では表示しない）
+├─ デスクトップ? → 終了
+├─ localStorage "pwa-installed" === true? → 終了
+├─ localStorage "pwa-install-dismissed-v2" が7日以内? → 終了
+│
+└─ バナー表示
+    │
+    ├─ [Install/追加方法] ボタンタップ
+    │   ├─ deferredPrompt あり → ネイティブインストールダイアログ（Android Chrome）
+    │   ├─ iOS → iOS モーダル（Safari 共有ボタン → ホーム画面に追加の手順）
+    │   └─ Android fallback → Android モーダル（⋮ メニューの手順）
+    │
+    └─ [✕] ボタンタップ → バナーを閉じる（次回ページ遷移で再表示）
+```
+
+### UI 構成
+
+| 要素 | 動作 |
+|------|------|
+| バナー ✕ | 一時的に閉じる。次回ページ遷移で再表示 |
+| Install / 追加方法ボタン | プラットフォームに応じたインストール |
+| iOS モーダル「わかった」 | モーダルを閉じる。バナーは次回再表示 |
+| iOS/Android モーダル「今後表示しない」 | 7日間非表示（localStorage） |
+| インストール完了（appinstalled） | 永久非表示 |
+
+### 対応ページ
+
+| ページ | ファイル |
+|--------|----------|
+| Create | `create.html` |
+| Discover | `discover.html` |
+| Notifications | `notifications.html` |
+| My Page | `mypage.html` |
+| User Profile | `user.html` |
+
+### 多言語対応
+
+JS 内蔵で6言語対応。locale ファイル変更不要:
+
+| 言語 | コード |
+|------|--------|
+| English | `en` |
+| 日本語 | `ja` |
+| 中文 | `zh` |
+| 한국어 | `ko` |
+| Español | `es` |
+| Português | `pt` |
+
+言語判定: `DreamCoreI18n.currentLang` → `localStorage dreamcore_lang` → `navigator.language` → `en`
+
+### beforeinstallprompt について
+
+Chrome が `beforeinstallprompt` を発火する条件:
+- HTTPS
+- 有効な manifest.json（name, icons, start_url, display）
+- 登録済み Service Worker（fetch handler 必須）
+- **まだインストールされていない**
+
+**既にインストール済みの端末**では `beforeinstallprompt` は発火せず、ネイティブダイアログではなく手動案内モーダルが表示される。これは正しい動作。
+
+### デバッグ
+
+```javascript
+// デスクトップでも動作確認可能
+window.__pwaForceShow('ios');      // iOS モーダル付きバナー
+window.__pwaForceShow('android');  // Android モーダル付きバナー
+window.__pwaForceShow();           // バナーのみ
+
+// テストページ
+/pwa-test         // デバイス情報 + デバッグボタン
+/pwa-test-create  // Create ページ模擬 + デバッグボタン
+```
+
+### localStorage キー
+
+| キー | 値 | 用途 |
+|------|-----|------|
+| `pwa-install-dismissed-v2` | ISO timestamp | 最後に dismiss した日時 |
+| `pwa-installed` | `"true"` | インストール完了フラグ |
+
+---
+
 ## Environment Variables
 
 ```
