@@ -46,7 +46,7 @@
       iosStep3: 'Tap <strong>"Add"</strong> in the top right',
       iosOk: 'Got it',
       androidTitle: 'Install App',
-      androidStep1: 'Tap the <strong>menu ⋮</strong> button in the top right',
+      androidStep1: 'Tap <strong>⋮</strong> in the top right of your browser',
       androidStep2: 'Tap <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>',
       androidOk: 'Got it',
     },
@@ -62,8 +62,8 @@
       iosStep3: '右上の<strong>「追加」</strong>をタップ',
       iosOk: 'わかった',
       androidTitle: 'アプリをインストール',
-      androidStep1: '右上の<strong>メニュー ⋮</strong> をタップ',
-      androidStep2: '<strong>「アプリをインストール」</strong>または<strong>「ホーム画面に追加」</strong>をタップ',
+      androidStep1: 'ブラウザ右上の <strong>⋮</strong> をタップ',
+      androidStep2: '<strong>「ホーム画面に追加」</strong>をタップ',
       androidOk: 'わかった',
     },
     zh: {
@@ -78,7 +78,7 @@
       iosStep3: '点击右上角的<strong>"添加"</strong>',
       iosOk: '知道了',
       androidTitle: '安装应用',
-      androidStep1: '点击右上角的<strong>菜单 ⋮</strong>',
+      androidStep1: '点击浏览器右上角的 <strong>⋮</strong>',
       androidStep2: '点击<strong>"安装应用"</strong>或<strong>"添加到主屏幕"</strong>',
       androidOk: '知道了',
     },
@@ -94,7 +94,7 @@
       iosStep3: '오른쪽 상단의 <strong>"추가"</strong>를 탭',
       iosOk: '확인',
       androidTitle: '앱 설치',
-      androidStep1: '오른쪽 상단의 <strong>메뉴 ⋮</strong>를 탭',
+      androidStep1: '브라우저 오른쪽 상단의 <strong>⋮</strong>를 탭',
       androidStep2: '<strong>"앱 설치"</strong> 또는 <strong>"홈 화면에 추가"</strong>를 탭',
       androidOk: '확인',
     },
@@ -110,7 +110,7 @@
       iosStep3: 'Toca <strong>"Añadir"</strong> en la esquina superior derecha',
       iosOk: 'Entendido',
       androidTitle: 'Instalar aplicación',
-      androidStep1: 'Toca el <strong>menú ⋮</strong> en la esquina superior derecha',
+      androidStep1: 'Toca <strong>⋮</strong> en la esquina superior derecha del navegador',
       androidStep2: 'Toca <strong>"Instalar aplicación"</strong> o <strong>"Añadir a pantalla de inicio"</strong>',
       androidOk: 'Entendido',
     },
@@ -126,7 +126,7 @@
       iosStep3: 'Toque em <strong>"Adicionar"</strong> no canto superior direito',
       iosOk: 'Entendi',
       androidTitle: 'Instalar aplicativo',
-      androidStep1: 'Toque no <strong>menu ⋮</strong> no canto superior direito',
+      androidStep1: 'Toque em <strong>⋮</strong> no canto superior direito do navegador',
       androidStep2: 'Toque em <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>',
       androidOk: 'Entendi',
     },
@@ -666,6 +666,17 @@
     var overlay = document.createElement('div');
     overlay.className = 'pwa-ios-overlay';
 
+    var lang = getLang();
+    var androidMenu = {
+      en: { bookmark: 'Bookmark', addHome: 'Add to Home screen' },
+      ja: { bookmark: 'ブックマーク', addHome: 'ホーム画面に追加' },
+      zh: { bookmark: '书签', addHome: '添加到主屏幕' },
+      ko: { bookmark: '북마크', addHome: '홈 화면에 추가' },
+      es: { bookmark: 'Marcador', addHome: 'Añadir a pantalla de inicio' },
+      pt: { bookmark: 'Favorito', addHome: 'Adicionar à tela inicial' },
+    };
+    var am = androidMenu[lang] || androidMenu.en;
+
     overlay.innerHTML = [
       '<div class="pwa-ios-modal" role="dialog" aria-modal="true" aria-label="' + t('androidTitle') + '">',
       '  <h3>' + t('androidTitle') + '</h3>',
@@ -676,7 +687,6 @@
       '        <div class="pwa-ios-step-label">' + t('androidStep1') + '</div>',
       '        <div class="pwa-ios-illust">',
       '          <svg width="24" height="24" viewBox="0 0 24 24" fill="#333"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>',
-      '          <span class="pwa-ios-illust-text">Menu</span>',
       '        </div>',
       '      </div>',
       '    </li>',
@@ -685,8 +695,8 @@
       '      <div class="pwa-ios-step-content">',
       '        <div class="pwa-ios-step-label">' + t('androidStep2') + '</div>',
       '        <div class="pwa-ios-menu-item">',
-      '          <div class="pwa-ios-menu-row">' + SVG.bookmark + ' <span>Bookmark</span></div>',
-      '          <div class="pwa-ios-menu-row pwa-highlight">' + SVG.addHome + ' <span style="color:#333;font-weight:600">Install app</span></div>',
+      '          <div class="pwa-ios-menu-row">' + SVG.bookmark + ' <span>' + am.bookmark + '</span></div>',
+      '          <div class="pwa-ios-menu-row pwa-highlight">' + SVG.addHome + ' <span style="color:#333;font-weight:600">' + am.addHome + '</span></div>',
       '        </div>',
       '      </div>',
       '    </li>',
