@@ -9,6 +9,15 @@ const geminiClient = require('./geminiClient');
 const claudeChat = require('./claudeChat');
 const config = require('./config');
 
+// Engine V2 (lazy-loaded, feature-flagged)
+let engineV2 = null;
+function getEngineV2() {
+  if (!engineV2) {
+    engineV2 = require('./engine-v2');
+  }
+  return engineV2;
+}
+
 // Modal client for remote execution (lazy-loaded when USE_MODAL=true)
 let modalClient = null;
 function getModalClient() {
@@ -1644,8 +1653,9 @@ ${userMessage}
   }
 
   // Run Claude as an async job
-  async runClaudeAsJob(userId, projectId, userMessage, debugOptions = {}) {
+  async runClaudeAsJob(userId, projectId, userMessage, debugOptions = {}, userEmail = null) {
     // userId comes from Supabase Auth JWT (already validated)
+    // userEmail comes from JWT email claim (for v2 allowlist check)
 
     // Check for existing active job
     const existingJob = await jobManager.getActiveJob(projectId);
@@ -1666,13 +1676,13 @@ ${userMessage}
       isExisting: false,
       startProcessing: () => {
         // Process job with slot management (slot already acquired)
-        this.processJobWithSlot(job.id, userId, projectId, userMessage, debugOptions);
+        this.processJobWithSlot(job.id, userId, projectId, userMessage, debugOptions, userEmail);
       }
     };
   }
 
   // Wrapper that ensures slot is released after job completion
-  async processJobWithSlot(jobId, userId, projectId, userMessage, debugOptions = {}) {
+  async processJobWithSlot(jobId, userId, projectId, userMessage, debugOptions = {}, userEmail = null) {
     const config = require('./config');
     const timeout = config.RATE_LIMIT.cli.timeout;
 
@@ -1692,7 +1702,7 @@ ${userMessage}
     try {
       // Race between job completion and timeout
       await Promise.race([
-        this.processJob(jobId, userId, projectId, userMessage, debugOptions),
+        this.processJob(jobId, userId, projectId, userMessage, debugOptions, userEmail),
         timeoutPromise
       ]);
     } catch (err) {
@@ -1713,7 +1723,7 @@ ${userMessage}
   }
 
   // Process job (runs in background)
-  async processJob(jobId, userId, projectId, userMessage, debugOptions = {}) {
+  async processJob(jobId, userId, projectId, userMessage, debugOptions = {}, userEmail = null) {
     const projectDir = userManager.getProjectDir(userId, projectId);
 
     // Debug: Log the full user message to verify visual guideline is included
@@ -1955,6 +1965,34 @@ ${userMessage}
 
     // Use Modal for Claude CLI execution if enabled
     if (config.USE_MODAL) {
+      // Engine V2 branch: DAG-based game creation (feature-flagged)
+      const ev2 = getEngineV2();
+      const verifiedUser = { id: userId, email: userEmail };
+      if (ev2.shouldUseV2(verifiedUser)) {
+        const v2Options = {
+          jobId, prompt, detectedSkills,
+          onEvent: (event) => jobManager.notifySubscribers(jobId, event),
+        };
+
+        if (ev2.isShadowMode()) {
+          // Shadow mode: v2 runs in background for measurement only.
+          // v1 result is always returned to the user.
+          console.log('[EngineV2:shadow] Starting shadow run for job:', jobId);
+          ev2.runShadow(userId, projectId, userMessage, v2Options).catch(() => {});
+          // Fall through to v1 below
+        } else {
+          // Live mode: v2 replaces v1 (with fallback on failure)
+          try {
+            console.log('[EngineV2] Using v2 engine for job:', jobId);
+            return await ev2.run(userId, projectId, userMessage, v2Options);
+          } catch (err) {
+            console.warn('[EngineV2] Fallback to v1:', err.message);
+            await ev2.logFallback(jobId, err);
+            // Fall through to v1
+          }
+        }
+      }
+
       console.log('Using Claude CLI on Modal for job:', jobId);
       return this._runClaudeOnModal(jobId, userId, projectId, prompt, userMessage, detectedSkills);
     }

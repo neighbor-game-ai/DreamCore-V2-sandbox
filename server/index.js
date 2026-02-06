@@ -1235,6 +1235,7 @@ const wsConnections = new Map(); // userId -> Set of ws
 
 wss.on('connection', (ws) => {
   let userId = null;
+  let userEmail = null;  // JWT-verified email (for engine v2 allowlist)
   let currentProjectId = null;
   let jobUnsubscribe = null;
   let sessionId = null;
@@ -1284,6 +1285,7 @@ wss.on('connection', (ws) => {
           }
 
           userId = user.id;
+          userEmail = user.email;  // JWT-verified email for engine v2 allowlist
           userSupabase = supabase;  // Store for db operations
           sessionId = data.sessionId || 'unknown';
           clearTimeout(authTimeout);  // 認証成功したのでタイムアウトをキャンセル
@@ -1659,7 +1661,8 @@ wss.on('connection', (ws) => {
                 userId,
                 currentProjectId,
                 userMessage,
-                debugOptions
+                debugOptions,
+                userEmail  // JWT-verified email for engine v2 allowlist
               );
 
               // Subscribe to job updates BEFORE starting processing

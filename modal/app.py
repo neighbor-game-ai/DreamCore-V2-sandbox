@@ -2682,3 +2682,83 @@ async def generate_gemini(request: Request):
 #         "app": APP_NAME,
 #         "version": APP_VERSION,
 #     })
+
+
+# =============================================================================
+# Engine V2 Endpoints (M1)
+# v1 functions above are NEVER modified. v2 adds new functions.
+# =============================================================================
+
+
+@app.function(image=web_image, secrets=[internal_secret], volumes={MOUNT_DATA: data_volume})
+@modal.fastapi_endpoint(method="POST")
+async def v2_detect_intent(request: Request):
+    """V2 intent detection - returns string enum ('chat'|'edit'|'restore')."""
+    from starlette.responses import JSONResponse
+
+    if not verify_internal_auth(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    message = body.get("message", "")
+    result = await run_haiku_in_sandbox(f"Intent detection prompt: {message}")
+
+    try:
+        parsed = json.loads(result)
+        intent = parsed.get("intent", "chat") if isinstance(parsed, dict) else "chat"
+    except (json.JSONDecodeError, TypeError):
+        intent = "chat"
+
+    if intent not in ("chat", "edit", "restore"):
+        intent = "chat"
+
+    return JSONResponse({"intent": intent})
+
+
+@app.function(image=web_image, secrets=[internal_secret], volumes={MOUNT_DATA: data_volume})
+@modal.fastapi_endpoint(method="POST")
+async def v2_chat_haiku(request: Request):
+    """V2 chat endpoint - calls run_haiku_in_sandbox directly."""
+    from starlette.responses import JSONResponse
+
+    if not verify_internal_auth(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    result = await run_haiku_in_sandbox(body.get("prompt", ""))
+    return JSONResponse({"result": result})
+
+
+@app.function(image=web_image, secrets=[internal_secret], volumes={MOUNT_DATA: data_volume})
+@modal.fastapi_endpoint(method="POST")
+async def v2_generate_code(request: Request):
+    """V2 code generation - M1 skeleton, returns placeholder."""
+    from starlette.responses import JSONResponse
+
+    if not verify_internal_auth(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    try:
+        validate_ids(body.get("user_id", ""), body.get("project_id", ""))
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+    # M1: Return placeholder response. Full implementation in M2.
+    return JSONResponse({
+        "status": "not_implemented",
+        "message": "v2_generate_code endpoint ready. Implementation in M2.",
+        "engine_version": "v2"
+    })

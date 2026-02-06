@@ -821,6 +821,84 @@ class ModalClient {
         prewarmCache.delete(userId);
       });
   }
+
+  // =========================================================================
+  // Engine V2 endpoints
+  // =========================================================================
+
+  /**
+   * Call v2_detect_intent Modal endpoint
+   * @param {string} message - User message
+   * @returns {Promise<{intent: string}>} Intent result ('chat'|'edit'|'restore')
+   */
+  async v2DetectIntent(message) {
+    const endpoint = deriveEndpoint(this.baseEndpoint, 'v2-detect-intent');
+    if (!endpoint) throw new Error('Modal v2_detect_intent endpoint not configured');
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ message }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`v2_detect_intent error: ${response.status} - ${errorText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Call v2_chat_haiku Modal endpoint
+   * @param {string} prompt - Chat prompt
+   * @returns {Promise<{result: string}>} Chat response
+   */
+  async v2ChatHaiku(prompt) {
+    const endpoint = deriveEndpoint(this.baseEndpoint, 'v2-chat-haiku');
+    if (!endpoint) throw new Error('Modal v2_chat_haiku endpoint not configured');
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ prompt }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`v2_chat_haiku error: ${response.status} - ${errorText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Call v2_generate_code Modal endpoint
+   * @param {object} params
+   * @param {string} params.user_id
+   * @param {string} params.project_id
+   * @param {string} params.prompt
+   * @param {object} [params.plan] - Plan from planning step
+   * @param {string[]} [params.skills] - Detected skills
+   * @returns {Promise<object>} Code generation result
+   */
+  async v2GenerateCode({ user_id, project_id, prompt, plan, skills }) {
+    const endpoint = deriveEndpoint(this.baseEndpoint, 'v2-generate-code');
+    if (!endpoint) throw new Error('Modal v2_generate_code endpoint not configured');
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ user_id, project_id, prompt, plan, skills }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`v2_generate_code error: ${response.status} - ${errorText}`);
+    }
+
+    return response.json();
+  }
 }
 
 // Export singleton instance
