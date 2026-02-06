@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- Non-blocking font loading -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
-  <link rel="stylesheet" href="/style.css?v=20260206d">
+  <link rel="stylesheet" href="/style.css?v=20260206e">
   <!-- Skeleton styles (inline for instant display) -->
   <style>
     .skeleton .skeleton-shimmer {
@@ -325,6 +325,7 @@
   </script>
   <script src="/push.js?v=20260205n" defer></script>
   <script src="/app.js?v=20260206b" defer></script>
+  <script src="/pwa-install.js?v=20260206" defer></script>
   <script defer>
     // Language selector initialization
     document.addEventListener('DOMContentLoaded', async () => {
@@ -378,14 +379,6 @@
       document.addEventListener('click', () => {
         selector.classList.remove('open');
       });
-
-      // Hotfix: prevent horizontal scroll on projectListView (iOS Safari)
-      const plv = document.getElementById('projectListView');
-      if (plv) {
-        plv.addEventListener('scroll', function() {
-          if (plv.scrollLeft !== 0) plv.scrollLeft = 0;
-        }, { passive: false });
-      }
     });
   </script>
 </body>
