@@ -33,26 +33,29 @@
           break;
         }
       }
-      if (!cached && !supabaseSession) { window.location.href = '/'; return; }
+      if (!cached && !supabaseSession) { window.location.href = '/login'; return; }
       if (!cached && supabaseSession) { return; } // Let auth.js restore session
       try {
         var data = JSON.parse(cached);
         // Check cache TTL (5 min)
         if (Date.now() - data.timestamp > 300000) {
           sessionStorage.removeItem('dreamcore_session_cache');
-          window.location.href = '/';
+          if (supabaseSession) return; // localStorage has session, let auth.js handle
+          window.location.href = '/login';
           return;
         }
         // Check session token expiry
         var session = data.session;
         if (session && session.expires_at && Date.now() / 1000 > session.expires_at - 60) {
           sessionStorage.removeItem('dreamcore_session_cache');
-          window.location.href = '/';
+          if (supabaseSession) return; // localStorage has session, let auth.js handle
+          window.location.href = '/login';
           return;
         }
       } catch(e) {
         sessionStorage.removeItem('dreamcore_session_cache');
-        window.location.href = '/';
+        if (supabaseSession) return; // localStorage has session, let auth.js handle
+        window.location.href = '/login';
       }
     })();
     window.__SUPABASE__ = {
@@ -184,12 +187,12 @@
       // V2 Waitlist: Check access permission
       const session = await DreamCoreAuth.getSession();
       if (!session) {
-        window.location.href = '/';
+        window.location.href = '/login';
         return;
       }
       const { allowed, authError } = await DreamCoreAuth.checkAccess();
       if (authError) {
-        window.location.href = '/';  // Auth error → login page
+        window.location.href = '/login';  // Auth error → login page
         return;
       }
       if (!allowed) {

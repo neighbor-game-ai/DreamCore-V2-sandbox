@@ -34,24 +34,27 @@
           break;
         }
       }
-      if (!cached && !supabaseSession) { window.location.href = '/'; return; }
+      if (!cached && !supabaseSession) { window.location.href = '/login'; return; }
       if (!cached && supabaseSession) { return; } // Let auth.js restore session
       try {
         var data = JSON.parse(cached);
         if (Date.now() - data.timestamp > 300000) {
           sessionStorage.removeItem('dreamcore_session_cache');
-          window.location.href = '/';
+          if (supabaseSession) return; // localStorage has session, let auth.js handle
+          window.location.href = '/login';
           return;
         }
         var session = data.session;
         if (session && session.expires_at && Date.now() / 1000 > session.expires_at - 60) {
           sessionStorage.removeItem('dreamcore_session_cache');
-          window.location.href = '/';
+          if (supabaseSession) return; // localStorage has session, let auth.js handle
+          window.location.href = '/login';
           return;
         }
       } catch(e) {
         sessionStorage.removeItem('dreamcore_session_cache');
-        window.location.href = '/';
+        if (supabaseSession) return; // localStorage has session, let auth.js handle
+        window.location.href = '/login';
       }
     })();
     window.__SUPABASE__ = {
