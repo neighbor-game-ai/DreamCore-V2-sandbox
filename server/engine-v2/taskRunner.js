@@ -21,7 +21,7 @@ const TASKS_AFTER_INTENT = ['plan', 'codegen', 'asset', 'qa_review', 'fix', 'pub
 async function createAttempt(db, taskId, attemptNo) {
   const { rows } = await db.query(
     `INSERT INTO engine_v2.job_task_attempts
-       (task_id, attempt_number, status, started_at)
+       (task_id, attempt_no, status, started_at)
      VALUES ($1, $2, 'running', NOW())
      RETURNING id`,
     [taskId, attemptNo]
@@ -46,12 +46,12 @@ async function completeAttempt(db, attemptId, result) {
   await db.query(
     `UPDATE engine_v2.job_task_attempts
      SET status        = $1,
-         finished_at   = NOW(),
-         input_tokens  = $2,
-         output_tokens = $3,
+         ended_at      = NOW(),
+         tokens_in     = $2,
+         tokens_out    = $3,
          latency_ms    = $4,
          cost_usd      = $5,
-         error_message = $6
+         error          = $6
      WHERE id = $7`,
     [
       result.status,
@@ -59,7 +59,7 @@ async function completeAttempt(db, attemptId, result) {
       result.output_tokens ?? null,
       result.latency_ms ?? null,
       result.cost_usd ?? null,
-      result.error_message ?? null,
+      result.error_message ? JSON.stringify({ message: result.error_message }) : null,
       attemptId,
     ]
   );
@@ -189,109 +189,70 @@ const ROLE_ENDPOINTS = {
 /**
  * Create a task executor function.
  *
- * @param {object} modalClient - client with .post(path, body) method (TODO: M2)
+ * @param {object} modalClient - ModalClient instance with v2 methods
  * @param {object} options
  * @param {object} options.db - db module
+ * @param {string} options.userId - JWT-verified user ID
+ * @param {string} options.projectId - Target project ID
+ * @param {string} options.userMessage - Original user message
+ * @param {string} options.prompt - Built prompt
+ * @param {string[]} options.detectedSkills - Skills detected in message
  * @returns {function(object): Promise<object>} executeTask(task) -> output
  */
 function createTaskExecutor(modalClient, options) {
-  const { db } = options;
+  const { db, userId, projectId, userMessage, prompt, detectedSkills } = options;
 
   /**
-   * Execute a single task: track attempts, call agent, save artifacts.
+   * Execute a single task: call agent, track attempts, save artifacts.
    *
-   * @param {object} task
-   * @param {string} task.id - task UUID
-   * @param {string} task.job_id
-   * @param {string} task.task_key
-   * @param {string} task.agent_role
-   * @param {number} task.max_attempts
-   * @param {object} task.input - input payload for the agent
+   * NOTE: Task status management (running/succeeded/failed) is handled by
+   * scheduler.executeAndHandle. This function ONLY handles:
+   * - Agent calls via Modal v2 endpoints
+   * - Attempt tracking (createAttempt, completeAttempt)
+   * - Artifact saving
+   * Returns output on success, throws on all-attempts-exhausted failure.
+   *
+   * @param {object} task - claimed task row from scheduler
    * @returns {Promise<object>} task output
    */
   async function executeTask(task) {
-    const { id: taskId, job_id: jobId, task_key: taskKey, agent_role: agentRole, max_attempts: maxAttempts } = task;
+    const { id: taskId, job_id: jobId, task_key: taskKey, agent_role: agentRole, attempt_count: attemptCount, max_attempts: maxAttempts } = task;
 
-    // Mark task as running
-    await db.query(
-      `UPDATE engine_v2.job_tasks SET status = 'running', started_at = NOW() WHERE id = $1`,
-      [taskId]
-    );
-    await emitEvent(db, jobId, taskId, 'task_started', { task_key: taskKey });
+    const attemptNo = attemptCount; // claimNextTask increments attempt_count
+    const attemptId = await createAttempt(db, taskId, attemptNo);
+    const startTime = Date.now();
 
-    let lastError = null;
-    let output = null;
+    try {
+      const context = { userId, projectId, userMessage, prompt, detectedSkills };
+      const output = await callAgent(modalClient, taskKey, task.input, context);
+      const latencyMs = Date.now() - startTime;
 
-    for (let attempt = 1; attempt <= (maxAttempts || 1); attempt++) {
-      const attemptId = await createAttempt(db, taskId, attempt);
-      const startTime = Date.now();
+      await completeAttempt(db, attemptId, {
+        status: 'succeeded',
+        input_tokens: output._meta?.input_tokens,
+        output_tokens: output._meta?.output_tokens,
+        latency_ms: latencyMs,
+        cost_usd: output._meta?.cost_usd,
+      });
 
-      try {
-        // --- M1 STUB: actual Modal call is not implemented yet ---
-        output = await callAgent(modalClient, agentRole, taskKey, task.input);
-        // ---------------------------------------------------------
+      // Clean internal metadata before returning
+      delete output._meta;
 
-        const latencyMs = Date.now() - startTime;
+      // Save artifacts based on task type
+      await saveTaskArtifacts(db, jobId, taskId, taskKey, output);
 
-        await completeAttempt(db, attemptId, {
-          status: 'succeeded',
-          input_tokens: output._meta?.input_tokens,
-          output_tokens: output._meta?.output_tokens,
-          latency_ms: latencyMs,
-          cost_usd: output._meta?.cost_usd,
-        });
+      return output;
+    } catch (err) {
+      const latencyMs = Date.now() - startTime;
 
-        // Clean internal metadata before returning
-        delete output._meta;
+      await completeAttempt(db, attemptId, {
+        status: 'failed',
+        latency_ms: latencyMs,
+        error_message: err.message,
+      });
 
-        // Save artifacts based on task type
-        await saveTaskArtifacts(db, jobId, taskId, taskKey, output);
-
-        // Mark task as succeeded
-        await db.query(
-          `UPDATE engine_v2.job_tasks SET status = 'succeeded', finished_at = NOW(), output = $1 WHERE id = $2`,
-          [JSON.stringify(output), taskId]
-        );
-        await emitEvent(db, jobId, taskId, 'task_completed', { task_key: taskKey, attempt });
-
-        // Handle conditional branching
-        await handleConditionalSkip(db, jobId, taskKey, output);
-
-        return output;
-      } catch (err) {
-        const latencyMs = Date.now() - startTime;
-        lastError = err;
-
-        await completeAttempt(db, attemptId, {
-          status: 'failed',
-          latency_ms: latencyMs,
-          error_message: err.message,
-        });
-
-        await emitEvent(db, jobId, taskId, 'task_attempt_failed', {
-          task_key: taskKey,
-          attempt,
-          error: err.message,
-        });
-
-        // If we have more attempts, continue; otherwise fall through
-        if (attempt < (maxAttempts || 1)) {
-          continue;
-        }
-      }
+      throw err;
     }
-
-    // All attempts exhausted
-    await db.query(
-      `UPDATE engine_v2.job_tasks SET status = 'failed', finished_at = NOW() WHERE id = $1`,
-      [taskId]
-    );
-    await emitEvent(db, jobId, taskId, 'task_failed', {
-      task_key: taskKey,
-      error: lastError?.message,
-    });
-
-    throw lastError;
   }
 
   return executeTask;
@@ -304,24 +265,59 @@ function createTaskExecutor(modalClient, options) {
 /**
  * Call the appropriate Modal v2 agent endpoint.
  *
- * M1 skeleton: throws "not implemented yet".
- * M2: will use modalClient.post() to call the real endpoint.
+ * Routes by task_key to the correct modalClient v2 method.
+ * Passes both task-specific input (from predecessor outputs) and
+ * job-level context (userId, projectId, prompt, etc.).
  *
- * @param {object} modalClient
- * @param {string} agentRole
- * @param {string} taskKey
- * @param {object} input
+ * @param {object} modalClient - ModalClient instance
+ * @param {string} taskKey - e.g. 'intent', 'plan', 'codegen'
+ * @param {object} input - task input (from job_tasks.input column)
+ * @param {object} context - job-level context
+ * @param {string} context.userId
+ * @param {string} context.projectId
+ * @param {string} context.userMessage
+ * @param {string} context.prompt
+ * @param {string[]} context.detectedSkills
  * @returns {Promise<object>} agent output
  */
-async function callAgent(modalClient, agentRole, taskKey, input) {
-  // TODO (M2): implement actual Modal calls
-  //
-  // const endpoint = ROLE_ENDPOINTS[agentRole];
-  // if (!endpoint) throw new Error(`Unknown agent_role: ${agentRole}`);
-  // const response = await modalClient.post(endpoint, { task_key: taskKey, ...input });
-  // return response.data;
+async function callAgent(modalClient, taskKey, input, context) {
+  switch (taskKey) {
+    case 'intent':
+      return modalClient.v2DetectIntent(context.userMessage);
 
-  throw new Error(`callAgent not implemented yet: ${agentRole}/${taskKey}`);
+    case 'plan':
+      // M2: plan endpoint not yet implemented on Modal
+      // Return a pass-through so downstream tasks can proceed
+      return { plan: 'auto', message: context.userMessage };
+
+    case 'codegen':
+      return modalClient.v2GenerateCode({
+        user_id: context.userId,
+        project_id: context.projectId,
+        prompt: context.prompt,
+        plan: input?.plan,
+        skills: context.detectedSkills,
+      });
+
+    case 'asset':
+      // M2: asset generation not yet implemented
+      return { images: [] };
+
+    case 'qa_review':
+      // M2: QA not yet implemented — pass with no issues
+      return { issues: 0, findings: [] };
+
+    case 'fix':
+      // M2: fix not needed when qa_review passes (issues=0 → skipped)
+      return { files: [] };
+
+    case 'publish_prep':
+      // M2: publish prep is a pass-through
+      return { ready: true };
+
+    default:
+      throw new Error(`Unknown task_key: ${taskKey}`);
+  }
 }
 
 // ---------------------------------------------------------------------------

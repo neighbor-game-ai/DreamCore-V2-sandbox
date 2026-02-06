@@ -9,6 +9,7 @@ const { runWorkflow } = require('./scheduler');
 const { createTaskExecutor } = require('./taskRunner');
 const { createStagingDir, cleanupStagingDir, applyToProduction } = require('./stagingManager');
 const { validateOutput, toV1Response } = require('./output');
+const modalClient = require('../modalClient');
 
 /**
  * Run the v2 engine for a game creation job.
@@ -39,13 +40,13 @@ async function run(userId, projectId, userMessage, options) {
     const taskMap = await buildDag(db, jobId, DEFAULT_WORKFLOW);
 
     // Create task executor (handles Modal API calls)
-    const executeTask = createTaskExecutor(null, {
+    const executeTask = createTaskExecutor(modalClient, {
+      db,
       userId,
       projectId,
       userMessage,
       prompt,
       detectedSkills,
-      stagingDir,
     });
 
     // Run the DAG workflow

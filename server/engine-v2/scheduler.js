@@ -1,6 +1,8 @@
 // server/engine-v2/scheduler.js
 'use strict';
 
+const { handleConditionalSkip, emitEvent } = require('./taskRunner');
+
 const WORKER_COUNT = 3;
 const POLL_INTERVAL_MS = 300;
 
@@ -164,6 +166,10 @@ function wait(ms) {
  */
 async function executeAndHandle(db, task, jobId, executeTask, onEvent) {
   onEvent('taskStarted', { jobId, task });
+  await emitEvent(db, jobId, task.id, 'task_started', {
+    task_key: task.task_key,
+    attempt: task.attempt_count,
+  });
 
   try {
     const result = await executeTask(task);
@@ -171,6 +177,18 @@ async function executeAndHandle(db, task, jobId, executeTask, onEvent) {
       output: result != null ? JSON.stringify(result) : null,
       finished_at: new Date().toISOString(),
     });
+
+    // Emit task_completed event to DB
+    await emitEvent(db, jobId, task.id, 'task_completed', {
+      task_key: task.task_key,
+    });
+
+    // Conditional skip: intent=chat → skip all; qa_review.issues=0 → skip fix
+    const skipped = await handleConditionalSkip(db, jobId, task.task_key, result);
+    if (skipped.length > 0) {
+      onEvent('tasksSkipped', { jobId, skipped });
+    }
+
     onEvent('taskDone', { jobId, task, result });
     await promoteReadyTasks(db, jobId);
   } catch (err) {
@@ -184,6 +202,11 @@ async function executeAndHandle(db, task, jobId, executeTask, onEvent) {
         error_code: err.code || 'task_error',
         error_message: err.message,
         finished_at: new Date().toISOString(),
+      });
+      await emitEvent(db, jobId, task.id, 'task_failed', {
+        task_key: task.task_key,
+        error: err.message,
+        attempt: task.attempt_count,
       });
       onEvent('taskFailed', { jobId, task, error: err.message });
       await propagateFailure(db, jobId, task.id);
