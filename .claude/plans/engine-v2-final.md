@@ -1,6 +1,6 @@
 # Game Creation Engine v2 — Final Design Document
 
-**Status:** Frozen (design review complete, rev.3 — all 10 findings fixed)
+**Status:** Frozen (design review complete, rev.4 — all 12 findings fixed)
 **Created:** 2026-02-06
 **Reviewers:** CTO + Engineering
 
@@ -738,13 +738,16 @@ async def v2_detect_intent(request: Request):
     message = body.get("message", "")
     # Calls existing helper directly (same as v1 uses internally)
     result = await run_haiku_in_sandbox(f"Intent detection prompt: {message}")
-    # parse_intent is NOT an existing function — inline JSON parsing here
+    # Intent output contract: string enum ('chat'|'edit'|'restore')
     # (v1 also parses intent inline in detect_intent at line 1645)
     import json
     try:
-        intent = json.loads(result)
+        parsed = json.loads(result)
+        intent = parsed.get("intent", "chat") if isinstance(parsed, dict) else "chat"
     except (json.JSONDecodeError, TypeError):
-        intent = {"type": "unknown", "raw": result}
+        intent = "chat"  # safe default — treated as new game creation
+    if intent not in ("chat", "edit", "restore"):
+        intent = "chat"
     return JSONResponse({"intent": intent})
 
 @app.function(image=web_image, secrets=[...], volumes={...})
@@ -871,7 +874,7 @@ function validateOutput(result) {
   if (!result.files.some(f => f.path === 'index.html')) return false;
   // images array is optional (text-only games have no images)
   // qa is required — qa_review task always runs before publish_prep
-  if (!result.qa || typeof result.qa.issues !== 'number') return false;
+  if (!result.qa || typeof result.qa.issues !== 'number' || !Array.isArray(result.qa.findings)) return false;
   return true;
 }
 ```
