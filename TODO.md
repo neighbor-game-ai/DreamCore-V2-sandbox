@@ -8,6 +8,33 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-06: URL構造リファクタ Phase 2 — ルート意味切替 ✅
+
+**詳細:** `.claude/logs/2026-02-06-url-restructure-phase2.md`
+
+`/` をホーム（create）、`/login` をログイン専用URLに変更:
+
+- `GET /` → create.html（ホーム）に変更（express.static の index.html を上書き）
+- `GET /login` → index.html（ログイン画面）は維持
+- `GET /index.html` → 301 `/login` は維持
+- manifest.json `id` を `/create` に修正（PWA再インストールが必要になる場合あり）
+- waitlist.html の認証リダイレクトを `/login` に修正
+- E2E全項目パス（agent-browser自動 + 手動通知タップ確認 2026-02-06）
+
+---
+
+### 2026-02-06: Phase 1 リファクタリング（ナビゲーション共通化 + デッドコード削除） ✅
+
+**詳細:** `.claude/logs/2026-02-06-phase1-refactoring.md`
+
+- ナビゲーション重複コード82行を `navigation.js` に統合
+- デッドコード16関数 (-112行) 削除
+- CTO レビュー対応: currentTab パラメータで同一タブ再読み込み防止
+- 回帰テスト13ケース追加
+- E2E テスト全 PASS
+
+---
+
 ### 2026-02-06: 通知ディープリンク認証修正 + 全ページログインチラ見え修正 ✅
 
 **詳細:** `.claude/logs/2026-02-06-push-deep-link-fix.md`
