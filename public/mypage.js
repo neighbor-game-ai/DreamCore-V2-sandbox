@@ -71,31 +71,8 @@ class MyPageApp {
 
     this.logoutBtn?.addEventListener('click', () => this.logout());
 
-    // Bottom navigation
-    document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tab = btn.dataset.tab;
-        switch (tab) {
-          case 'discover':
-            window.location.href = '/discover';
-            break;
-          case 'create':
-            window.location.href = '/create';
-            break;
-          case 'notifications':
-            window.location.href = '/notifications';
-            break;
-          case 'profile':
-            // Already on profile
-            break;
-        }
-      });
-    });
-
-    // Zapping button
-    document.getElementById('navZappingBtn')?.addEventListener('click', () => {
-      window.location.href = '/discover?zap=1';
-    });
+    // Bottom navigation (shared module)
+    setupBottomNav({ onProfile: function() { /* already on profile */ } });
   }
 
   async loadData() {
