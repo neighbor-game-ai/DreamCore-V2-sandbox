@@ -64,7 +64,7 @@
         }
       }
       if (!cached && !supabaseSession) {
-        window.location.href = '/';
+        window.location.href = '/login';
         return;
       }
       // If we have Supabase session but no cache, let auth.js handle session restoration
@@ -77,19 +77,22 @@
         // Check cache TTL (5 min)
         if (age > 300000) {
           sessionStorage.removeItem('dreamcore_session_cache');
-          window.location.href = '/';
+          if (supabaseSession) return; // localStorage has session, let auth.js handle
+          window.location.href = '/login';
           return;
         }
         // Check session token expiry
         var session = data.session;
         if (session && session.expires_at && Date.now() / 1000 > session.expires_at - 60) {
           sessionStorage.removeItem('dreamcore_session_cache');
-          window.location.href = '/';
+          if (supabaseSession) return; // localStorage has session, let auth.js handle
+          window.location.href = '/login';
           return;
         }
       } catch(e) {
         sessionStorage.removeItem('dreamcore_session_cache');
-        window.location.href = '/';
+        if (supabaseSession) return; // localStorage has session, let auth.js handle
+        window.location.href = '/login';
       }
     })();
     window.__SUPABASE__ = {
