@@ -1968,6 +1968,7 @@ ${userMessage}
       // Engine V2 branch: DAG-based game creation (feature-flagged)
       const ev2 = getEngineV2();
       const verifiedUser = { id: userId, email: userEmail };
+      console.log(`[EngineV2] Check: enabled=${ev2.ENGINE_V2_ENABLED} mode=${ev2.ENGINE_V2_MODE} email=${userEmail} result=${ev2.shouldUseV2(verifiedUser)}`);
       if (ev2.shouldUseV2(verifiedUser)) {
         const v2Options = {
           jobId, prompt, detectedSkills,
