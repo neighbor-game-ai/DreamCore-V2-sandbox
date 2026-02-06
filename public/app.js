@@ -845,6 +845,7 @@ class GameCreatorApp {
     // Notify server that user left the editor (for push suppression)
     this.stopEditorHeartbeat();
     this.sendViewState('deselectProject');
+    this.currentProjectId = null;
   }
 
   showEditorView() {
@@ -2464,7 +2465,7 @@ class GameCreatorApp {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     if (type === 'deselectProject') {
       this.ws.send(JSON.stringify({ type: 'deselectProject' }));
-    } else {
+    } else if (this.currentProjectId) {
       this.ws.send(JSON.stringify({
         type: 'viewState',
         projectId: this.currentProjectId,
