@@ -142,8 +142,10 @@ body::before {
   background: var(--white);
   display: flex;
   flex-direction: column;
-  overflow-x: hidden;
+  overflow-x: clip;
   overflow-y: auto;
+  touch-action: pan-y;
+  overscroll-behavior-x: none;
 }
 
 /* Minimal Header */
@@ -159,7 +161,7 @@ body::before {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--gray-100);
-  overflow: hidden;
+  overflow-x: clip;
   max-width: 100%;
 }
 
@@ -388,6 +390,8 @@ body::before {
   flex: 1;
   padding: 0 var(--s-32) var(--s-64);
   margin-top: 240px;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 /* Games Filter Bar - Nintendo × Kashiwa Sato Style */
@@ -477,6 +481,8 @@ body::before {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: var(--s-12);
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 /* Project Card - Minimal */
