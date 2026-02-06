@@ -150,7 +150,7 @@ class ProfileApp {
       if (document.referrer && document.referrer.includes(window.location.host)) {
         history.back();
       } else {
-        window.location.href = '/';
+        window.location.href = '/create';
       }
     });
 

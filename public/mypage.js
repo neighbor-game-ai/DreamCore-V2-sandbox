@@ -59,7 +59,7 @@ class MyPageApp {
 
   setupListeners() {
     this.backBtn?.addEventListener('click', () => {
-      window.location.href = '/';
+      window.location.href = '/create';
     });
 
     this.editBtn?.addEventListener('click', () => {
