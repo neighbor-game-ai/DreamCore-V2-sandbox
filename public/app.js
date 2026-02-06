@@ -329,7 +329,7 @@ class GameCreatorApp {
             return;
           }
           if (!allowed) {
-            window.location.href = '/waitlist.html';  // Not approved → waitlist
+            window.location.href = '/waitlist';  // Not approved → waitlist
             return;
           }
 
@@ -364,7 +364,7 @@ class GameCreatorApp {
         return;
       }
       if (!allowed) {
-        window.location.href = '/waitlist.html';  // Not approved → waitlist
+        window.location.href = '/waitlist';  // Not approved → waitlist
         return;
       }
 
@@ -1601,7 +1601,7 @@ class GameCreatorApp {
         window.location.href = '/notifications';
         break;
       case 'profile':
-        // Use /@username if available, otherwise /mypage.html
+        // Use /@username if available, otherwise /mypage
         DreamCoreAuth.getMyProfileUrl().then(url => {
           window.location.href = url;
         });
@@ -1894,7 +1894,7 @@ class GameCreatorApp {
       alert(this.t('editor.selectProjectFirst'));
       return;
     }
-    window.location.href = `/publish.html?id=${this.currentProjectId}`;
+    window.location.href = `/publish?id=${this.currentProjectId}`;
   }
 
   handleMessage(data) {

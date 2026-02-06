@@ -188,7 +188,7 @@ async function signInWithGoogle() {
   const { data, error } = await supabaseClient.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin + '/create.html'
+      redirectTo: window.location.origin + '/create'
     }
   });
 
@@ -209,7 +209,7 @@ async function signInWithApple() {
   const { data, error } = await supabaseClient.auth.signInWithOAuth({
     provider: 'apple',
     options: {
-      redirectTo: window.location.origin + '/create.html'
+      redirectTo: window.location.origin + '/create'
     }
   });
 
@@ -522,7 +522,7 @@ async function requireAuthAndAccess() {
 
   const { allowed } = await checkAccess();
   if (!allowed) {
-    window.location.href = '/waitlist.html';
+    window.location.href = '/waitlist';
     return false;
   }
 
@@ -531,13 +531,13 @@ async function requireAuthAndAccess() {
 
 /**
  * Get the URL for the user's profile page
- * Returns /@{username} if username is set, otherwise /mypage.html
+ * Returns /@{username} if username is set, otherwise /mypage
  * @returns {Promise<string>} Profile URL
  */
 async function getMyProfileUrl() {
   const session = await getSession();
   if (!session) {
-    return '/mypage.html';
+    return '/mypage';
   }
 
   try {
@@ -547,7 +547,7 @@ async function getMyProfileUrl() {
       const { username, timestamp } = JSON.parse(cached);
       // Cache valid for 5 minutes
       if (Date.now() - timestamp < 5 * 60 * 1000) {
-        return username ? `/@${username}` : '/mypage.html';
+        return username ? `/@${username}` : '/mypage';
       }
     }
 
@@ -560,13 +560,13 @@ async function getMyProfileUrl() {
         username: profile.username || null,
         timestamp: Date.now()
       }));
-      return profile.username ? `/@${profile.username}` : '/mypage.html';
+      return profile.username ? `/@${profile.username}` : '/mypage';
     }
   } catch (e) {
     console.error('[Auth] Failed to get profile URL:', e);
   }
 
-  return '/mypage.html';
+  return '/mypage';
 }
 
 /**
@@ -612,7 +612,7 @@ window.DreamCoreAuth = {
   requireAuth,
   checkAccess,           // V2 waitlist: check access status
   requireAuthAndAccess,  // V2 waitlist: require auth + approval
-  getMyProfileUrl,       // Get /@username or /mypage.html
+  getMyProfileUrl,       // Get /@username or /mypage
   clearMyUsernameCache,  // Clear cached username
   setupBottomNav         // Setup bottom nav with profile link
 };

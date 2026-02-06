@@ -89,7 +89,7 @@ self.addEventListener('push', (event) => {
     body: 'New notification',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
-    data: { url: '/notifications.html' }
+    data: { url: '/notifications' }
   };
 
   if (event.data) {
@@ -105,14 +105,14 @@ self.addEventListener('push', (event) => {
   // Format A: { data: { url, projectId, type } }  - nested (current server format)
   // Format B: { url, projectId, type }            - top-level (fallback)
   const notificationData = data.data || {
-    url: data.url || '/notifications.html',
+    url: data.url || '/notifications',
     projectId: data.projectId || null,
     type: data.type || 'system'
   };
 
   // Ensure url exists even if data.data was present but incomplete
   if (!notificationData.url) {
-    notificationData.url = data.url || '/notifications.html';
+    notificationData.url = data.url || '/notifications';
   }
   if (!notificationData.projectId && data.projectId) {
     notificationData.projectId = data.projectId;
@@ -148,7 +148,7 @@ self.addEventListener('notificationclick', (event) => {
   // Determine URL based on notification data
   // Priority: 1. url (explicit), 2. projectId (generate URL), 3. fallback
   const notificationData = event.notification.data || {};
-  let targetUrl = '/notifications.html';  // Default fallback
+  let targetUrl = '/notifications';  // Default fallback
 
   if (notificationData.url) {
     // Primary: Use explicit URL from notification payload

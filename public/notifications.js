@@ -34,7 +34,7 @@ class NotificationsApp {
       return;
     }
     if (!allowed) {
-      window.location.href = '/waitlist.html';  // Not approved → waitlist
+      window.location.href = '/waitlist';  // Not approved → waitlist
       return;
     }
 
@@ -81,7 +81,7 @@ class NotificationsApp {
             // Already on notifications
             break;
           case 'profile':
-            // Use /@username if available, otherwise /mypage.html
+            // Use /@username if available, otherwise /mypage
             DreamCoreAuth.getMyProfileUrl().then(url => {
               window.location.href = url;
             });

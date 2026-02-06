@@ -539,7 +539,7 @@
             successEl.classList.remove('hidden');
             // Success - redirect to create.html
             setTimeout(() => {
-              window.location.href = '/create.html';
+              window.location.href = '/create';
             }, 1000);
           } else {
             errorEl.textContent = result.error || (typeof DreamCoreI18n !== 'undefined' ? DreamCoreI18n.t('waitlist.errorOccurred') : 'An error occurred');

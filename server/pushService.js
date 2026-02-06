@@ -165,7 +165,7 @@ async function sendPushToUser(userId, payload) {
     badge: '/icons/icon-192.png',
     tag: payload.tag || 'dreamcore',
     data: {
-      url: payload.url || '/notifications.html',
+      url: payload.url || '/notifications',
       projectId: payload.projectId || null,
       type: payload.type || 'system',
       timestamp: Date.now()

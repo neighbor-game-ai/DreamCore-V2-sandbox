@@ -39,11 +39,11 @@ class MyPageApp {
       return;
     }
     if (!allowed) {
-      window.location.href = '/waitlist.html';  // Not approved → waitlist
+      window.location.href = '/waitlist';  // Not approved → waitlist
       return;
     }
 
-    // No redirect - display profile directly on /mypage.html
+    // No redirect - display profile directly on /mypage
     // Share button will generate /@username URL for sharing
     this.currentUser = session.user;
     this.userId = session.user.id;

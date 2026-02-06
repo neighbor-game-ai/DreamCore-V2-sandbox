@@ -269,6 +269,53 @@ app.use((req, res, next) => {
   next();
 });
 
+// ==================== Clean URL Routes ====================
+// Serve HTML pages at clean URLs (without .html extension)
+// Must be defined BEFORE express.static to take priority
+app.get('/create', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'create.html'));
+});
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+});
+app.get('/mypage', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'mypage.html'));
+});
+app.get('/discover', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'discover.html'));
+});
+app.get('/notifications', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'notifications.html'));
+});
+app.get('/waitlist', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'waitlist.html'));
+});
+app.get('/editor', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'editor.html'));
+});
+app.get('/publish', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'publish.html'));
+});
+
+// 301 Redirects: old .html URLs → clean URLs (preserve query strings)
+// These redirects should be maintained for at least 90 days (added 2026-02-06)
+const cleanUrlRedirects = {
+  '/create.html': '/create',
+  '/mypage.html': '/mypage',
+  '/discover.html': '/discover',
+  '/notifications.html': '/notifications',
+  '/waitlist.html': '/waitlist',
+  '/editor.html': '/editor',
+  '/publish.html': '/publish',
+  '/index.html': '/login',
+};
+for (const [from, to] of Object.entries(cleanUrlRedirects)) {
+  app.get(from, (req, res) => {
+    const qs = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
+    res.redirect(301, to + qs);
+  });
+}
+
 // Serve static files
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
@@ -2261,10 +2308,7 @@ app.get('/api/projects/:projectId/movie', authenticate, checkProjectOwnership, (
 });
 
 // ==================== My Page Route ====================
-
-app.get('/mypage', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'mypage.html'));
-});
+// NOTE: /mypage route defined in Clean URL Routes section above
 
 // ==================== Play Screen Route ====================
 
@@ -2295,27 +2339,11 @@ app.get('/play/:projectId', authenticate, async (req, res) => {
 // NOTE: /api/public/games/* routes removed for Phase 1 (owner-only)
 
 // ==================== Notifications Route ====================
-
-app.get('/notifications', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'notifications.html'));
-});
+// NOTE: /notifications route defined in Clean URL Routes section above
 
 // ==================== Page Routes ====================
-
-// Login page (root)
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-});
-
-// Discover page
-app.get('/discover', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'discover.html'));
-});
-
-// Create page (project list)
-app.get('/create', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'create.html'));
-});
+// NOTE: /create, /login, /mypage, /discover, /notifications routes
+//       defined in Clean URL Routes section above
 
 // Editor page (project detail)
 app.get('/project/:id', (req, res) => {

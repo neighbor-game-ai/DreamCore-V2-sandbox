@@ -26,7 +26,7 @@ class PublishPage {
 
     if (!this.projectId) {
       alert(DreamCoreI18n.t('publish.noProjectSpecified'));
-      window.location.href = '/create.html';
+      window.location.href = '/create';
       return;
     }
 
@@ -179,7 +179,7 @@ class PublishPage {
     } catch (error) {
       console.error('Error loading project:', error);
       alert(DreamCoreI18n.t('publish.projectLoadFailed'));
-      window.location.href = '/create.html';
+      window.location.href = '/create';
     }
   }
 
@@ -931,10 +931,10 @@ class PublishPage {
     if (this.isDirty) {
       // Auto-save before leaving
       this.savePublishData().then(() => {
-        window.location.href = `/editor.html?id=${this.projectId}`;
+        window.location.href = `/editor?id=${this.projectId}`;
       });
     } else {
-      window.location.href = `/editor.html?id=${this.projectId}`;
+      window.location.href = `/editor?id=${this.projectId}`;
     }
   }
 

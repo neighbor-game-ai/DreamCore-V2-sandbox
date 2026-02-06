@@ -2,7 +2,7 @@
   "name": "DreamCore - Create Games by Chatting",
   "short_name": "DreamCore",
   "description": "Create original games just by chatting with AI. No programming required.",
-  "start_url": "/create.html",
+  "start_url": "/create",
   "id": "/create.html",
   "scope": "/",
   "display": "standalone",
