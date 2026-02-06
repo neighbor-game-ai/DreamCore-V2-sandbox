@@ -72,7 +72,7 @@ class MyPageApp {
     this.logoutBtn?.addEventListener('click', () => this.logout());
 
     // Bottom navigation (shared module)
-    setupBottomNav({ onProfile: function() { /* already on profile */ } });
+    setupBottomNav({ currentTab: 'profile' });
   }
 
   async loadData() {
