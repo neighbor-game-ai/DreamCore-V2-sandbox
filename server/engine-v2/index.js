@@ -25,6 +25,10 @@ const modalClient = require('../modalClient');
  * @returns {Promise<void>}
  */
 async function run(userId, projectId, userMessage, options) {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('v2_no_database_url');
+  }
+
   const { jobId, prompt, detectedSkills, onEvent } = options;
   const stagingDir = await createStagingDir(jobId);
 
@@ -156,6 +160,15 @@ const SHADOW_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
  * @param {object} options - jobId, prompt, detectedSkills (event callback is ignored)
  */
 async function runShadow(userId, projectId, userMessage, options) {
+  // Guard: skip shadow if DATABASE_URL is not configured (log once)
+  if (!process.env.DATABASE_URL) {
+    if (!runShadow._warnedNoDB) {
+      console.warn('[EngineV2:shadow] Skipped: DATABASE_URL not set');
+      runShadow._warnedNoDB = true;
+    }
+    return;
+  }
+
   const { jobId, prompt, detectedSkills } = options;
   // NOTE: caller's event callback is intentionally NOT destructured — shadow never sends to user
   const startTime = Date.now();
