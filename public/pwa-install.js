@@ -16,6 +16,13 @@
   var DISMISS_DAYS = 7;
   var LS_DISMISSED = 'pwa-install-dismissed-v2';
   var LS_INSTALLED = 'pwa-installed';
+  var deferredPrompt = null;
+
+  // Capture beforeinstallprompt ASAP (before DOMContentLoaded)
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredPrompt = e;
+  });
 
   // ---------------------------------------------------------------------------
   // Safe localStorage helpers (private browsing / quota / disabled)
@@ -467,7 +474,6 @@
   // Banner
   // ---------------------------------------------------------------------------
   var bannerEl = null;
-  var deferredPrompt = null;
 
   function createBanner() {
     var banner = document.createElement('div');
@@ -749,12 +755,6 @@
     if (!shouldShow()) return;
 
     injectStyles();
-
-    // Capture beforeinstallprompt if available (Chromium)
-    window.addEventListener('beforeinstallprompt', function (e) {
-      e.preventDefault();
-      deferredPrompt = e;
-    });
 
     window.addEventListener('appinstalled', function () {
       lsSet(LS_INSTALLED, 'true');
