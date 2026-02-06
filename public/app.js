@@ -419,27 +419,6 @@ class GameCreatorApp {
     }
   }
 
-  initPage() {
-    // DEPRECATED: Use initPageUI() + checkAuthAndConnect() instead
-    // This method is kept for backward compatibility
-    console.warn('[App] initPage() is deprecated, use non-blocking pattern');
-  }
-
-  _legacyInitPage() {
-    // Legacy method - not used in new non-blocking pattern
-    switch (this.currentPage) {
-      case 'discover':
-        this.initDiscoverPage();
-        break;
-      case 'create':
-        this.initCreatePage();
-        break;
-      case 'editor':
-        this.initEditorPage();
-        break;
-    }
-  }
-
   initDiscoverPage() {
     this.loadPublicGames();
     this.setupZappingListeners();
@@ -492,13 +471,6 @@ class GameCreatorApp {
     this.notificationsButton?.addEventListener('click', () => {
       window.location.href = '/notifications';
     });
-  }
-
-  async checkSession() {
-    // DEPRECATED: 旧認証APIは廃止されました。認証はSupabase Auth（DreamCoreAuth）で処理されます。
-    // このメソッドは呼び出されるべきではありません。
-    console.warn('[DEPRECATED] checkSession() は廃止されました。DreamCoreAuth を使用してください。');
-    throw new Error('checkSession() は廃止されました。認証は Supabase Auth (DreamCoreAuth) で処理してください。');
   }
 
   async login() {
