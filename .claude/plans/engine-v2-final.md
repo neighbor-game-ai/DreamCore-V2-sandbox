@@ -745,7 +745,7 @@ async def v2_detect_intent(request: Request):
         parsed = json.loads(result)
         intent = parsed.get("intent", "chat") if isinstance(parsed, dict) else "chat"
     except (json.JSONDecodeError, TypeError):
-        intent = "chat"  # safe default — treated as new game creation
+        intent = "chat"  # safe default — skips game creation (see 7.4)
     if intent not in ("chat", "edit", "restore"):
         intent = "chat"
     return JSONResponse({"intent": intent})
