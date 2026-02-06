@@ -731,6 +731,11 @@
   }
 
   function init() {
+    // Register service worker on all pages (needed for PWA install)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(function () {});
+    }
+
     if (!shouldShow()) return;
 
     injectStyles();
