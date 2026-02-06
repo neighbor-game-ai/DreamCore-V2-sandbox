@@ -1,6 +1,6 @@
 # Game Creation Engine v2 — Final Design Document
 
-**Status:** Frozen (design review complete)
+**Status:** Frozen (design review complete, rev.2 — 5 findings fixed)
 **Created:** 2026-02-06
 **Reviewers:** CTO + Engineering
 
@@ -225,20 +225,66 @@ CREATE INDEX idx_events_job
 
 ### 3.9 RLS Policy
 
-Owner-based via `job_id → jobs.user_id = auth.uid()`. SELECT only (all writes via service role).
+Owner-based SELECT only. All writes use service role (pg client), so RLS does not apply to writes.
+
+**Tables with direct `job_id` column** — join via `jobs.user_id`:
 
 ```sql
+-- job_runs
+ALTER TABLE engine_v2.job_runs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "owner_select" ON engine_v2.job_runs FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.jobs WHERE jobs.id = job_runs.job_id AND jobs.user_id = auth.uid())
+);
+
+-- job_tasks
 ALTER TABLE engine_v2.job_tasks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "owner_select" ON engine_v2.job_tasks FOR SELECT USING (
-  EXISTS (
-    SELECT 1 FROM public.jobs
-    WHERE jobs.id = job_tasks.job_id AND jobs.user_id = auth.uid()
-  )
+  EXISTS (SELECT 1 FROM public.jobs WHERE jobs.id = job_tasks.job_id AND jobs.user_id = auth.uid())
 );
--- Same pattern for all engine_v2 tables
+
+-- job_task_artifacts
+ALTER TABLE engine_v2.job_task_artifacts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "owner_select" ON engine_v2.job_task_artifacts FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.jobs WHERE jobs.id = job_task_artifacts.job_id AND jobs.user_id = auth.uid())
+);
+
+-- job_task_events
+ALTER TABLE engine_v2.job_task_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "owner_select" ON engine_v2.job_task_events FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.jobs WHERE jobs.id = job_task_events.job_id AND jobs.user_id = auth.uid())
+);
 ```
 
-**All writes use service role (server-side pg client). RLS does not apply to writes.**
+**Tables WITHOUT `job_id`** — join via `task_id → job_tasks.job_id → jobs`:
+
+```sql
+-- job_task_dependencies (has predecessor_task_id + successor_task_id, no job_id)
+ALTER TABLE engine_v2.job_task_dependencies ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "owner_select" ON engine_v2.job_task_dependencies FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM engine_v2.job_tasks t
+    JOIN public.jobs j ON j.id = t.job_id
+    WHERE t.id = job_task_dependencies.successor_task_id
+      AND j.user_id = auth.uid()
+  )
+);
+
+-- job_task_attempts (has task_id, no job_id)
+ALTER TABLE engine_v2.job_task_attempts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "owner_select" ON engine_v2.job_task_attempts FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM engine_v2.job_tasks t
+    JOIN public.jobs j ON j.id = t.job_id
+    WHERE t.id = job_task_attempts.task_id
+      AND j.user_id = auth.uid()
+  )
+);
+```
+
+**Note:** These multi-join RLS policies have a performance cost on large datasets. Acceptable because:
+1. engine_v2 tables start empty and grow slowly (internal users only)
+2. SELECT via anon client is rare (monitoring/debug only)
+3. Production reads use service role (bypasses RLS)
 
 ---
 
@@ -270,46 +316,102 @@ function shouldUseV2(verifiedUser) {
 
 ---
 
-## 5. Routing Branch (minimal change to server/index.js)
+## 5. Routing Branch
+
+### 5.1 Actual Execution Path (verified from code)
+
+```
+WebSocket 'message' event
+  → server/index.js:1528  case 'message'
+    → server/index.js:1658  claudeRunner.runClaudeAsJob()
+      → server/claudeRunner.js:1647  runClaudeAsJob() — job creation + slot
+        → server/claudeRunner.js:1675  processJobWithSlot() — timeout wrapper
+          → server/claudeRunner.js:1716  processJob() — intent, Gemini, prompt
+            → server/claudeRunner.js:1956  ★ BRANCH POINT (USE_MODAL check)
+              → _runClaudeOnModal()  OR  _runClaudeLocal()
+```
+
+**The WebSocket message type is `'message'`, not `'generateGame'`.**
+**The branch point is in `claudeRunner.processJob()` at line 1956, not in `index.js`.**
+
+### 5.2 v2 Branch Implementation
+
+Branch at `claudeRunner.js:processJob()` line 1956, where `USE_MODAL` is already checked.
 
 ```javascript
-case 'generateGame': {
-  const verifiedUser = getVerifiedUser(ws);
-  const useV2 = engineV2.shouldUseV2(verifiedUser);
+// server/claudeRunner.js — processJob() (line 1956 area)
+// EXISTING:
+if (config.USE_MODAL) {
+  return this._runClaudeOnModal(jobId, userId, projectId, prompt, userMessage, detectedSkills);
+}
+return this._runClaudeLocal(jobId, userId, projectId, projectDir, prompt, userMessage, detectedSkills);
 
-  if (useV2) {
+// MODIFIED (minimal change):
+if (config.USE_MODAL) {
+  const verifiedUser = { id: userId, email: this._getUserEmail(userId) };
+  if (engineV2.shouldUseV2(verifiedUser)) {
     try {
-      const result = await engineV2.run(userId, currentProjectId, userMessage, {
-        jobId: job.id,
-        onEvent: (event) => safeSend(event),
+      return await engineV2.run(userId, projectId, userMessage, {
+        jobId, prompt, detectedSkills,
+        onEvent: (event) => jobManager.emit(jobId, event),
       });
-      if (!engineV2.validateOutput(result)) {
-        throw new Error('V2_OUTPUT_INVALID');
-      }
     } catch (err) {
       console.warn('[EngineV2] Fallback to v1:', err.message);
-      await engineV2.logFallback(job.id, err);
-      await runV1(userId, currentProjectId, userMessage, job);
+      await engineV2.logFallback(jobId, err);
+      // Fall through to v1
     }
-  } else {
-    await runV1(userId, currentProjectId, userMessage, job);
   }
+  return this._runClaudeOnModal(jobId, userId, projectId, prompt, userMessage, detectedSkills);
 }
-
-function getVerifiedUser(ws) {
-  if (!ws.userId) throw new Error('UNAUTHENTICATED');
-  return { id: ws.userId, email: ws.userEmail };
-}
+return this._runClaudeLocal(jobId, userId, projectId, projectDir, prompt, userMessage, detectedSkills);
 ```
+
+### 5.3 Why This Location
+
+| Reason | Detail |
+|--------|--------|
+| Already a branch point | `USE_MODAL` flag check at line 1956 |
+| Job management handled upstream | `processJobWithSlot()` wraps timeout + slot release |
+| Intent detection reusable | v2 can reuse or replace the intent detection done earlier in `processJob()` |
+| Clean fallback | v2 failure falls through to existing `_runClaudeOnModal()` |
+
+### 5.4 server/index.js Changes
+
+**server/index.js requires NO structural changes.** The v2 branch lives entirely in `claudeRunner.js`.
+Only addition: `require('./engine-v2')` at the top of `claudeRunner.js`.
 
 ---
 
 ## 6. Auth Context
 
-`shouldUseV2` receives only JWT-verified user info:
-- `ws.userId` = JWT `sub` claim (verified at WebSocket init)
-- `ws.userEmail` = JWT `email` claim (verified at WebSocket init)
-- Source is `getVerifiedUser(ws)` — single point of truth
+### 6.1 Verified User Source
+
+In the WebSocket flow, user identity is established at connection init:
+- `ws.userId` = JWT `sub` claim (verified at init, `server/index.js`)
+- `ws.userEmail` = JWT `email` claim (verified at init)
+- `claudeRunner` receives `userId` as parameter from the WebSocket handler
+
+### 6.2 Email Lookup for Allowlist
+
+`claudeRunner.processJob()` has `userId` but not `email`. Options:
+1. Pass `email` from WebSocket handler through the call chain
+2. Look up email from `public.jobs` or Supabase Auth at branch point
+
+**Chosen: Option 1** — pass `userEmail` as part of the existing parameters.
+Minimal change: add `userEmail` to `runClaudeAsJob()` and `processJob()` signatures.
+
+```javascript
+// server/index.js:1658 (existing call site, add userEmail)
+const { job, isExisting, startProcessing } = await claudeRunner.runClaudeAsJob(
+  userId,
+  currentProjectId,
+  userMessage,
+  debugOptions,
+  ws.userEmail  // ★ add: JWT-verified email
+);
+```
+
+- `shouldUseV2` receives only this JWT-verified value
 - Client-supplied values (req.body.email etc.) are never used
 
 ---
@@ -590,34 +692,91 @@ async function applyToProduction(userId, projectId, stagingDir) {
 
 **v1 functions are NEVER modified. v2 adds new functions with `v2_` prefix.**
 
+### 11.1 Core Extraction Strategy
+
+Current `modal/app.py` already has reusable internal helpers:
+- `run_haiku_in_sandbox(prompt, timeout)` — used by both `detect_intent` and `chat_haiku`
+- `verify_internal_auth(request)` — auth check used by all endpoints
+- `validate_ids(user_id, project_id)` — UUID validation
+- `get_proxy_url()`, `get_vertex_env()`, `write_gcp_credentials()` — infra helpers
+
+**v1 endpoint functions (`detect_intent`, `chat_haiku`, `generate_gemini`) contain
+request parsing + response formatting logic around these helpers.**
+
+**Strategy: v2 endpoints call the EXISTING helpers directly. No `_core` extraction needed.
+v1 endpoint functions are not touched at all.**
+
 ```python
 # modal/app.py
 
-# ★ v1 (existing, NO CHANGES)
+# ★ v1 (existing, NO CHANGES — lines 1645, 1824, 2262)
+@app.function(image=web_image, secrets=[...], volumes={...})
 @modal.fastapi_endpoint(method="POST")
 async def detect_intent(request: Request):
-    ...
+    # ... existing code unchanged ...
 
+@app.function(image=web_image, secrets=[...], volumes={...})
+@modal.fastapi_endpoint(method="POST")
+async def chat_haiku(request: Request):
+    # ... existing code unchanged ...
+
+@app.function(image=web_image.pip_install("httpx", "Pillow"), secrets=[...], volumes={...})
 @modal.fastapi_endpoint(method="POST")
 async def generate_gemini(request: Request):
-    ...
+    # ... existing code unchanged ...
 
-# ★ v2 (NEW, separate functions)
+# ★ v2 (NEW — calls existing helpers, NOT v1 endpoint functions)
+@app.function(image=web_image, secrets=[...], volumes={...})
 @modal.fastapi_endpoint(method="POST")
 async def v2_detect_intent(request: Request):
-    return await _detect_intent_core(request)
+    if not verify_internal_auth(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    body = await request.json()
+    message = body.get("message", "")
+    # Calls existing helper directly (same as v1 uses internally)
+    result = await run_haiku_in_sandbox(f"Intent detection prompt: {message}")
+    return JSONResponse({"intent": parse_intent(result)})
 
-@modal.fastapi_endpoint(method="POST")
-async def v2_generate_code(request: Request):
-    return await _generate_gemini_core(request)
-
+@app.function(image=web_image, secrets=[...], volumes={...})
 @modal.fastapi_endpoint(method="POST")
 async def v2_chat_haiku(request: Request):
-    return await _chat_haiku_core(request)
+    if not verify_internal_auth(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    body = await request.json()
+    # Calls existing helper directly
+    result = await run_haiku_in_sandbox(body.get("prompt", ""))
+    return JSONResponse({"result": result})
+
+@app.function(image=web_image.pip_install("httpx", "Pillow"), secrets=[...], volumes={...})
+@modal.fastapi_endpoint(method="POST")
+async def v2_generate_code(request: Request):
+    if not verify_internal_auth(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    body = await request.json()
+    validate_ids(body["user_id"], body["project_id"])
+    # Uses same Gemini/Vertex infra as v1, but v2-specific prompt construction
+    # ... streaming response via existing httpx + Vertex pattern ...
 ```
 
-Initial implementation: v2 functions delegate to same internal logic as v1.
-When v2-specific changes are needed: modify v2 functions only, v1 stays intact.
+### 11.2 What This Means for v1
+
+| Item | Impact on v1 |
+|------|-------------|
+| `detect_intent()` function | **Zero changes** |
+| `chat_haiku()` function | **Zero changes** |
+| `generate_gemini()` function | **Zero changes** |
+| `run_haiku_in_sandbox()` helper | **Zero changes** (called by v2 too) |
+| `verify_internal_auth()` helper | **Zero changes** (called by v2 too) |
+| New v2_ functions added | **Additive only** — existing functions unaffected |
+
+### 11.3 When v2 Needs Different Logic
+
+If v2 needs to change behavior (e.g., different prompt format for intent detection):
+1. Copy the relevant helper logic INTO the v2 function
+2. v1 helper stays unchanged
+3. v2 function diverges independently
+
+This avoids premature abstraction while maintaining v1 immutability.
 
 ---
 
@@ -667,24 +826,69 @@ Task completion events streamed via WebSocket using `job_task_events`.
 
 ## 14. Output Compatibility
 
-v2 final output is converted to v1 format before delivery to frontend.
+### 14.1 v2 Canonical Output Schema
+
+v2 `engineV2.run()` returns this single canonical schema:
 
 ```javascript
-function toV1Response(v2Result) {
-  return {
-    type: 'completed',
-    files: v2Result.artifacts.filter(a => a.kind === 'code'),
-    images: v2Result.artifacts.filter(a => a.kind === 'image'),
-    summary: v2Result.summary,
-  };
+// V2Result — the ONLY output type from engineV2.run()
+{
+  files: [
+    { path: 'index.html', content: '<!DOCTYPE html>...' },
+    { path: 'game.js', content: '...' },
+  ],
+  images: [
+    { name: 'cat.png', uri: '/data/staging/{jobId}/assets/cat.png' },
+  ],
+  summary: 'かわいい猫のシューティングゲームを作成しました',
+  qa: {
+    issues: 0,
+    findings: [],
+  },
 }
+```
 
+**This is NOT the same as `job_task_artifacts`.** Artifacts are DB records for observability.
+`V2Result` is assembled by `publish_prep` task from the final state of all artifacts.
+
+### 14.2 Validation (against V2Result schema)
+
+```javascript
 function validateOutput(result) {
-  if (!result || !result.files || !result.summary) return false;
+  if (!result) return false;
+  if (!Array.isArray(result.files) || result.files.length === 0) return false;
+  if (typeof result.summary !== 'string' || result.summary.length === 0) return false;
   if (!result.files.some(f => f.path === 'index.html')) return false;
+  // images array is optional (text-only games have no images)
   return true;
 }
 ```
+
+### 14.3 v1 Format Conversion (for WebSocket delivery)
+
+```javascript
+// Convert V2Result → v1 WebSocket message format
+function toV1Response(v2Result) {
+  return {
+    type: 'completed',
+    files: v2Result.files,     // Already in [{path, content}] format
+    images: v2Result.images,   // Already in [{name, uri}] format
+    summary: v2Result.summary,
+  };
+}
+```
+
+### 14.4 Schema Guarantee
+
+| Field | Type | Required | Source Task |
+|-------|------|----------|------------|
+| `files` | `[{path: string, content: string}]` | Yes | codegen (or fix if QA triggered) |
+| `files[].path` must include `index.html` | — | Yes | codegen |
+| `images` | `[{name: string, uri: string}]` | No | asset |
+| `summary` | `string` | Yes | codegen |
+| `qa` | `{issues: int, findings: []}` | Yes | qa_review |
+
+**If `validateOutput` fails → `V2_OUTPUT_INVALID` → v1 fallback.**
 
 ---
 
@@ -752,14 +956,31 @@ Recorded to both `engine_v2.job_runs.error_code` and `engine_v2.job_task_events`
 - `engine_v2` schema migration (flag OFF, tables unused)
 - `server/engine-v2/` directory with all file skeletons
 - `featureFlag.js` with `shouldUseV2`
-- `modal/app.py` v2_ endpoint additions (delegating to v1 core)
-- `server/index.js` routing branch (always takes v1 path when ENABLED=false)
+- `modal/app.py` v2_ endpoint additions (calling existing helpers directly)
+- `server/claudeRunner.js` v2 branch at `processJob()` line 1956 (always takes v1 path when ENABLED=false)
+- `server/index.js` passes `ws.userEmail` to `runClaudeAsJob()` (minimal signature change)
 
 ### M1 Completion Criteria
 
-1. Zero `engine_version=v2` traffic on production
-2. All existing E2E tests pass
-3. Rollback procedure rehearsed once on real environment
+**Non-regression (flag OFF):**
+1. `ENGINE_V2_ENABLED=false` on production
+2. All existing E2E tests pass (game creation, edit, chat flows)
+3. `SELECT count(*) FROM engine_v2.job_runs` = 0 (zero v2 traffic)
+4. v1 game creation latency unchanged (no performance regression from code addition)
+
+**v2 code safety:**
+5. `shouldUseV2({id:'test', email:'test'})` returns `false` when `ENGINE_V2_ENABLED=false`
+6. `require('./engine-v2')` does not throw when loaded (module loads cleanly)
+7. `engine_v2` schema tables exist and are empty
+
+**Rollback rehearsal:**
+8. `ENGINE_V2_ENABLED=false` → confirm zero v2 code paths execute
+9. `DROP SCHEMA engine_v2 CASCADE` → confirm no errors, no v1 impact
+10. Re-apply migration → confirm schema recreates cleanly
+
+**Modal v2 endpoints:**
+11. `v2_detect_intent`, `v2_chat_haiku`, `v2_generate_code` respond to POST (auth required)
+12. Existing v1 endpoints (`detect_intent`, `chat_haiku`, `generate_gemini`) behavior unchanged
 
 ---
 
