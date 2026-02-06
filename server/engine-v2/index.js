@@ -138,52 +138,42 @@ async function logFallback(jobId, err) {
   }
 }
 
+// Shadow mode timeout: abort if v2 takes longer than this (prevents hung backgrounds)
+const SHADOW_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
 /**
  * Run v2 engine in shadow mode (measurement only).
  *
  * - Runs the full v2 pipeline in the background
  * - Never throws (all errors are caught and recorded)
- * - Never sends results to the user (no onEvent calls for game output)
+ * - Caller's event callback is intentionally ignored — shadow never writes to WebSocket
  * - Records metrics to engine_v2.job_runs for analysis
+ * - Times out after SHADOW_TIMEOUT_MS to prevent hangs
  *
  * @param {string} userId
  * @param {string} projectId
  * @param {string} userMessage
- * @param {object} options - same as run(), but onEvent is replaced with a no-op
+ * @param {object} options - jobId, prompt, detectedSkills (event callback is ignored)
  */
 async function runShadow(userId, projectId, userMessage, options) {
   const { jobId, prompt, detectedSkills } = options;
+  // NOTE: caller's event callback is intentionally NOT destructured — shadow never sends to user
   const startTime = Date.now();
 
-  try {
-    // Record shadow run
-    await db.query(
-      `INSERT INTO engine_v2.job_runs
-         (job_id, user_id, project_id, engine_version, scheduler_version, mode)
-       VALUES ($1, $2, $3, 'v2', '1.0', 'shadow')`,
-      [jobId, userId, projectId]
+  // Timeout guard: abort if shadow run takes too long
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(
+      () => reject(new Error('v2_shadow_timeout')),
+      SHADOW_TIMEOUT_MS
     );
+  });
 
-    // Build the task DAG
-    await buildDag(db, jobId, DEFAULT_WORKFLOW);
-
-    // Create task executor
-    const executeTask = createTaskExecutor(modalClient, {
-      db,
-      userId,
-      projectId,
-      userMessage,
-      prompt,
-      detectedSkills,
-    });
-
-    // Run workflow with a metrics-only event handler (no WebSocket output)
-    const shadowOnEvent = (eventName, data) => {
-      // Log for debugging, but never send to user
-      console.log(`[EngineV2:shadow] ${eventName}`, data?.task?.task_key || '');
-    };
-
-    await runWorkflow(db, jobId, executeTask, shadowOnEvent);
+  try {
+    await Promise.race([
+      _runShadowInner(userId, projectId, userMessage, jobId, prompt, detectedSkills),
+      timeoutPromise,
+    ]);
 
     const elapsedMs = Date.now() - startTime;
 
@@ -208,8 +198,43 @@ async function runShadow(userId, projectId, userMessage, options) {
     ).catch(() => {});
 
     console.warn(`[EngineV2:shadow] Failed in ${elapsedMs}ms: ${err.message}`);
+  } finally {
+    clearTimeout(timeoutId);
   }
-  // No finally cleanup needed — shadow mode doesn't use staging dir
+}
+
+/**
+ * Inner shadow execution (separated for Promise.race timeout).
+ * No staging dir, no production writes, no WebSocket output.
+ */
+async function _runShadowInner(userId, projectId, userMessage, jobId, prompt, detectedSkills) {
+  // Record shadow run
+  await db.query(
+    `INSERT INTO engine_v2.job_runs
+       (job_id, user_id, project_id, engine_version, scheduler_version, mode)
+     VALUES ($1, $2, $3, 'v2', '1.0', 'shadow')`,
+    [jobId, userId, projectId]
+  );
+
+  // Build the task DAG
+  await buildDag(db, jobId, DEFAULT_WORKFLOW);
+
+  // Create task executor
+  const executeTask = createTaskExecutor(modalClient, {
+    db,
+    userId,
+    projectId,
+    userMessage,
+    prompt,
+    detectedSkills,
+  });
+
+  // Metrics-only event handler — console.log only, never WebSocket
+  const shadowOnEvent = (eventName, data) => {
+    console.log(`[EngineV2:shadow] ${eventName}`, data?.task?.task_key || '');
+  };
+
+  await runWorkflow(db, jobId, executeTask, shadowOnEvent);
 }
 
 module.exports = {
