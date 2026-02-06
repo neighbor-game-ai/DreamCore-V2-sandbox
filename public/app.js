@@ -59,6 +59,8 @@ class GameCreatorApp {
     this.projectGrid = document.getElementById('projectGrid');
     this.gamesFilter = document.getElementById('gamesFilter');
     this.currentProjectFilter = 'all';
+    this.currentGridPage = 1;
+    this.gridPageSize = 20;
     this.createProjectButton = document.getElementById('createProjectButton');
     this.listStatusIndicator = document.getElementById('listStatusIndicator');
     this.homeButton = document.getElementById('homeButton');
@@ -860,6 +862,9 @@ class GameCreatorApp {
   renderProjectGrid() {
     if (!this.projectGrid) return;
 
+    // Remove previous pagination controls
+    this.projectGrid.parentElement?.querySelector('.project-grid-pagination')?.remove();
+
     // Update filter counts
     const allCount = this.projects.length;
     const publishedCount = this.projects.filter(p => p.isPublic).length;
@@ -901,7 +906,15 @@ class GameCreatorApp {
       return;
     }
 
-    this.projectGrid.innerHTML = filteredProjects.map((project, index) => `
+    // Pagination
+    const totalPages = Math.ceil(filteredProjects.length / this.gridPageSize);
+    if (this.currentGridPage > totalPages) this.currentGridPage = totalPages || 1;
+    const startIdx = (this.currentGridPage - 1) * this.gridPageSize;
+    const pageProjects = filteredProjects.slice(startIdx, startIdx + this.gridPageSize);
+
+    this.projectGrid.innerHTML = pageProjects.map((project, i) => {
+      const index = startIdx + i;
+      return `
       <div class="project-card ${project.isPublic ? 'is-published' : ''}" data-id="${project.id}">
         <div class="project-card-thumbnail">
           ${project.isPublic ? `
@@ -943,7 +956,27 @@ class GameCreatorApp {
           <div class="project-card-date">${this.formatDate(project.createdAt)}</div>
         </div>
       </div>
-    `).join('');
+    `}).join('');
+
+    // Pagination controls (only if more than 1 page)
+    if (totalPages > 1) {
+      const paginationHtml = `
+        <div class="project-grid-pagination">
+          <button class="pagination-btn pagination-prev" ${this.currentGridPage <= 1 ? 'disabled' : ''}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+          <span class="pagination-info">${this.currentGridPage} / ${totalPages}</span>
+          <button class="pagination-btn pagination-next" ${this.currentGridPage >= totalPages ? 'disabled' : ''}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+      `;
+      this.projectGrid.insertAdjacentHTML('afterend', paginationHtml);
+    }
 
     // Add click handlers
     this.projectGrid.querySelectorAll('.project-card').forEach(card => {
@@ -951,6 +984,22 @@ class GameCreatorApp {
         const projectId = card.dataset.id;
         window.location.href = `/project/${projectId}`;
       });
+    });
+
+    // Pagination button handlers
+    this.projectGrid.parentElement?.querySelector('.pagination-prev')?.addEventListener('click', () => {
+      if (this.currentGridPage > 1) {
+        this.currentGridPage--;
+        this.renderProjectGrid();
+        this.projectGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+    this.projectGrid.parentElement?.querySelector('.pagination-next')?.addEventListener('click', () => {
+      if (this.currentGridPage < totalPages) {
+        this.currentGridPage++;
+        this.renderProjectGrid();
+        this.projectGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     });
   }
 
@@ -1426,6 +1475,7 @@ class GameCreatorApp {
         this.gamesFilter.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         this.currentProjectFilter = tab.dataset.filter;
+        this.currentGridPage = 1;
         this.renderProjectGrid();
       });
     });

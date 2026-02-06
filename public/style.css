@@ -479,6 +479,47 @@ body::before {
   gap: var(--s-12);
 }
 
+/* Pagination */
+.project-grid-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 0 8px;
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--gray-200, #e5e5e5);
+  background: var(--gray-50, #fafafa);
+  color: var(--gray-700, #333);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--gray-100, #f0f0f0);
+  border-color: var(--gray-300, #d1d1d6);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.pagination-info {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-500, #8e8e93);
+  min-width: 48px;
+  text-align: center;
+}
+
 /* Project Card - Minimal */
 .project-card {
   position: relative;
