@@ -321,8 +321,21 @@ for (const [from, to] of Object.entries(cleanUrlRedirects)) {
   });
 }
 
-// Serve static files
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// Serve static files with cache strategy:
+// - Versioned assets (?v=xxx): immutable, 1 year (safe to cache forever)
+// - HTML: no-cache (always revalidate for fresh content)
+// - Other static: default Express behavior (ETag-based revalidation)
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+  setHeaders: (res, filePath) => {
+    const reqUrl = res.req && (res.req.originalUrl || res.req.url);
+    const hasVersionQuery = reqUrl && reqUrl.includes('?v=');
+    if (hasVersionQuery) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 
 // ==================== Health Check ====================
 // Get git commit hash at startup
