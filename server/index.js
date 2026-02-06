@@ -1233,6 +1233,20 @@ app.get('/g/:gameId/*', async (req, res) => {
 // Track WebSocket connections by userId
 const wsConnections = new Map(); // userId -> Set of ws
 
+// Push suppression: check if user is actively viewing the project editor
+function shouldSuppressPush(userId, projectId) {
+  const connections = wsConnections.get(userId);
+  if (!connections) return false;
+  for (const conn of connections) {
+    if (conn.activeProjectId === projectId &&
+        conn.visible === true &&
+        conn.lastSeenAt && (Date.now() - conn.lastSeenAt) < 15000) {
+      return true;
+    }
+  }
+  return false;
+}
+
 wss.on('connection', (ws) => {
   let userId = null;
   let userEmail = null;  // JWT-verified email (for engine v2 allowlist)
@@ -1325,6 +1339,21 @@ wss.on('connection', (ws) => {
           safeSend({ type: 'pong' });
           break;
 
+        case 'deselectProject':
+          ws.activeProjectId = null;
+          ws.visible = true;
+          ws.lastSeenAt = Date.now();
+          break;
+
+        case 'viewState':
+          // Client sends visibility changes for push suppression
+          if (data.projectId) {
+            ws.activeProjectId = data.projectId;
+          }
+          ws.visible = data.visible !== false;
+          ws.lastSeenAt = Date.now();
+          break;
+
         case 'selectProject':
           if (!userId) {
             safeSend({ type: 'error', message: 'Not initialized' });
@@ -1335,6 +1364,11 @@ wss.on('connection', (ws) => {
             return;
           }
           currentProjectId = data.projectId;
+
+          // Track active project for push suppression
+          ws.activeProjectId = data.projectId;
+          ws.visible = true;
+          ws.lastSeenAt = Date.now();
 
           // Sync files from Modal to local for fast preview (non-blocking)
           if (config.USE_MODAL) {
@@ -2409,6 +2443,11 @@ jobManager.on('jobCompleted', async ({ job, result }) => {
       message = message.substring(0, 97) + '...';
     }
 
+    const suppressPush = shouldSuppressPush(job.user_id, job.project_id);
+    if (suppressPush) {
+      console.log(`[Notification] Push suppressed: user ${job.user_id} is viewing project ${job.project_id}`);
+    }
+
     await notificationService.createNotification({
       userId: job.user_id,
       type: 'project',
@@ -2416,7 +2455,8 @@ jobManager.on('jobCompleted', async ({ job, result }) => {
       message,
       icon: 'success',
       projectId: job.project_id,
-      jobId: job.id
+      jobId: job.id,
+      sendPush: !suppressPush
     });
   } catch (err) {
     console.error('[Notification] Failed to send completion notification:', err);
@@ -2432,6 +2472,11 @@ jobManager.on('jobFailed', async (job) => {
     const project = await db.getProjectById(supabaseAdmin, job.project_id);
     const projectName = project?.name || 'Your game';
 
+    const suppressPush = shouldSuppressPush(job.user_id, job.project_id);
+    if (suppressPush) {
+      console.log(`[Notification] Push suppressed (failed): user ${job.user_id} is viewing project ${job.project_id}`);
+    }
+
     await notificationService.createNotification({
       userId: job.user_id,
       type: 'project',
@@ -2439,7 +2484,8 @@ jobManager.on('jobFailed', async (job) => {
       message: `There was an error updating ${projectName}. Please try again.`,
       icon: 'warning',
       projectId: job.project_id,
-      jobId: job.id
+      jobId: job.id,
+      sendPush: !suppressPush
     });
   } catch (err) {
     console.error('[Notification] Failed to send failure notification:', err);

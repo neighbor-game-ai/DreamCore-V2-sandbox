@@ -841,6 +841,9 @@ class GameCreatorApp {
     this.renderProjectGrid();
     document.title = 'Game Creator - Projects';
     this.updateProjectTitle(null);
+
+    // Notify server that user left the editor (for push suppression)
+    this.sendViewState('deselectProject');
   }
 
   showEditorView() {
@@ -1311,11 +1314,14 @@ class GameCreatorApp {
 
     // visibilitychange - main handler
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
+      const visible = document.visibilityState === 'visible';
+      if (visible) {
         console.log('[Visibility] Page became visible, checking connection...');
         // Small delay to let network stabilize after wake
         setTimeout(() => this.checkAndReconnect(), 300);
       }
+      // Send viewState for push suppression
+      this.sendViewState('viewState', visible);
     });
 
     // focus - backup for visibilitychange (more reliable on some mobile browsers)
@@ -2432,6 +2438,20 @@ class GameCreatorApp {
 
   updateProjectList() {
     // Project selector removed from UI
+  }
+
+  // Send view state to server for push notification suppression
+  sendViewState(type, visible) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    if (type === 'deselectProject') {
+      this.ws.send(JSON.stringify({ type: 'deselectProject' }));
+    } else {
+      this.ws.send(JSON.stringify({
+        type: 'viewState',
+        projectId: this.currentProjectId,
+        visible: visible !== undefined ? visible : document.visibilityState === 'visible'
+      }));
+    }
   }
 
   selectProject(projectId, updateUrl = true) {
