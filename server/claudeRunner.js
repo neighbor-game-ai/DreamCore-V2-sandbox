@@ -1816,6 +1816,19 @@ ${userMessage}
       }
     }
 
+    // Engine V2 shadow: fire before Gemini so it runs on every job
+    if (config.USE_MODAL) {
+      const ev2 = getEngineV2();
+      const verifiedUser = { id: userId, email: userEmail };
+      if (ev2.shouldUseV2(verifiedUser) && ev2.isShadowMode()) {
+        console.log('[EngineV2:shadow] Starting shadow run for job:', jobId);
+        // Shadow uses userMessage as prompt (buildPrompt hasn't run yet)
+        ev2.runShadow(userId, projectId, userMessage, {
+          jobId, prompt: userMessage, detectedSkills: [],
+        }).catch(() => {});
+      }
+    }
+
     // Skip Gemini if useClaude is enabled
     if (!debugOptions.useClaude) {
       // Try Gemini first for code generation
@@ -1965,32 +1978,21 @@ ${userMessage}
 
     // Use Modal for Claude CLI execution if enabled
     if (config.USE_MODAL) {
-      // Engine V2 branch: DAG-based game creation (feature-flagged)
+      // Engine V2 live mode: replaces v1 (shadow already fired before Gemini)
       const ev2 = getEngineV2();
       const verifiedUser = { id: userId, email: userEmail };
-      console.log(`[EngineV2] Check: enabled=${ev2.ENGINE_V2_ENABLED} mode=${ev2.ENGINE_V2_MODE} email=${userEmail} result=${ev2.shouldUseV2(verifiedUser)}`);
-      if (ev2.shouldUseV2(verifiedUser)) {
+      if (ev2.shouldUseV2(verifiedUser) && !ev2.isShadowMode()) {
         const v2Options = {
           jobId, prompt, detectedSkills,
           onEvent: (event) => jobManager.notifySubscribers(jobId, event),
         };
-
-        if (ev2.isShadowMode()) {
-          // Shadow mode: v2 runs in background for measurement only.
-          // v1 result is always returned to the user.
-          console.log('[EngineV2:shadow] Starting shadow run for job:', jobId);
-          ev2.runShadow(userId, projectId, userMessage, v2Options).catch(() => {});
-          // Fall through to v1 below
-        } else {
-          // Live mode: v2 replaces v1 (with fallback on failure)
-          try {
-            console.log('[EngineV2] Using v2 engine for job:', jobId);
-            return await ev2.run(userId, projectId, userMessage, v2Options);
-          } catch (err) {
-            console.warn('[EngineV2] Fallback to v1:', err.message);
-            await ev2.logFallback(jobId, err);
-            // Fall through to v1
-          }
+        try {
+          console.log('[EngineV2] Using v2 engine for job:', jobId);
+          return await ev2.run(userId, projectId, userMessage, v2Options);
+        } catch (err) {
+          console.warn('[EngineV2] Fallback to v1:', err.message);
+          await ev2.logFallback(jobId, err);
+          // Fall through to v1
         }
       }
 
