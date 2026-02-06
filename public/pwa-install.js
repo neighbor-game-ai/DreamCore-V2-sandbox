@@ -783,10 +783,13 @@
     else if (mode === 'android') { showAndroidModal(); }
   };
 
+  // Wait for DOMContentLoaded so i18n has time to initialize
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(init, 100);
+    });
   } else {
-    init();
+    setTimeout(init, 100);
   }
 
 })();
