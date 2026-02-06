@@ -111,3 +111,15 @@ function shouldSuppressPush(userId, projectId) {
 - 全変更コミット・デプロイ済み (GCE)
 - Push 抑制: 本番環境で動作確認済み
 - 追加対応不要
+
+---
+
+## 追記: PWA インストール修正 (user.html)
+
+**問題**: user.html の `<head>` に `<link rel="manifest">` を含む PWA メタタグが全て欠落。`beforeinstallprompt` が発火せず、Android Chrome でインストールプロンプトが表示されなかった。
+
+**修正**: PWA メタタグブロックを追加。preauth.js は公開ページのため追加せず。
+
+**確認**: デプロイ後、Android Chrome でインストールプロンプト発火を確認。
+
+**再発防止提案**: 主要 HTML の `<head>` 必須タグを CI で静的チェック化（CTO 指示）。

@@ -67,6 +67,14 @@ LINE式のPush通知抑制機能を実装。エディタ閲覧中はPush通知�
 - 全変更を GCE にデプロイ済み
 - PM2 restart 完了、online 確認
 
+### 7. PWA インストール修正 (user.html)
+
+- 調査: user.html に manifest.json リンクと PWA メタタグが全て欠落していた
+- 原因: beforeinstallprompt が発火せず、インストールプロンプトが表示されない
+- 修正: PWA メタタグブロック（manifest, theme-color, apple-touch-icon, apple-mobile-web-app-*）を追加
+- preauth.js は意図的に追加せず（公開プロフィールページのため未ログインユーザーも閲覧可能にする必要あり）
+- デプロイ後、Android Chrome でインストールプロンプト発火を確認
+
 ## 変更ファイル一覧
 
 | ファイル | 変更種別 |
@@ -76,7 +84,7 @@ LINE式のPush通知抑制機能を実装。エディタ閲覧中はPush通知�
 | `public/create.html` | ボタン削除, キャッシュバスター |
 | `public/editor.html` | キャッシュバスター |
 | `public/style.css` | pagination スタイル, overflow修正 |
-| `public/user.html` | 言語セレクタ削除 |
+| `public/user.html` | 言語セレクタ削除, PWA メタタグ追加, キャッシュバスター更新 |
 
 ## 学び・注意点
 
