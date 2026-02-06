@@ -2,7 +2,7 @@
 // Engine V2 entry point — orchestrates DAG-based game creation
 'use strict';
 
-const { shouldUseV2, ENGINE_V2_ENABLED } = require('./featureFlag');
+const { shouldUseV2, isShadowMode, ENGINE_V2_ENABLED, ENGINE_V2_MODE } = require('./featureFlag');
 const db = require('./db');
 const { buildDag, DEFAULT_WORKFLOW } = require('./dagBuilder');
 const { runWorkflow } = require('./scheduler');
@@ -138,9 +138,86 @@ async function logFallback(jobId, err) {
   }
 }
 
+/**
+ * Run v2 engine in shadow mode (measurement only).
+ *
+ * - Runs the full v2 pipeline in the background
+ * - Never throws (all errors are caught and recorded)
+ * - Never sends results to the user (no onEvent calls for game output)
+ * - Records metrics to engine_v2.job_runs for analysis
+ *
+ * @param {string} userId
+ * @param {string} projectId
+ * @param {string} userMessage
+ * @param {object} options - same as run(), but onEvent is replaced with a no-op
+ */
+async function runShadow(userId, projectId, userMessage, options) {
+  const { jobId, prompt, detectedSkills } = options;
+  const startTime = Date.now();
+
+  try {
+    // Record shadow run
+    await db.query(
+      `INSERT INTO engine_v2.job_runs
+         (job_id, user_id, project_id, engine_version, scheduler_version, mode)
+       VALUES ($1, $2, $3, 'v2', '1.0', 'shadow')`,
+      [jobId, userId, projectId]
+    );
+
+    // Build the task DAG
+    await buildDag(db, jobId, DEFAULT_WORKFLOW);
+
+    // Create task executor
+    const executeTask = createTaskExecutor(modalClient, {
+      db,
+      userId,
+      projectId,
+      userMessage,
+      prompt,
+      detectedSkills,
+    });
+
+    // Run workflow with a metrics-only event handler (no WebSocket output)
+    const shadowOnEvent = (eventName, data) => {
+      // Log for debugging, but never send to user
+      console.log(`[EngineV2:shadow] ${eventName}`, data?.task?.task_key || '');
+    };
+
+    await runWorkflow(db, jobId, executeTask, shadowOnEvent);
+
+    const elapsedMs = Date.now() - startTime;
+
+    // Mark shadow run as succeeded
+    await db.query(
+      `UPDATE engine_v2.job_runs
+       SET status = 'succeeded', finished_at = now()
+       WHERE job_id = $1`,
+      [jobId]
+    );
+
+    console.log(`[EngineV2:shadow] Completed in ${elapsedMs}ms: ${jobId}`);
+  } catch (err) {
+    const elapsedMs = Date.now() - startTime;
+
+    // Record shadow failure (never propagate to caller)
+    await db.query(
+      `UPDATE engine_v2.job_runs
+       SET status = 'failed', error_code = $2, finished_at = now()
+       WHERE job_id = $1`,
+      [jobId, err.message || 'v2_shadow_unknown']
+    ).catch(() => {});
+
+    console.warn(`[EngineV2:shadow] Failed in ${elapsedMs}ms: ${err.message}`);
+  }
+  // No finally cleanup needed — shadow mode doesn't use staging dir
+}
+
 module.exports = {
   run,
+  runShadow,
   shouldUseV2,
+  isShadowMode,
   logFallback,
   ENGINE_V2_ENABLED,
+  ENGINE_V2_MODE,
 };

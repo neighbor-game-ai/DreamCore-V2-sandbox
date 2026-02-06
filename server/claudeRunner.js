@@ -1969,16 +1969,27 @@ ${userMessage}
       const ev2 = getEngineV2();
       const verifiedUser = { id: userId, email: userEmail };
       if (ev2.shouldUseV2(verifiedUser)) {
-        try {
-          console.log('[EngineV2] Using v2 engine for job:', jobId);
-          return await ev2.run(userId, projectId, userMessage, {
-            jobId, prompt, detectedSkills,
-            onEvent: (event) => jobManager.notifySubscribers(jobId, event),
-          });
-        } catch (err) {
-          console.warn('[EngineV2] Fallback to v1:', err.message);
-          await ev2.logFallback(jobId, err);
-          // Fall through to v1
+        const v2Options = {
+          jobId, prompt, detectedSkills,
+          onEvent: (event) => jobManager.notifySubscribers(jobId, event),
+        };
+
+        if (ev2.isShadowMode()) {
+          // Shadow mode: v2 runs in background for measurement only.
+          // v1 result is always returned to the user.
+          console.log('[EngineV2:shadow] Starting shadow run for job:', jobId);
+          ev2.runShadow(userId, projectId, userMessage, v2Options).catch(() => {});
+          // Fall through to v1 below
+        } else {
+          // Live mode: v2 replaces v1 (with fallback on failure)
+          try {
+            console.log('[EngineV2] Using v2 engine for job:', jobId);
+            return await ev2.run(userId, projectId, userMessage, v2Options);
+          } catch (err) {
+            console.warn('[EngineV2] Fallback to v1:', err.message);
+            await ev2.logFallback(jobId, err);
+            // Fall through to v1
+          }
         }
       }
 

@@ -7,10 +7,18 @@ const ALLOWLIST = new Set(
   (process.env.ENGINE_V2_ALLOWLIST || '').split(',').filter(Boolean)
 );
 
+// 'shadow' = v2 runs in background for measurement only, v1 result always returned
+// 'live'   = v2 replaces v1 (with fallback on failure)
+const ENGINE_V2_MODE = process.env.ENGINE_V2_MODE || 'shadow';
+
 function shouldUseV2(verifiedUser) {
   if (!ENGINE_V2_ENABLED) return false;
   if (!ENGINE_V2_ALLOWLIST_ONLY) return true;
   return ALLOWLIST.has(verifiedUser.id) || ALLOWLIST.has(verifiedUser.email);
 }
 
-module.exports = { shouldUseV2, ENGINE_V2_ENABLED };
+function isShadowMode() {
+  return ENGINE_V2_MODE === 'shadow';
+}
+
+module.exports = { shouldUseV2, isShadowMode, ENGINE_V2_ENABLED, ENGINE_V2_MODE };
