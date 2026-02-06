@@ -272,6 +272,11 @@ app.use((req, res, next) => {
 // ==================== Clean URL Routes ====================
 // Serve HTML pages at clean URLs (without .html extension)
 // Must be defined BEFORE express.static to take priority
+
+// Home page: / serves create (game creation home)
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'create.html'));
+});
 app.get('/create', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'create.html'));
 });
