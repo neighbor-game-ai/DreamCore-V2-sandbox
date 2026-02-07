@@ -151,7 +151,8 @@ async function propagateFailure(db, jobId, failedTaskId) {
      SET status = 'canceled',
          error_code = 'upstream_failed',
          error_message = 'Canceled: upstream task ' || $2::uuid || ' failed'
-     WHERE id IN (SELECT task_id FROM downstream)
+     WHERE job_id = $1::uuid
+       AND id IN (SELECT task_id FROM downstream)
        AND status IN ('pending', 'ready', 'blocked')`,
     [jobId, failedTaskId]
   );
