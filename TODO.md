@@ -8,6 +8,18 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-07: Engine V2 統合の巻き戻し（V1 解放） ✅
+
+**詳細:** `.claude/logs/2026-02-07-v1-cleanup.md`
+
+- claudeRunner.js から V2 分岐 3 箇所を除去（コミット: `3179594`）
+- GCE デプロイ済み、V1 fail rate 1.01%（正常）、V2 runs = 0
+- タグ: `restore-point/20260207-pre-v1-cleanup`, `restore-point/20260207-post-v1-cleanup`
+- **main は他エンジニア作業に開放 OK**
+- **PR-2（Modal V2 endpoint 削除）は 24 時間監視後に判断**
+
+---
+
 ### 2026-02-07: 画像生成の多様性・品質改善 ✅
 
 **詳細:** `.claude/logs/2026-02-07-image-generation-fix.md`
@@ -15,7 +27,9 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 - Sonnet によるプロンプト上書きを廃止（全画像が中世ファンタジーになる問題を解消）
 - analyzeImageDirection を AI 呼び出しからルールベースに変更（コスト削減）
 - geminiResult.specs フォールバックで新規ゲームの向き情報を画像生成に反映
-- trim 後の正方形パディングでアスペクト比の歪みを解消
+- p5js-setup スキルテンプレートの `50,50` 固定描画を比率計算パターンに修正
+- 正方形パディングは撤回（trim のみ）→ ゲームコード側で `img.height/img.width` 計算
+- テスト: キリン避けゲームで縦長/横長キャラの描画・当たり判定とも正常確認
 - Gemini への指示にアスペクト比維持のコード例を追加
 - facing 正規表現を拡張（front, camera 等もマッチ）
 - 3回のテストで全修正の動作を確認、本番デプロイ済み

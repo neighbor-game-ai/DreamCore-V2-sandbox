@@ -60,16 +60,32 @@ specs にキャラ外見情報がある場合、Gemini の元プロンプトを�
 `/facing\s+(right|left|up|down)/` → `/facing\s+\w/`
 Gemini が `facing front`, `facing the camera` 等を書くケースに対応。
 
-### Fix 6: 正方形パディング（geminiClient.js）
+### ~~Fix 6: 正方形パディング（geminiClient.js）~~ → 撤回
 
-`trim()` 後に最大辺で正方形に透明パディング:
-```
-512x512 → trim → 601x904 → pad → 904x904（正方形）
-```
+当初 `trim()` 後に正方形パディングを追加したが、後に以下の矛盾を発見し撤回:
+- 正方形パディング → `img.height/img.width` が常に 1.0 → アスペクト比計算が無効化
+- 当たり判定にも透明余白が含まれてしまう
+
+**最終方針:** trim のみ（パディングなし）。ゲームコード側で比率計算。
 
 ### Fix 7: アスペクト比維持指示（createPrompt.js, updatePrompt.js）
 
 Gemini にコード生成時「`p.image()` で元画像のアスペクト比を維持して描画」を指示。
+
+### Fix 8: p5js-setup スキルテンプレート修正（SKILL.md）
+
+Gemini がスキルのサンプルコードをそのままコピーする問題を発見。
+`drawSprite` ヘルパーと全 `p.image()` の例を `50, 50` 固定から比率計算に変更:
+```javascript
+// Before: drawSprite(p, img, x, y, w, h, fallbackColor) → 50, 50 固定
+// After:  drawSprite(p, img, x, y, displayW, fallbackColor) → img.height/img.width で計算
+```
+`★画像描画の注意` セクションを追加し、`✅正しい / ❌禁止` パターンを明示。
+
+### Fix 9: 正方形パディング撤回（geminiClient.js）
+
+Fix 8 でゲームコード側が修正されたため、Fix 6 の正方形パディングを削除。
+trim 後の非正方形画像をそのまま保存する運用に変更。
 
 ## テスト結果
 
@@ -87,14 +103,22 @@ Gemini にコード生成時「`p.image()` で元画像のアスペクト比を�
 - 正方形パディング: `1024x1024 → trimmed 601x904 → square 904x904` ✅
 - specs フォールバック: 動作確認 ✅
 
+### テスト4: キリン避けゲーム（アスペクト比最終検証）
+- player（キリン）: 極端に縦長 → `286x857` trimmed → 潰れなし ✅
+- enemy（ハンバーガー）: 横長 → `661x647` trimmed → 歪みなし ✅
+- Gemini がスキルテンプレートの影響で `img.height/img.width` を自発的に使用 ✅
+- 当たり判定: 円形判定 + 0.8 寛容度、透明余白に依存せず ✅
+- `p.image(img, x, y, 50, 50)` は一箇所もなし ✅
+
 ## 変更ファイル一覧
 
 | ファイル | 変更内容 |
 |---------|---------|
 | `server/claudeRunner.js` | analyzeImageDirection 簡素化、Sonnet 廃止、specs フォールバック、facing 正規表現拡張 |
-| `server/geminiClient.js` | style パラメータ復活、trim 後の正方形パディング |
+| `server/geminiClient.js` | style パラメータ復活、正方形パディング追加→撤回（trim のみ） |
 | `server/prompts/createPrompt.js` | アスペクト比維持指示追加 |
 | `server/prompts/updatePrompt.js` | アスペクト比維持指示追加 |
+| `.claude/skills/p5js-setup/SKILL.md` | drawSprite・画像描画例を比率計算パターンに変更 |
 
 ## コミット
 
@@ -103,10 +127,13 @@ Gemini にコード生成時「`p.image()` で元画像のアスペクト比を�
 - `aa97a41` fix(image-gen): don't replace Gemini's prompt with specs character appearance
 - `a1a69a0` fix(image-gen): prioritize Gemini's facing direction over specs
 - `0c58b01` fix(image-gen): preserve aspect ratio with square padding + code hints
+- `a19b269` fix(skill): replace fixed 50x50 image drawing with aspect-ratio-preserving pattern in p5js-setup
+- `fefa13f` fix(image): remove square padding — game code now handles aspect ratio
 
 ## 学び・注意点
 
 - **AI の割り込みは最小限に**: Gemini のプロンプトは信頼し、向きだけ足す。上書きしない。
 - **Sonnet は賢すぎる**: 「向きだけ判断して」と頼んでも、プロンプト全体を書き換える。
-- **trim() は危険**: 透明部分の自動クロップでアスペクト比が変わる。正方形パディングで対策。
+- **スキルテンプレートの影響力**: Gemini はスキルのサンプルコードをほぼそのままコピーする。テンプレートのコード品質 = 生成コードの品質。
+- **応急処置と根本修正は矛盾しうる**: 正方形パディング（応急）と比率計算（根本）を両方入れると、パディングが比率を 1.0 にしてしまい無効化される。根本修正ができたら応急処置は外す。
 - **テスト駆動**: 本番ログで実際のプロンプトを確認しながらバグを発見・修正した。
