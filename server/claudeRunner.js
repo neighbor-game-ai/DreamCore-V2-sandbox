@@ -572,151 +572,44 @@ class ClaudeRunner {
     return patterns.join('\n\n') || code.substring(0, 1500);
   }
 
-  // Use SPEC.md to determine image direction and enhance prompt with theme/character info
-  async analyzeImageDirection(gameCode, gameSpec, imageName, originalPrompt) {
-    console.log(`Analyzing image direction for: ${imageName}`);
+  // Determine image direction and enhance prompt using specs (deterministic, no AI call)
+  analyzeImageDirection(gameCode, gameSpec, imageName, originalPrompt) {
+    console.log(`[analyzeImageDirection] Analyzing: ${imageName}`);
 
-    // First, try to get direction from SPEC.md (preferred method)
     const role = this.guessImageRole(imageName, originalPrompt);
+
+    // 1. SPEC has direction → use buildEnhancedImagePrompt() for rich prompt
     const specDirection = this.getDirectionFromSpec(gameSpec, role);
-
     if (specDirection) {
-      // Use enhanced prompt builder that includes theme and character info
-      const enhancedPrompt = this.buildEnhancedImagePrompt(
-        originalPrompt,
-        gameSpec,
-        imageName,
-        specDirection
-      );
-      console.log(`Direction from SPEC.md for ${imageName}: ${specDirection}`);
-      return enhancedPrompt;
+      const enhanced = this.buildEnhancedImagePrompt(originalPrompt, gameSpec, imageName, specDirection);
+      console.log(`[analyzeImageDirection] Direction from spec for ${imageName}: ${specDirection}`);
+      console.log(`[analyzeImageDirection] Enhanced prompt: "${enhanced}"`);
+      return enhanced;
     }
 
-    // Fallback: Use AI to analyze and build detailed prompt
-    console.log(`No direction in SPEC.md, using AI analysis for: ${imageName}`);
-
-    // Extract available context from specs
-    const theme = this.extractThemeFromSpec(gameSpec);
-    const characterAppearance = this.extractCharacterAppearanceFromSpec(gameSpec, role);
-    const specContext = gameSpec ? gameSpec.substring(0, 1200) : '';
-    const movementContext = this.extractMovementPatterns(gameCode);
-
-    const prompt = `ゲームの画像生成用プロンプトを作成してください。
-
-${specContext ? `## ゲーム仕様書\n${specContext}\n` : ''}
-${movementContext ? `## コードパターン\n${movementContext}\n` : ''}
-${theme ? `## 抽出済みテーマ\n${JSON.stringify(theme)}\n` : ''}
-${characterAppearance ? `## 抽出済みキャラクター外見\n${characterAppearance}\n` : ''}
-
-## 生成する画像
-- 名前: ${imageName}
-- 元のプロンプト: ${originalPrompt}
-- 役割推測: ${role}
-
-## 出力ルール
-1. **テーマ・世界観を必ず反映**：仕様書に記載された舞台・雰囲気を画像プロンプトに含める
-2. **キャラクター外見を具体的に**：服装、色、髪型、アクセサリーなど詳細に記述
-3. **向きを指定**：横スクロール(右進行)→player=right/enemy=left、縦スクロール→player=up/enemy=down
-4. **アートスタイル**：pixel art, cartoon, anime などを含める
-
-## 出力形式（1行のみ）
-結果: [詳細な英語プロンプト]
-
-## 良い例
-- テーマ「オーストリア」の場合:
-  結果: cheerful Austrian boy wearing green Lederhosen with suspenders, white shirt, alpine hat with feather, rosy cheeks, pixel art style, facing right, side view, 2D game sprite
-- テーマ「宇宙」の場合:
-  結果: cute astronaut in white spacesuit, orange helmet with blue visor, jetpack on back, cartoon style, facing right, side view, 2D game sprite
-
-## 悪い例（禁止）
-- 結果: player character sprite
-- 結果: game enemy`;
-
-    // Helper function to parse result
-    const parseDirectionResult = (result, imageName, originalPrompt) => {
-      console.log(`Direction analysis raw output for ${imageName}:`, result);
-
-      // Extract "結果:" line from structured output
-      const resultMatch = result.match(/結果:\s*(.+)/);
-      if (resultMatch) {
-        const enhancedPrompt = resultMatch[1].trim();
-        console.log(`Enhanced prompt for ${imageName}: ${enhancedPrompt}`);
-        return enhancedPrompt;
-      }
-
-      // Fallback: try to find any line that looks like a prompt (has "facing" or "view")
-      const lines = result.split('\n').filter(line => line.trim());
-      const promptLine = lines.find(line => /facing|view|向き/i.test(line));
-      if (promptLine) {
-        const cleaned = promptLine.replace(/^(思考|結果|output):\s*/i, '').trim();
-        console.log(`Enhanced prompt (fallback) for ${imageName}: ${cleaned}`);
-        return cleaned;
-      }
-
-      // Last resort: use last non-empty line
-      const lastLine = lines[lines.length - 1] || originalPrompt;
-      console.log(`Enhanced prompt (last line) for ${imageName}: ${lastLine}`);
-      return lastLine;
-    };
-
-    // Use Modal when enabled
-    if (config.USE_MODAL) {
-      const client = getModalClient();
-      if (client) {
-        try {
-          console.log(`[analyzeImageDirection] Using Modal Sonnet for: ${imageName}`);
-          const response = await client.chatSonnet({
-            message: prompt,
-            system_prompt: '画像アセットの向きを分析するアシスタントです。指示に従って向き指定を追加したプロンプトを生成してください。',
-            raw_output: true,
-          });
-          return parseDirectionResult(response.result || '', imageName, originalPrompt);
-        } catch (err) {
-          console.error(`[analyzeImageDirection] Modal error, using original prompt:`, err.message);
-          return originalPrompt;
-        }
-      }
+    // 2. Gemini's prompt already has "facing" → use as-is
+    if (/facing\s+(right|left|up|down)/i.test(originalPrompt)) {
+      console.log(`[analyzeImageDirection] Prompt already has facing direction for ${imageName}`);
+      console.log(`[analyzeImageDirection] Enhanced prompt: "${originalPrompt}"`);
+      return originalPrompt;
     }
 
-    // Fallback: Local CLI (development only)
-    return new Promise(async (resolve) => {
-      try {
-        const claude = await spawnClaudeAsync([
-          '--print',
-          '--model', 'sonnet',
-          '--dangerously-skip-permissions'
-        ], {
-          cwd: process.cwd(),
-          env: { ...process.env }
-        });
+    // 3. Try getDirectionFromSpec with full gameSpec (covers geminiResult.specs fallback)
+    const specsDirection = this.getDirectionFromSpec(gameSpec, role);
+    if (specsDirection) {
+      const enhanced = `${originalPrompt}, facing ${specsDirection}, side view, 2D game sprite`;
+      console.log(`[analyzeImageDirection] Direction from specs fallback for ${imageName}: ${specsDirection}`);
+      console.log(`[analyzeImageDirection] Enhanced prompt: "${enhanced}"`);
+      return enhanced;
+    }
 
-        claude.stdin.write(prompt);
-        claude.stdin.end();
-
-        let output = '';
-        claude.stdout.on('data', (data) => {
-          output += data.toString();
-        });
-
-        claude.on('close', () => {
-          resolve(parseDirectionResult(output.trim(), imageName, originalPrompt));
-        });
-
-        claude.on('error', () => {
-          console.log('Image direction analysis error, using original prompt');
-          resolve(originalPrompt);
-        });
-
-        setTimeout(() => {
-          claude.kill();
-          console.log('Image direction analysis timeout');
-          resolve(originalPrompt);
-        }, 10000);
-      } catch (err) {
-        console.error('[analyzeImageDirection] Local CLI error:', err.message);
-        resolve(originalPrompt);
-      }
-    });
+    // 4. Final fallback: default direction based on role
+    const roleLower = role.toLowerCase();
+    const defaultDirection = /enemy|敵|エネミー|monster|ボス/.test(roleLower) ? 'left' : 'right';
+    const enhanced = `${originalPrompt}, facing ${defaultDirection}, side view, 2D game sprite`;
+    console.log(`[analyzeImageDirection] Default direction for ${imageName} (${role}): ${defaultDirection}`);
+    console.log(`[analyzeImageDirection] Enhanced prompt: "${enhanced}"`);
+    return enhanced;
   }
 
   // Get fallback skills based on framework and dimension
@@ -1123,7 +1016,7 @@ ${userMessage}
           `画像の向きを分析中: ${img.name} (${i + 1}/${totalImages})`
         );
 
-        const enhancedPrompt = await this.analyzeImageDirection(
+        const enhancedPrompt = this.analyzeImageDirection(
           gameCode,
           gameSpec,
           img.name,
@@ -1864,7 +1757,19 @@ ${userMessage}
           const indexFile = geminiResult.files.find(f => f.path === 'index.html');
           gameCodeForImages = indexFile ? indexFile.content : geminiResult.files[0].content;
         }
-        const gameSpec = this.readSpec(userId, projectId);
+        let gameSpec = this.readSpec(userId, projectId);
+
+        // Fallback: use geminiResult.specs when readSpec returns null (new games - specs saved async after images)
+        if (!gameSpec && geminiResult.specs) {
+          const specParts = [];
+          if (geminiResult.specs.game) specParts.push(geminiResult.specs.game);
+          if (geminiResult.specs.mechanics) specParts.push(geminiResult.specs.mechanics);
+          if (geminiResult.specs.progress) specParts.push(geminiResult.specs.progress);
+          gameSpec = specParts.join('\n\n---\n\n') || null;
+          if (gameSpec) {
+            console.log('Using geminiResult.specs as gameSpec fallback for image generation');
+          }
+        }
 
         // Build AI context for traceability
         const aiContext = {
