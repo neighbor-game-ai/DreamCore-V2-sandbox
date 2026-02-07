@@ -2690,7 +2690,7 @@ async def generate_gemini(request: Request):
 # =============================================================================
 
 
-@app.function(image=web_image, secrets=[internal_secret], volumes={MOUNT_DATA: data_volume})
+@app.function(image=web_image, secrets=[api_proxy_secret, internal_secret, proxy_secret, vertex_ai_secret, vertex_config_secret], volumes={MOUNT_DATA: data_volume})
 @modal.fastapi_endpoint(method="POST")
 async def v2_detect_intent(request: Request):
     """V2 intent detection - returns string enum ('chat'|'edit'|'restore')."""
@@ -2705,21 +2705,51 @@ async def v2_detect_intent(request: Request):
         return JSONResponse({"error": "Invalid JSON"}, status_code=400)
 
     message = body.get("message", "")
-    result = await run_haiku_in_sandbox(f"Intent detection prompt: {message}")
+    if not message:
+        return JSONResponse({"error": "message is required"}, status_code=400)
+
+    # Build structured prompt (mirrors V1 detect_intent)
+    prompt = f"""ユーザーのメッセージの意図を判定してください。
+メッセージ: "{message}"
+
+以下から1つだけ選んでください:
+- restore: 元に戻す、前のバージョンに戻す、取り消す
+- chat: 質問、相談、説明を求める、教えて
+- edit: コード変更、機能追加、バグ修正、ゲーム作成
+
+回答（1単語のみ、小文字で）:"""
 
     try:
-        parsed = json.loads(result)
-        intent = parsed.get("intent", "chat") if isinstance(parsed, dict) else "chat"
-    except (json.JSONDecodeError, TypeError):
-        intent = "chat"
+        result = await run_haiku_in_sandbox(prompt, timeout_seconds=15)
 
-    if intent not in ("chat", "edit", "restore"):
-        intent = "chat"
+        # Parse result — look for keywords in output
+        result_lower = result.lower().strip() if result else ""
 
-    return JSONResponse({"intent": intent})
+        if "restore" in result_lower:
+            intent = "restore"
+        elif "chat" in result_lower:
+            intent = "chat"
+        else:
+            intent = "edit"
+
+        return JSONResponse({"intent": intent})
+
+    except Exception as e:
+        print(f"[v2_detect_intent] ERROR: {type(e).__name__}: {e}")
+        # Keyword-based fallback on error
+        message_lower = message.lower()
+
+        if any(kw in message_lower for kw in ["元に戻", "戻して", "undo", "restore", "前の", "revert"]):
+            intent = "restore"
+        elif any(kw in message_lower for kw in ["?", "？", "教えて", "なぜ", "どうして", "ですか"]):
+            intent = "chat"
+        else:
+            intent = "edit"
+
+        return JSONResponse({"intent": intent, "fallback": True})
 
 
-@app.function(image=web_image, secrets=[internal_secret], volumes={MOUNT_DATA: data_volume})
+@app.function(image=web_image, secrets=[api_proxy_secret, internal_secret, proxy_secret, vertex_ai_secret, vertex_config_secret], volumes={MOUNT_DATA: data_volume})
 @modal.fastapi_endpoint(method="POST")
 async def v2_chat_haiku(request: Request):
     """V2 chat endpoint - calls run_haiku_in_sandbox directly."""
@@ -2733,14 +2763,22 @@ async def v2_chat_haiku(request: Request):
     except Exception:
         return JSONResponse({"error": "Invalid JSON"}, status_code=400)
 
-    result = await run_haiku_in_sandbox(body.get("prompt", ""))
-    return JSONResponse({"result": result})
+    prompt = body.get("prompt", "")
+    if not prompt:
+        return JSONResponse({"error": "prompt is required"}, status_code=400)
+
+    try:
+        result = await run_haiku_in_sandbox(prompt)
+        return JSONResponse({"result": result})
+    except Exception as e:
+        print(f"[v2_chat_haiku] ERROR: {type(e).__name__}: {e}")
+        return JSONResponse({"error": str(e)}, status_code=502)
 
 
-@app.function(image=web_image, secrets=[internal_secret], volumes={MOUNT_DATA: data_volume})
+@app.function(image=web_image, secrets=[api_proxy_secret, internal_secret, proxy_secret, vertex_ai_secret, vertex_config_secret], volumes={MOUNT_DATA: data_volume})
 @modal.fastapi_endpoint(method="POST")
 async def v2_generate_code(request: Request):
-    """V2 code generation - M1 skeleton, returns placeholder."""
+    """V2 code generation - returns placeholder until full implementation."""
     from starlette.responses import JSONResponse
 
     if not verify_internal_auth(request):
@@ -2751,14 +2789,22 @@ async def v2_generate_code(request: Request):
     except Exception:
         return JSONResponse({"error": "Invalid JSON"}, status_code=400)
 
+    user_id = body.get("user_id", "")
+    project_id = body.get("project_id", "")
+
+    if not user_id:
+        return JSONResponse({"error": "user_id is required"}, status_code=400)
+    if not project_id:
+        return JSONResponse({"error": "project_id is required"}, status_code=400)
+
     try:
-        validate_ids(body.get("user_id", ""), body.get("project_id", ""))
+        validate_ids(user_id, project_id)
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
 
-    # M1: Return placeholder response. Full implementation in M2.
+    # Stub: return empty result. Full implementation connects to Claude CLI.
     return JSONResponse({
-        "status": "not_implemented",
-        "message": "v2_generate_code endpoint ready. Implementation in M2.",
-        "engine_version": "v2"
+        "files": [],
+        "summary": "v2_generate_code stub — no code generated",
+        "engine_version": "v2",
     })
