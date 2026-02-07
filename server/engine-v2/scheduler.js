@@ -33,7 +33,7 @@ async function promoteReadyTasks(db, jobId) {
   const { rows } = await db.query(
     `UPDATE engine_v2.job_tasks t
      SET status = 'ready'
-     WHERE t.job_id = $1
+     WHERE t.job_id = $1::uuid
        AND t.status = 'pending'
        AND NOT EXISTS (
          SELECT 1 FROM engine_v2.job_task_dependencies d
@@ -62,7 +62,7 @@ async function claimNextTask(db, jobId) {
          attempt_count = attempt_count + 1
      WHERE id = (
        SELECT id FROM engine_v2.job_tasks
-       WHERE job_id = $1 AND status = 'ready'
+       WHERE job_id = $1::uuid AND status = 'ready'
        ORDER BY created_at
        LIMIT 1
        FOR UPDATE SKIP LOCKED
@@ -81,7 +81,7 @@ async function hasActiveTasks(db, jobId) {
   const { rows } = await db.query(
     `SELECT EXISTS (
        SELECT 1 FROM engine_v2.job_tasks
-       WHERE job_id = $1 AND status IN ('ready', 'running')
+       WHERE job_id = $1::uuid AND status IN ('ready', 'running')
      ) AS active`,
     [jobId]
   );
@@ -94,7 +94,7 @@ async function hasActiveTasks(db, jobId) {
 async function countStuckTasks(db, jobId) {
   const { rows } = await db.query(
     `SELECT count(*)::int AS cnt FROM engine_v2.job_tasks
-     WHERE job_id = $1 AND status IN ('pending', 'blocked')`,
+     WHERE job_id = $1::uuid AND status IN ('pending', 'blocked')`,
     [jobId]
   );
   return rows[0].cnt;
@@ -108,18 +108,27 @@ async function countStuckTasks(db, jobId) {
  * @param {object} extra - optional: error_code, error_message, output, finished_at
  */
 async function markTaskStatus(db, taskId, status, extra = {}) {
-  const setClauses = ['status = $2'];
+  const setClauses = ['status = $2::text'];
   const params = [taskId, status];
   let idx = 3;
 
+  // Type cast map for known columns
+  const typeCasts = {
+    error_code: 'text',
+    error_message: 'text',
+    output: 'jsonb',
+    finished_at: 'timestamptz',
+  };
+
   for (const [key, value] of Object.entries(extra)) {
-    setClauses.push(`${key} = $${idx}`);
+    const cast = typeCasts[key] ? `::${typeCasts[key]}` : '';
+    setClauses.push(`${key} = $${idx}${cast}`);
     params.push(value);
     idx++;
   }
 
   await db.query(
-    `UPDATE engine_v2.job_tasks SET ${setClauses.join(', ')} WHERE id = $1`,
+    `UPDATE engine_v2.job_tasks SET ${setClauses.join(', ')} WHERE id = $1::uuid`,
     params
   );
 }
@@ -132,7 +141,7 @@ async function propagateFailure(db, jobId, failedTaskId) {
     `WITH RECURSIVE downstream AS (
        SELECT d.successor_task_id AS task_id
        FROM engine_v2.job_task_dependencies d
-       WHERE d.predecessor_task_id = $2
+       WHERE d.predecessor_task_id = $2::uuid
        UNION
        SELECT d.successor_task_id
        FROM engine_v2.job_task_dependencies d
@@ -141,7 +150,7 @@ async function propagateFailure(db, jobId, failedTaskId) {
      UPDATE engine_v2.job_tasks
      SET status = 'canceled',
          error_code = 'upstream_failed',
-         error_message = 'Canceled: upstream task ' || $2 || ' failed'
+         error_message = 'Canceled: upstream task ' || $2::uuid || ' failed'
      WHERE id IN (SELECT task_id FROM downstream)
        AND status IN ('pending', 'ready', 'blocked')`,
     [jobId, failedTaskId]

@@ -22,7 +22,7 @@ async function createAttempt(db, taskId, attemptNo) {
   const { rows } = await db.query(
     `INSERT INTO engine_v2.job_task_attempts
        (task_id, attempt_no, status, started_at)
-     VALUES ($1, $2, 'running', NOW())
+     VALUES ($1::uuid, $2::int, 'running', NOW())
      RETURNING id`,
     [taskId, attemptNo]
   );
@@ -45,14 +45,14 @@ async function createAttempt(db, taskId, attemptNo) {
 async function completeAttempt(db, attemptId, result) {
   await db.query(
     `UPDATE engine_v2.job_task_attempts
-     SET status        = $1,
+     SET status        = $1::text,
          ended_at      = NOW(),
-         tokens_in     = $2,
-         tokens_out    = $3,
-         latency_ms    = $4,
-         cost_usd      = $5,
-         error          = $6
-     WHERE id = $7`,
+         tokens_in     = $2::int,
+         tokens_out    = $3::int,
+         latency_ms    = $4::int,
+         cost_usd      = $5::numeric,
+         error          = $6::jsonb
+     WHERE id = $7::uuid`,
     [
       result.status,
       result.input_tokens ?? null,
@@ -84,7 +84,7 @@ async function saveArtifact(db, jobId, taskId, kind, content, metadata) {
   const { rows } = await db.query(
     `INSERT INTO engine_v2.job_task_artifacts
        (job_id, task_id, kind, content, metadata)
-     VALUES ($1, $2, $3, $4, $5)
+     VALUES ($1::uuid, $2::uuid, $3::text, $4::jsonb, $5::jsonb)
      RETURNING id`,
     [
       jobId,
@@ -114,7 +114,7 @@ async function emitEvent(db, jobId, taskId, eventType, data) {
   await db.query(
     `INSERT INTO engine_v2.job_task_events
        (job_id, task_id, event_type, data)
-     VALUES ($1, $2, $3, $4)`,
+     VALUES ($1::uuid, $2::uuid, $3::text, $4::jsonb)`,
     [jobId, taskId, eventType, data ? JSON.stringify(data) : null]
   );
 }
@@ -150,8 +150,8 @@ async function handleConditionalSkip(db, jobId, taskKey, output) {
   const { rows } = await db.query(
     `UPDATE engine_v2.job_tasks
      SET status = 'skipped'
-     WHERE job_id = $1
-       AND task_key = ANY($2)
+     WHERE job_id = $1::uuid
+       AND task_key = ANY($2::text[])
        AND status IN ('pending', 'blocked', 'ready')
      RETURNING task_key`,
     [jobId, keysToSkip]

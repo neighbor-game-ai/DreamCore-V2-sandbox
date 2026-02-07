@@ -36,7 +36,7 @@ async function run(userId, projectId, userMessage, options) {
     // Record v2 job run
     await db.query(
       `INSERT INTO engine_v2.job_runs (job_id, user_id, project_id, engine_version, scheduler_version)
-       VALUES ($1, $2, $3, 'v2', '1.0')`,
+       VALUES ($1::uuid, $2::uuid, $3::uuid, 'v2', '1.0')`,
       [jobId, userId, projectId]
     );
 
@@ -59,7 +59,7 @@ async function run(userId, projectId, userMessage, options) {
     // Collect final result from publish_prep task output
     const { rows } = await db.query(
       `SELECT output FROM engine_v2.job_tasks
-       WHERE job_id = $1 AND task_key = 'publish_prep' AND status = 'succeeded'`,
+       WHERE job_id = $1::uuid AND task_key = 'publish_prep' AND status = 'succeeded'`,
       [jobId]
     );
 
@@ -80,7 +80,7 @@ async function run(userId, projectId, userMessage, options) {
     // Mark v2 job as succeeded
     await db.query(
       `UPDATE engine_v2.job_runs SET status = 'succeeded', finished_at = now()
-       WHERE job_id = $1`,
+       WHERE job_id = $1::uuid`,
       [jobId]
     );
 
@@ -92,8 +92,8 @@ async function run(userId, projectId, userMessage, options) {
     // Mark v2 job as failed
     await db.query(
       `UPDATE engine_v2.job_runs
-       SET status = 'failed', error_code = $2, finished_at = now(), fallback_triggered = true
-       WHERE job_id = $1`,
+       SET status = 'failed', error_code = $2::text, finished_at = now(), fallback_triggered = true
+       WHERE job_id = $1::uuid`,
       [jobId, err.message || 'v2_unknown']
     ).catch(() => {});
 
@@ -109,7 +109,7 @@ async function run(userId, projectId, userMessage, options) {
 async function assembleResult(db, jobId) {
   const { rows: tasks } = await db.query(
     `SELECT task_key, output FROM engine_v2.job_tasks
-     WHERE job_id = $1 AND status IN ('succeeded', 'skipped')
+     WHERE job_id = $1::uuid AND status IN ('succeeded', 'skipped')
      ORDER BY created_at`,
     [jobId]
   );
@@ -134,7 +134,7 @@ async function logFallback(jobId, err) {
   try {
     await db.query(
       `INSERT INTO engine_v2.job_task_events (job_id, event_type, data)
-       VALUES ($1, 'v2_fallback', $2)`,
+       VALUES ($1::uuid, 'v2_fallback', $2::jsonb)`,
       [jobId, JSON.stringify({ error: err.message, stack: err.stack })]
     );
   } catch (logErr) {
@@ -194,7 +194,7 @@ async function runShadow(userId, projectId, userMessage, options) {
     await db.query(
       `UPDATE engine_v2.job_runs
        SET status = 'succeeded', finished_at = now()
-       WHERE job_id = $1`,
+       WHERE job_id = $1::uuid`,
       [jobId]
     );
 
@@ -205,8 +205,8 @@ async function runShadow(userId, projectId, userMessage, options) {
     // Record shadow failure (never propagate to caller)
     await db.query(
       `UPDATE engine_v2.job_runs
-       SET status = 'failed', error_code = $2, finished_at = now()
-       WHERE job_id = $1`,
+       SET status = 'failed', error_code = $2::text, finished_at = now()
+       WHERE job_id = $1::uuid`,
       [jobId, err.message || 'v2_shadow_unknown']
     ).catch(() => {});
 
@@ -225,7 +225,7 @@ async function _runShadowInner(userId, projectId, userMessage, jobId, prompt, de
   await db.query(
     `INSERT INTO engine_v2.job_runs
        (job_id, user_id, project_id, engine_version, scheduler_version, mode)
-     VALUES ($1, $2, $3, 'v2', '1.0', 'shadow')`,
+     VALUES ($1::uuid, $2::uuid, $3::uuid, 'v2', '1.0', 'shadow')`,
     [jobId, userId, projectId]
   );
 

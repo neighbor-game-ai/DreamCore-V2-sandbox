@@ -49,7 +49,7 @@ async function buildDag(db, jobId, workflow = DEFAULT_WORKFLOW) {
       const { rows } = await client.query(
         `INSERT INTO engine_v2.job_tasks
            (job_id, task_key, agent_role, status, display_label, weight, max_attempts)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         VALUES ($1::uuid, $2::text, $3::text, $4::text, $5::text, $6::int, $7::int)
          RETURNING id`,
         [jobId, task.key, task.role, status, task.label, task.weight, task.maxAttempts]
       );
@@ -61,7 +61,7 @@ async function buildDag(db, jobId, workflow = DEFAULT_WORKFLOW) {
       await client.query(
         `INSERT INTO engine_v2.job_task_dependencies
            (predecessor_task_id, successor_task_id)
-         VALUES ($1, $2)`,
+         VALUES ($1::uuid, $2::uuid)`,
         [map[predecessorKey], map[successorKey]]
       );
     }
