@@ -1595,12 +1595,12 @@ wss.on('connection', (ws) => {
             console.log('[AutoFix] Using Claude Code CLI directly for bug fix');
           }
 
-          // === Style selection check: Game creation with dimension → show styleOptions (no quota) ===
-          // Guard: if already awaiting style selection for this project, skip free pass
-          // (prevents infinite free requests by re-sending the same game creation message)
+          // === Style selection check: show styleOptions if style not yet decided (no quota) ===
+          // Condition: STYLE.md doesn't exist → style not yet decided
+          // Guard: if already awaiting style selection, remind user instead of re-sending
           if (!data.skipStyleSelection && !data.selectedStyle) {
             if (isValidSelectionFlag(awaitingStyleSelect, currentProjectId)) {
-              // Already sent styleOptions — remind user to select (no quota, no DB hit)
+              // Already sent styleOptions — remind user to select (no quota, no DB/file hit)
               safeSend({ type: 'info', message: 'スタイルを選択してください。' });
               return;
             } else {
@@ -1610,9 +1610,11 @@ wss.on('connection', (ws) => {
               const hasDimensionSpecified = has2DSpecified || has3DSpecified;
 
               if (isGameCreationRequest && hasDimensionSpecified) {
-                const isInitialized = await db.isProjectInitialized(currentProjectId);
+                // Check if style is already decided (STYLE.md exists)
+                const styleContent = await userManager.readProjectFile(userId, currentProjectId, 'STYLE.md');
+                const hasStyleDecided = styleContent !== null && styleContent !== '';
 
-                if (!isInitialized) {
+                if (!hasStyleDecided) {
                   const dimension = has3DSpecified ? '3d' : '2d';
 
                   awaitingStyleSelect = {
@@ -1653,6 +1655,10 @@ wss.on('connection', (ws) => {
           } else if (data.skipStyleSelection) {
             if (isValidSelectionFlag(awaitingStyleSelect, currentProjectId)) {
               console.log(`[Selection] Style skipped with valid flag userId=${userId}`);
+              // Persist skip as STYLE.md marker so styleOptions won't reappear
+              userManager.writeProjectFile(userSupabase, userId, currentProjectId, 'STYLE.md',
+                '# SKIPPED\n\nUser chose to skip style selection.'
+              ).catch(err => console.error('[Style Selection] Failed to save skip marker:', err.message));
             } else {
               console.warn(`[Quota Abuse] skipStyleSelection without valid flag userId=${userId}`);
             }
