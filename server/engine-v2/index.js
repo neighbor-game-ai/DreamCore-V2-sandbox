@@ -3,6 +3,7 @@
 'use strict';
 
 const { shouldUseV2, isShadowMode, ENGINE_V2_ENABLED, ENGINE_V2_MODE } = require('./featureFlag');
+const { runContractTest } = require('./contractTest');
 const db = require('./db');
 const { buildDag, DEFAULT_WORKFLOW } = require('./dagBuilder');
 const { runWorkflow } = require('./scheduler');
@@ -27,6 +28,12 @@ const modalClient = require('../modalClient');
 async function run(userId, projectId, userMessage, options) {
   if (!process.env.DATABASE_URL) {
     throw new Error('v2_no_database_url');
+  }
+
+  // Contract test: verify V2 Modal endpoints are deployed
+  const endpointsOk = await runContractTest();
+  if (!endpointsOk) {
+    throw new Error('v2_contract_test_failed');
   }
 
   const { jobId, prompt, detectedSkills, onEvent } = options;
@@ -168,6 +175,10 @@ async function runShadow(userId, projectId, userMessage, options) {
     }
     return;
   }
+
+  // Contract test: verify V2 Modal endpoints are deployed (runs once, cached)
+  const endpointsOk = await runContractTest();
+  if (!endpointsOk) return;
 
   const { jobId, prompt, detectedSkills } = options;
   // NOTE: caller's event callback is intentionally NOT destructured — shadow never sends to user
