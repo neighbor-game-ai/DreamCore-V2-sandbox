@@ -2793,19 +2793,25 @@ def _build_codegen_prompt(user_message, existing_code, is_new_project):
 
 
 def _extract_json_from_response(raw_text):
-    """Extract JSON from Claude CLI output. 3-tier strategy."""
+    """Extract JSON from Claude CLI output. 4-tier strategy."""
     if not raw_text or not raw_text.strip():
         raise ValueError("v2_output_invalid: empty response")
 
     text = raw_text.strip()
 
-    # 1. ```json ... ``` code fence
-    fence_match = re.search(r'```json\s*\n(.*?)\n\s*```', text, re.DOTALL)
-    if fence_match:
-        try:
-            return json.loads(fence_match.group(1))
-        except json.JSONDecodeError:
-            pass
+    # Diagnostic logging
+    print(f"[v2_extract] text length={len(text)}")
+    print(f"[v2_extract] FIRST 500 chars: {text[:500]}")
+    print(f"[v2_extract] LAST 300 chars: {text[-300:]}")
+
+    # 1. ```json ... ``` code fence (also try ``` without language tag)
+    for pattern in [r'```json\s*\n(.*?)\n\s*```', r'```\s*\n(\{.*?\})\n\s*```']:
+        fence_match = re.search(pattern, text, re.DOTALL)
+        if fence_match:
+            try:
+                return json.loads(fence_match.group(1))
+            except json.JSONDecodeError:
+                print(f"[v2_extract] Tier 1 fence found but JSON invalid")
 
     # 2. Full text as JSON
     try:
@@ -2813,7 +2819,41 @@ def _extract_json_from_response(raw_text):
     except json.JSONDecodeError:
         pass
 
-    # 3. Last JSON block (scan backward for matching braces)
+    # 3. Find {"files" pattern and scan forward (robust against {} in HTML content)
+    files_idx = text.find('{"files"')
+    if files_idx == -1:
+        files_idx = text.find('{ "files"')
+    if files_idx >= 0:
+        # Scan forward counting braces, but respect JSON string escaping
+        depth = 0
+        in_string = False
+        escape_next = False
+        for i in range(files_idx, len(text)):
+            c = text[i]
+            if escape_next:
+                escape_next = False
+                continue
+            if c == '\\' and in_string:
+                escape_next = True
+                continue
+            if c == '"' and not escape_next:
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if c == '{':
+                depth += 1
+            elif c == '}':
+                depth -= 1
+                if depth == 0:
+                    candidate = text[files_idx:i + 1]
+                    try:
+                        return json.loads(candidate)
+                    except json.JSONDecodeError:
+                        print(f"[v2_extract] Tier 3 found {{\"files\"}} block ({len(candidate)} chars) but JSON invalid")
+                        break
+
+    # 4. Last resort: backward scan (original tier 3)
     brace_depth = 0
     json_end = -1
     json_start = -1
@@ -2832,7 +2872,7 @@ def _extract_json_from_response(raw_text):
         try:
             return json.loads(text[json_start:json_end + 1])
         except json.JSONDecodeError:
-            pass
+            print(f"[v2_extract] Tier 4 backward scan found block ({json_end - json_start + 1} chars) but JSON invalid")
 
     raise ValueError("v2_output_invalid: no valid JSON found in response")
 
@@ -3012,7 +3052,8 @@ async def v2_generate_code(request: Request):
     except ValueError as e:
         # JSON extraction failed
         error_msg = str(e)
-        print(f"[v2_codegen] PARSE ERROR: {error_msg}")
+        raw_preview = raw_response[:200] if raw_response else "(empty)"
+        print(f"[v2_codegen] PARSE ERROR: {error_msg}, raw_preview={raw_preview}")
         return JSONResponse({
             "error": error_msg,
             "error_code": "v2_output_invalid",
