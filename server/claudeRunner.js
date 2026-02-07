@@ -576,22 +576,20 @@ class ClaudeRunner {
   analyzeImageDirection(gameCode, gameSpec, imageName, originalPrompt) {
     console.log(`[analyzeImageDirection] Analyzing: ${imageName}`);
 
+    // 1. Gemini's prompt already has "facing" → trust it as-is (highest priority)
+    if (/facing\s+(right|left|up|down)/i.test(originalPrompt)) {
+      console.log(`[analyzeImageDirection] Prompt already has facing direction for ${imageName}`);
+      return originalPrompt;
+    }
+
     const role = this.guessImageRole(imageName, originalPrompt);
 
-    // 1. SPEC has direction → append direction to Gemini's original prompt (don't replace it)
+    // 2. SPEC has direction → append to Gemini's original prompt
     const specDirection = this.getDirectionFromSpec(gameSpec, role);
     if (specDirection) {
       const enhanced = `${originalPrompt}, facing ${specDirection}, side view, 2D game sprite`;
       console.log(`[analyzeImageDirection] Direction from spec for ${imageName}: ${specDirection}`);
-      console.log(`[analyzeImageDirection] Enhanced prompt: "${enhanced}"`);
       return enhanced;
-    }
-
-    // 2. Gemini's prompt already has "facing" → use as-is
-    if (/facing\s+(right|left|up|down)/i.test(originalPrompt)) {
-      console.log(`[analyzeImageDirection] Prompt already has facing direction for ${imageName}`);
-      console.log(`[analyzeImageDirection] Enhanced prompt: "${originalPrompt}"`);
-      return originalPrompt;
     }
 
     // 3. Final fallback: default direction based on role
@@ -599,7 +597,6 @@ class ClaudeRunner {
     const defaultDirection = /enemy|敵|エネミー|monster|ボス/.test(roleLower) ? 'left' : 'right';
     const enhanced = `${originalPrompt}, facing ${defaultDirection}, side view, 2D game sprite`;
     console.log(`[analyzeImageDirection] Default direction for ${imageName} (${role}): ${defaultDirection}`);
-    console.log(`[analyzeImageDirection] Enhanced prompt: "${enhanced}"`);
     return enhanced;
   }
 
