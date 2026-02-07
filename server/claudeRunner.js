@@ -577,7 +577,8 @@ class ClaudeRunner {
     console.log(`[analyzeImageDirection] Analyzing: ${imageName}`);
 
     // 1. Gemini's prompt already has "facing" → trust it as-is (highest priority)
-    if (/facing\s+(right|left|up|down)/i.test(originalPrompt)) {
+    //    Matches: facing right, facing front, facing the camera, facing 30 degrees, etc.
+    if (/facing\s+\w/i.test(originalPrompt)) {
       console.log(`[analyzeImageDirection] Prompt already has facing direction for ${imageName}`);
       return originalPrompt;
     }

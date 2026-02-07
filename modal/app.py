@@ -2792,68 +2792,162 @@ def _build_codegen_prompt(user_message, existing_code, is_new_project):
 {{"files": [{{"path": "index.html", "content": "修正後の完全なHTMLコード"}}], "summary": "変更内容の日本語説明（1-2文）"}}"""
 
 
-def _extract_json_from_response(raw_text):
+def _fix_invalid_json_escapes(text):
+    """Fix invalid JSON from LLM output via iterative repair.
+
+    Handles two categories:
+    1. Invalid escape sequences: \\', \\a, \\xNN (JS-style in JSON context)
+    2. Literal control characters (newlines, tabs) inside JSON strings
+
+    Strategy: try json.loads, catch error, fix at reported position, retry.
+    """
+    max_repairs = 500
+    repairs = 0
+    while repairs < max_repairs:
+        try:
+            json.loads(text)
+            break
+        except json.JSONDecodeError as e:
+            err_str = str(e)
+            pos = e.pos
+
+            if repairs == 0:
+                print(f"[v2_fix] first error: pos={pos}, err={err_str[:100]}")
+
+            if "escape" in err_str.lower():
+                # Invalid escape sequence (e.g., \', \a, \0)
+                if pos < len(text) and text[pos] == '\\':
+                    next_char = text[pos + 1] if pos + 1 < len(text) else ''
+                    if next_char == 'x' and pos + 3 < len(text):
+                        hex_chars = text[pos+2:pos+4]
+                        if all(c in '0123456789abcdefABCDEF' for c in hex_chars):
+                            text = text[:pos] + f"\\u00{hex_chars}" + text[pos+4:]
+                            repairs += 1
+                            continue
+                    # Remove invalid backslash (\' → ', \a → a, etc.)
+                    text = text[:pos] + text[pos+1:]
+                    repairs += 1
+                    continue
+
+            elif "control character" in err_str.lower():
+                # Literal control char inside JSON string (common with LLM output)
+                if pos < len(text):
+                    char = text[pos]
+                    if char == '\n':
+                        text = text[:pos] + '\\n' + text[pos+1:]
+                    elif char == '\r':
+                        text = text[:pos] + '\\r' + text[pos+1:]
+                    elif char == '\t':
+                        text = text[:pos] + '\\t' + text[pos+1:]
+                    else:
+                        text = text[:pos] + ' ' + text[pos+1:]
+                    repairs += 1
+                    continue
+
+            # Unknown error — stop
+            print(f"[v2_fix] stopping at repair #{repairs}: {err_str[:100]}")
+            break
+
+    if repairs > 0:
+        print(f"[v2_fix] applied {repairs} repair(s)")
+    return text
+
+
+def _extract_json_from_response(raw_text, diagnostics=None):
     """Extract JSON from Claude CLI output. 4-tier strategy."""
+    if diagnostics is None:
+        diagnostics = {}
+
     if not raw_text or not raw_text.strip():
         raise ValueError("v2_output_invalid: empty response")
 
     text = raw_text.strip()
 
     # Diagnostic logging
-    print(f"[v2_extract] text length={len(text)}")
-    print(f"[v2_extract] FIRST 500 chars: {text[:500]}")
-    print(f"[v2_extract] LAST 300 chars: {text[-300:]}")
+    diagnostics['text_len'] = len(text)
+    diagnostics['line_count'] = text.count('\n')
+    print(f"[v2_extract] text length={len(text)}, lines={text.count(chr(10))}")
 
-    # 1. ```json ... ``` code fence (also try ``` without language tag)
-    for pattern in [r'```json\s*\n(.*?)\n\s*```', r'```\s*\n(\{.*?\})\n\s*```']:
+    # 1. ```json ... ``` code fence — use GREEDY (.*) to find the LAST closing ```
+    for pat_name, pattern in [
+        ("json-greedy", r'```json\s*\n(.*)\n\s*```'),
+        ("bare-greedy", r'```\s*\n(\{.*\})\n\s*```'),
+    ]:
         fence_match = re.search(pattern, text, re.DOTALL)
         if fence_match:
+            captured = fence_match.group(1)
+            # Fix invalid JSON escapes (LLMs use JS escapes like \' inside JSON)
+            captured_fixed = _fix_invalid_json_escapes(captured)
+            diagnostics[f'tier1_{pat_name}_fix_delta'] = len(captured) - len(captured_fixed)
             try:
-                return json.loads(fence_match.group(1))
-            except json.JSONDecodeError:
-                print(f"[v2_extract] Tier 1 fence found but JSON invalid")
+                result = json.loads(captured_fixed)
+                print(f"[v2_extract] Tier 1 ({pat_name}): OK")
+                diagnostics['tier'] = f'1-{pat_name}'
+                return result
+            except json.JSONDecodeError as e:
+                # Show context around the error position
+                err_pos = e.pos
+                err_context = captured_fixed[max(0,err_pos-20):err_pos+20] if err_pos < len(captured_fixed) else "??"
+                diagnostics[f'tier1_{pat_name}_error'] = str(e)[:200]
+                diagnostics[f'tier1_{pat_name}_err_context'] = repr(err_context)
+                print(f"[v2_extract] Tier 1 ({pat_name}): {e}")
 
-    # 2. Full text as JSON
+    # 2. Full text as JSON (with escape fix)
+    fixed_text = _fix_invalid_json_escapes(text)
     try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        pass
+        result = json.loads(fixed_text)
+        print("[v2_extract] Tier 2: OK")
+        diagnostics['tier'] = '2'
+        return result
+    except json.JSONDecodeError as e:
+        diagnostics['tier2'] = str(e)[:200]
 
-    # 3. Find {"files" pattern and scan forward (robust against {} in HTML content)
-    files_idx = text.find('{"files"')
-    if files_idx == -1:
-        files_idx = text.find('{ "files"')
-    if files_idx >= 0:
-        # Scan forward counting braces, but respect JSON string escaping
-        depth = 0
-        in_string = False
-        escape_next = False
-        for i in range(files_idx, len(text)):
-            c = text[i]
-            if escape_next:
-                escape_next = False
-                continue
-            if c == '\\' and in_string:
-                escape_next = True
-                continue
-            if c == '"' and not escape_next:
-                in_string = not in_string
-                continue
-            if in_string:
-                continue
-            if c == '{':
-                depth += 1
-            elif c == '}':
-                depth -= 1
-                if depth == 0:
-                    candidate = text[files_idx:i + 1]
-                    try:
-                        return json.loads(candidate)
-                    except json.JSONDecodeError:
-                        print(f"[v2_extract] Tier 3 found {{\"files\"}} block ({len(candidate)} chars) but JSON invalid")
-                        break
+    # 3. Find "files" key in pretty-printed JSON and locate enclosing {}
+    #    Handles: {\n  "files": [...]\n} (Haiku pretty-prints JSON)
+    files_key_idx = text.find('"files"')
+    if files_key_idx >= 0:
+        # Scan backward from "files" to find the opening {
+        open_brace_idx = -1
+        for i in range(files_key_idx - 1, -1, -1):
+            if text[i] == '{':
+                open_brace_idx = i
+                break
+            elif text[i] not in ' \t\n\r':
+                break  # Non-whitespace before "files" — not the outer object
 
-    # 4. Last resort: backward scan (original tier 3)
+        if open_brace_idx >= 0:
+            # Scan forward from opening { using string-aware brace matching
+            depth = 0
+            in_string = False
+            escape_next = False
+            for i in range(open_brace_idx, len(text)):
+                c = text[i]
+                if escape_next:
+                    escape_next = False
+                    continue
+                if c == '\\' and in_string:
+                    escape_next = True
+                    continue
+                if c == '"' and not escape_next:
+                    in_string = not in_string
+                    continue
+                if in_string:
+                    continue
+                if c == '{':
+                    depth += 1
+                elif c == '}':
+                    depth -= 1
+                    if depth == 0:
+                        candidate = text[open_brace_idx:i + 1]
+                        try:
+                            result = json.loads(candidate)
+                            print(f"[v2_extract] Tier 3: OK ({len(candidate)} chars)")
+                            return result
+                        except json.JSONDecodeError as e:
+                            print(f"[v2_extract] Tier 3: found block ({len(candidate)} chars) but JSON invalid: {e}")
+                            break
+
+    # 4. Last resort: backward scan
     brace_depth = 0
     json_end = -1
     json_start = -1
@@ -2870,9 +2964,11 @@ def _extract_json_from_response(raw_text):
 
     if json_start >= 0 and json_end > json_start:
         try:
-            return json.loads(text[json_start:json_end + 1])
+            result = json.loads(text[json_start:json_end + 1])
+            print(f"[v2_extract] Tier 4: OK ({json_end - json_start + 1} chars)")
+            return result
         except json.JSONDecodeError:
-            print(f"[v2_extract] Tier 4 backward scan found block ({json_end - json_start + 1} chars) but JSON invalid")
+            print(f"[v2_extract] Tier 4: backward scan found block ({json_end - json_start + 1} chars) but JSON invalid")
 
     raise ValueError("v2_output_invalid: no valid JSON found in response")
 
@@ -3026,8 +3122,9 @@ async def v2_generate_code(request: Request):
         raw_response = await run_haiku_in_sandbox(codegen_prompt, timeout_seconds=120)
         print(f"[v2_codegen] raw_response length={len(raw_response) if raw_response else 0}")
 
-        # Parse JSON (3-tier robust extraction)
-        result = _extract_json_from_response(raw_response)
+        # Parse JSON (4-tier robust extraction)
+        diag = {}
+        result = _extract_json_from_response(raw_response, diagnostics=diag)
 
         # Sanitize file paths through allowlist
         sanitized_files = _sanitize_output_files(result.get("files", []))
@@ -3052,8 +3149,7 @@ async def v2_generate_code(request: Request):
     except ValueError as e:
         # JSON extraction failed
         error_msg = str(e)
-        raw_preview = raw_response[:200] if raw_response else "(empty)"
-        print(f"[v2_codegen] PARSE ERROR: {error_msg}, raw_preview={raw_preview}")
+        print(f"[v2_codegen] PARSE ERROR: {error_msg}, raw_len={len(raw_response) if raw_response else 0}, diag={diag}")
         return JSONResponse({
             "error": error_msg,
             "error_code": "v2_output_invalid",
