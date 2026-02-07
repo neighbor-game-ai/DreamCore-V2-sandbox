@@ -1255,8 +1255,7 @@ wss.on('connection', (ws) => {
   let sessionId = null;
   let userSupabase = null;  // Supabase client with user's JWT
 
-  // Quota skip flags for dimension/style selection (per-connection state)
-  let awaitingDimensionSelect = null;  // { timestamp, projectId, originalMessage }
+  // Quota skip flag for style selection (per-connection state)
   let awaitingStyleSelect = null;      // { timestamp, projectId, dimension, originalMessage }
   const SELECTION_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -1264,7 +1263,6 @@ wss.on('connection', (ws) => {
     return flag && flag.projectId === projectId && (Date.now() - flag.timestamp < SELECTION_TTL);
   }
   function clearSelectionFlags() {
-    awaitingDimensionSelect = null;
     awaitingStyleSelect = null;
   }
 
@@ -1597,105 +1595,43 @@ wss.on('connection', (ws) => {
             console.log('[AutoFix] Using Claude Code CLI directly for bug fix');
           }
 
-          // === PATH A: Game creation without dimension → show dimensionOptions (no quota) ===
-          if (!data.skipStyleSelection && !data.selectedStyle && !data.selectedDimension) {
-            const hasGameKeyword = /ゲーム|game/i.test(userMessage);
-            const hasCreateKeyword = /作って|作成|create|つくって/i.test(userMessage);
-            const has2DSpecified = /2d|２d|2D|２D/i.test(userMessage);
-            const has3DSpecified = /3d|３d|3D|３D/i.test(userMessage);
-            const hasDimensionSpecified = has2DSpecified || has3DSpecified;
-
-            if (hasGameKeyword && hasCreateKeyword && !hasDimensionSpecified) {
-              const isInitialized = await db.isProjectInitialized(currentProjectId);
-              if (!isInitialized) {
-                awaitingDimensionSelect = {
-                  timestamp: Date.now(),
-                  projectId: currentProjectId,
-                  originalMessage: userMessage
-                };
-                console.log(`[Quota Skip] dimensionOptions sent type=dimension userId=${userId} projectId=${currentProjectId}`);
-                safeSend({
-                  type: 'dimensionOptions',
-                  originalMessage: userMessage
-                });
-                return; // No quota consumed
-              }
-            }
-          }
-
-          // === PATH B: Dimension selection response → show styleOptions (no quota) ===
-          if (data.selectedDimension) {
-            // Value validation
-            if (data.selectedDimension !== '2d' && data.selectedDimension !== '3d') {
-              console.warn(`[Quota Abuse] invalid dimension value="${data.selectedDimension}" userId=${userId}`);
-              awaitingDimensionSelect = null;
-              // Fall through to normal quota consumption
-            } else if (isValidSelectionFlag(awaitingDimensionSelect, currentProjectId)) {
-              const dimension = data.selectedDimension;
-              const originalMessage = awaitingDimensionSelect.originalMessage;
-              awaitingDimensionSelect = null; // Clear immediately (one-time use)
-
-              const isInitialized = await db.isProjectInitialized(currentProjectId);
-              if (!isInitialized) {
-                // Normalize message with dimension prefix for claudeRunner dimension detection
-                const normalizedMessage = `${dimension.toUpperCase()}で${originalMessage}`;
-
-                awaitingStyleSelect = {
-                  timestamp: Date.now(),
-                  projectId: currentProjectId,
-                  dimension,
-                  originalMessage: normalizedMessage
-                };
-
-                const styles = getStyleOptionsWithImages(dimension);
-                console.log(`[Quota Skip] styleOptions sent after dimension=${dimension} type=dimension_response userId=${userId} projectId=${currentProjectId}`);
-                safeSend({
-                  type: 'styleOptions',
-                  dimension,
-                  styles,
-                  originalMessage: normalizedMessage
-                });
-                return; // No quota consumed
-              }
-              // Fall through if project became initialized
+          // === Style selection check: Game creation with dimension → show styleOptions (no quota) ===
+          // Guard: if already awaiting style selection for this project, skip free pass
+          // (prevents infinite free requests by re-sending the same game creation message)
+          if (!data.skipStyleSelection && !data.selectedStyle) {
+            if (isValidSelectionFlag(awaitingStyleSelect, currentProjectId)) {
+              // Already sent styleOptions — remind user to select (no quota, no DB hit)
+              safeSend({ type: 'info', message: 'スタイルを選択してください。' });
+              return;
             } else {
-              console.warn(`[Quota Abuse] selectedDimension without valid flag reason=no_flag userId=${userId}`);
-              awaitingDimensionSelect = null;
-              // Fall through to normal quota consumption
-            }
-          }
+              const isGameCreationRequest = /作って|作成|create|ゲーム/i.test(userMessage);
+              const has2DSpecified = /2d|２d|2D|２D/i.test(userMessage);
+              const has3DSpecified = /3d|３d|3D|３D/i.test(userMessage);
+              const hasDimensionSpecified = has2DSpecified || has3DSpecified;
 
-          // === PATH C: Game creation with dimension → show styleOptions (no quota) ===
-          // (Existing style selection check, moved before quota check)
-          const shouldCheckStyleSelection = !data.skipStyleSelection && !data.selectedStyle && !data.selectedDimension;
-          if (shouldCheckStyleSelection) {
-            const isGameCreationRequest = /作って|作成|create|ゲーム/i.test(userMessage);
-            const has2DSpecified = /2d|２d|2D|２D/i.test(userMessage);
-            const has3DSpecified = /3d|３d|3D|３D/i.test(userMessage);
-            const hasDimensionSpecified = has2DSpecified || has3DSpecified;
+              if (isGameCreationRequest && hasDimensionSpecified) {
+                const isInitialized = await db.isProjectInitialized(currentProjectId);
 
-            if (isGameCreationRequest && hasDimensionSpecified) {
-              const isInitialized = await db.isProjectInitialized(currentProjectId);
+                if (!isInitialized) {
+                  const dimension = has3DSpecified ? '3d' : '2d';
 
-              if (!isInitialized) {
-                const dimension = has3DSpecified ? '3d' : '2d';
+                  awaitingStyleSelect = {
+                    timestamp: Date.now(),
+                    projectId: currentProjectId,
+                    dimension,
+                    originalMessage: userMessage
+                  };
 
-                awaitingStyleSelect = {
-                  timestamp: Date.now(),
-                  projectId: currentProjectId,
-                  dimension,
-                  originalMessage: userMessage
-                };
-
-                const styles = getStyleOptionsWithImages(dimension);
-                console.log(`[Quota Skip] styleOptions sent type=style userId=${userId} projectId=${currentProjectId}`);
-                safeSend({
-                  type: 'styleOptions',
-                  dimension,
-                  styles,
-                  originalMessage: userMessage
-                });
-                return; // No quota consumed
+                  const styles = getStyleOptionsWithImages(dimension);
+                  console.log(`[Quota Skip] styleOptions sent type=style userId=${userId} projectId=${currentProjectId}`);
+                  safeSend({
+                    type: 'styleOptions',
+                    dimension,
+                    styles,
+                    originalMessage: userMessage
+                  });
+                  return; // No quota consumed
+                }
               }
             }
           }
@@ -1706,7 +1642,12 @@ wss.on('connection', (ws) => {
                 awaitingStyleSelect.dimension === data.selectedStyle.dimension) {
               console.log(`[Selection] Style selected with valid flag dimension=${data.selectedStyle.dimension} userId=${userId}`);
             } else {
-              console.warn(`[Quota Abuse] selectedStyle without valid flag reason=${!awaitingStyleSelect ? 'no_flag' : awaitingStyleSelect.dimension !== data.selectedStyle?.dimension ? 'dimension_mismatch' : 'expired'} userId=${userId}`);
+              const abuseReason = !awaitingStyleSelect ? 'no_flag'
+                : awaitingStyleSelect.projectId !== currentProjectId ? 'project_mismatch'
+                : (Date.now() - awaitingStyleSelect.timestamp >= SELECTION_TTL) ? 'expired'
+                : awaitingStyleSelect.dimension !== data.selectedStyle?.dimension ? 'dimension_mismatch'
+                : 'unknown';
+              console.warn(`[Quota Abuse] selectedStyle without valid flag reason=${abuseReason} userId=${userId}`);
             }
             awaitingStyleSelect = null; // Always clear
           } else if (data.skipStyleSelection) {
