@@ -117,8 +117,22 @@ specsフィールドは**必ず**出力してください。生成したゲー�
 
 2Dゲームでキャラクター、敵、アイテムなどの画像が必要な場合のみ、imagesフィールドで指定:
 - 最大3枚まで
-- 画像は透過背景（PNG）で生成されます
+- 画像は透過背景（PNG）の正方形で生成されます
 - コード内では "assets/[name]" で参照できます
+
+**★画像描画時のアスペクト比維持（必須）：**
+画像は正方形PNGですが、キャラクターの実際の形状は縦長や横長です。
+p.image() で描画する際は、**元画像のアスペクト比を維持**してください：
+\`\`\`javascript
+// ✅ 正しい: 幅を基準にアスペクト比を維持
+const img = assets.player;
+const displayW = 60;
+const displayH = img.height ? displayW * (img.height / img.width) : displayW;
+p.image(img, x, y, displayW, displayH);
+
+// ❌ 禁止: 固定の正方形描画（キャラが歪む）
+p.image(img, x, y, 60, 60);
+\`\`\`
 
 **★画像プロンプトの書き方（最重要）：**
 promptには必ず以下の要素を含めること：

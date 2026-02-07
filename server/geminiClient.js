@@ -91,15 +91,36 @@ async function removeMagentaBackground(base64Image) {
       }
     }
 
-    // Create final image with trim to remove transparent borders
-    outputBuffer = await sharp(Buffer.from(erodedPixels), {
+    // Create final image: trim transparent borders, then pad to square
+    const trimmedBuffer = await sharp(Buffer.from(erodedPixels), {
       raw: { width, height, channels: 4 }
     })
-      .trim()  // Auto-crop transparent borders
+      .trim()
       .png()
       .toBuffer();
 
-    console.log('Magenta background removed with 1px erosion and trimmed');
+    // Pad to square so aspect ratio is preserved when game code draws at fixed size
+    const trimmedMeta = await sharp(trimmedBuffer).metadata();
+    const maxDim = Math.max(trimmedMeta.width, trimmedMeta.height);
+
+    if (trimmedMeta.width === maxDim && trimmedMeta.height === maxDim) {
+      outputBuffer = trimmedBuffer;
+    } else {
+      const padLeft = Math.floor((maxDim - trimmedMeta.width) / 2);
+      const padTop = Math.floor((maxDim - trimmedMeta.height) / 2);
+      outputBuffer = await sharp(trimmedBuffer)
+        .extend({
+          left: padLeft,
+          right: maxDim - trimmedMeta.width - padLeft,
+          top: padTop,
+          bottom: maxDim - trimmedMeta.height - padTop,
+          background: { r: 0, g: 0, b: 0, alpha: 0 }
+        })
+        .png()
+        .toBuffer();
+    }
+
+    console.log(`Magenta removed: ${width}x${height} → trimmed ${trimmedMeta.width}x${trimmedMeta.height} → square ${maxDim}x${maxDim}`);
     return `data:image/png;base64,${outputBuffer.toString('base64')}`;
   } catch (error) {
     console.error('Error removing background:', error);
