@@ -1409,6 +1409,34 @@ wss.on('connection', (ws) => {
             activeJob: activeJob || null
           });
 
+          // Re-send styleOptions if style selection was pending (reconnection recovery)
+          try {
+            const styleContent = await userManager.readProjectFile(userId, currentProjectId, 'STYLE.md');
+            const hasStyleDecided = styleContent !== null && styleContent !== '';
+            if (!hasStyleDecided) {
+              const pendingRaw = await userManager.readProjectFile(userId, currentProjectId, '.style-pending.json');
+              if (pendingRaw) {
+                const pending = JSON.parse(pendingRaw);
+                const styles = getStyleOptionsWithImages(pending.dimension);
+                awaitingStyleSelect = {
+                  timestamp: Date.now(),
+                  projectId: currentProjectId,
+                  dimension: pending.dimension,
+                  originalMessage: pending.originalMessage
+                };
+                console.log(`[Style Selection] Re-sending styleOptions on reconnect dimension=${pending.dimension} projectId=${currentProjectId}`);
+                safeSend({
+                  type: 'styleOptions',
+                  dimension: pending.dimension,
+                  styles,
+                  originalMessage: pending.originalMessage
+                });
+              }
+            }
+          } catch (err) {
+            console.error('[Style Selection] Reconnect check failed:', err.message);
+          }
+
           // Subscribe to active job updates if exists
           if (activeJob && ['pending', 'processing'].includes(activeJob.status)) {
             if (jobUnsubscribe) jobUnsubscribe();
@@ -1624,6 +1652,11 @@ wss.on('connection', (ws) => {
                     originalMessage: userMessage
                   };
 
+                  // Persist pending state for reconnection recovery
+                  userManager.writeProjectFile(userSupabase, userId, currentProjectId, '.style-pending.json',
+                    JSON.stringify({ dimension, originalMessage: userMessage })
+                  ).catch(err => console.error('[Style Selection] Failed to write .style-pending.json:', err.message));
+
                   const styles = getStyleOptionsWithImages(dimension);
                   console.log(`[Quota Skip] styleOptions sent type=style userId=${userId} projectId=${currentProjectId}`);
                   safeSend({
@@ -1652,6 +1685,9 @@ wss.on('connection', (ws) => {
               console.warn(`[Quota Abuse] selectedStyle without valid flag reason=${abuseReason} userId=${userId}`);
             }
             awaitingStyleSelect = null; // Always clear
+            // Clean up pending marker (style decided)
+            userManager.writeProjectFile(userSupabase, userId, currentProjectId, '.style-pending.json', '')
+              .catch(err => console.error('[Style Selection] Failed to clear .style-pending.json:', err.message));
           } else if (data.skipStyleSelection) {
             if (isValidSelectionFlag(awaitingStyleSelect, currentProjectId)) {
               console.log(`[Selection] Style skipped with valid flag userId=${userId}`);
@@ -1663,6 +1699,9 @@ wss.on('connection', (ws) => {
               console.warn(`[Quota Abuse] skipStyleSelection without valid flag userId=${userId}`);
             }
             awaitingStyleSelect = null; // Always clear
+            // Clean up pending marker (style skipped)
+            userManager.writeProjectFile(userSupabase, userId, currentProjectId, '.style-pending.json', '')
+              .catch(err => console.error('[Style Selection] Failed to clear .style-pending.json:', err.message));
           }
 
           // === Quota check (only reached for actual AI processing or normal messages) ===
