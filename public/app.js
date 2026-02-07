@@ -2349,6 +2349,10 @@ class GameCreatorApp {
       case 'styleOptions':
         this.displayStyleSelection(data.dimension, data.styles, data.originalMessage);
         break;
+
+      case 'dimensionOptions':
+        this.displayDimensionSelection(data.originalMessage);
+        break;
     }
   }
 
@@ -5897,6 +5901,53 @@ class GameCreatorApp {
 
   setupStyleSelectListeners() {
     // No modal listeners needed - everything happens in chat
+  }
+
+  // Display dimension selection (2D/3D) as a chat message
+  displayDimensionSelection(originalMessage) {
+    this.hideWelcomeMessage();
+    this.isProcessing = false;
+    if (this.sendButton) this.sendButton.disabled = false;
+    this.stopButton.classList.add('hidden');
+    this.hideStreaming();
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message assistant chat-response';
+
+    let html = `<div class="message-content markdown-body">${this.parseMarkdown('2Dゲームと3Dゲーム、どちらで作成しますか？')}</div>`;
+    html += '<div class="chat-suggestions">';
+    html += `<button class="suggestion-btn dimension-select-btn" data-dimension="2d" data-original-message="${this.escapeHtml(originalMessage)}">2Dで作成</button>`;
+    html += `<button class="suggestion-btn dimension-select-btn" data-dimension="3d" data-original-message="${this.escapeHtml(originalMessage)}">3Dで作成</button>`;
+    html += '</div>';
+
+    messageDiv.innerHTML = html;
+    this.chatMessages.appendChild(messageDiv);
+
+    // Click handlers — send selectedDimension (server-initiated UI only)
+    messageDiv.querySelectorAll('.dimension-select-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const dimension = btn.dataset.dimension;
+        const origMsg = btn.dataset.originalMessage;
+
+        // Disable buttons to prevent double-click
+        messageDiv.querySelectorAll('.dimension-select-btn').forEach(b => {
+          b.disabled = true;
+          b.style.opacity = '0.5';
+        });
+
+        // Show user's choice in chat
+        this.addMessage(`${dimension.toUpperCase()}で作成`, 'user');
+
+        // Send with selectedDimension field (quota-free path)
+        this.ws.send(JSON.stringify({
+          type: 'message',
+          content: origMsg,
+          selectedDimension: dimension
+        }));
+      });
+    });
+
+    this.scrollToLatestMessage(messageDiv);
   }
 
   // Display style selection as a chat message
