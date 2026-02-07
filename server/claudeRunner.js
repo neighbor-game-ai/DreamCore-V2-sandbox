@@ -9,14 +9,7 @@ const geminiClient = require('./geminiClient');
 const claudeChat = require('./claudeChat');
 const config = require('./config');
 
-// Engine V2 (lazy-loaded, feature-flagged)
-let engineV2 = null;
-function getEngineV2() {
-  if (!engineV2) {
-    engineV2 = require('./engine-v2');
-  }
-  return engineV2;
-}
+console.log('[EngineV2] disabled — V2 branches removed from V1 path');
 
 // Modal client for remote execution (lazy-loaded when USE_MODAL=true)
 let modalClient = null;
@@ -1698,19 +1691,6 @@ ${userMessage}
       }
     }
 
-    // Engine V2 shadow: fire before Gemini so it runs on every job
-    if (config.USE_MODAL) {
-      const ev2 = getEngineV2();
-      const verifiedUser = { id: userId, email: userEmail };
-      if (ev2.shouldUseV2(verifiedUser) && ev2.isShadowMode()) {
-        console.log('[EngineV2:shadow] Starting shadow run for job:', jobId);
-        // Shadow uses userMessage as prompt (buildPrompt hasn't run yet)
-        ev2.runShadow(userId, projectId, userMessage, {
-          jobId, prompt: userMessage, detectedSkills: [],
-        }).catch(() => {});
-      }
-    }
-
     // Skip Gemini if useClaude is enabled
     if (!debugOptions.useClaude) {
       // Try Gemini first for code generation
@@ -1872,24 +1852,6 @@ ${userMessage}
 
     // Use Modal for Claude CLI execution if enabled
     if (config.USE_MODAL) {
-      // Engine V2 live mode: replaces v1 (shadow already fired before Gemini)
-      const ev2 = getEngineV2();
-      const verifiedUser = { id: userId, email: userEmail };
-      if (ev2.shouldUseV2(verifiedUser) && !ev2.isShadowMode()) {
-        const v2Options = {
-          jobId, prompt, detectedSkills,
-          onEvent: (event) => jobManager.notifySubscribers(jobId, event),
-        };
-        try {
-          console.log('[EngineV2] Using v2 engine for job:', jobId);
-          return await ev2.run(userId, projectId, userMessage, v2Options);
-        } catch (err) {
-          console.warn('[EngineV2] Fallback to v1:', err.message);
-          await ev2.logFallback(jobId, err);
-          // Fall through to v1
-        }
-      }
-
       console.log('Using Claude CLI on Modal for job:', jobId);
       return this._runClaudeOnModal(jobId, userId, projectId, prompt, userMessage, detectedSkills);
     }
