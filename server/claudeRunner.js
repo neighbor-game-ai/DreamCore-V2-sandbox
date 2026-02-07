@@ -578,10 +578,10 @@ class ClaudeRunner {
 
     const role = this.guessImageRole(imageName, originalPrompt);
 
-    // 1. SPEC has direction → use buildEnhancedImagePrompt() for rich prompt
+    // 1. SPEC has direction → append direction to Gemini's original prompt (don't replace it)
     const specDirection = this.getDirectionFromSpec(gameSpec, role);
     if (specDirection) {
-      const enhanced = this.buildEnhancedImagePrompt(originalPrompt, gameSpec, imageName, specDirection);
+      const enhanced = `${originalPrompt}, facing ${specDirection}, side view, 2D game sprite`;
       console.log(`[analyzeImageDirection] Direction from spec for ${imageName}: ${specDirection}`);
       console.log(`[analyzeImageDirection] Enhanced prompt: "${enhanced}"`);
       return enhanced;
