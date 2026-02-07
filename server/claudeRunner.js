@@ -594,16 +594,7 @@ class ClaudeRunner {
       return originalPrompt;
     }
 
-    // 3. Try getDirectionFromSpec with full gameSpec (covers geminiResult.specs fallback)
-    const specsDirection = this.getDirectionFromSpec(gameSpec, role);
-    if (specsDirection) {
-      const enhanced = `${originalPrompt}, facing ${specsDirection}, side view, 2D game sprite`;
-      console.log(`[analyzeImageDirection] Direction from specs fallback for ${imageName}: ${specsDirection}`);
-      console.log(`[analyzeImageDirection] Enhanced prompt: "${enhanced}"`);
-      return enhanced;
-    }
-
-    // 4. Final fallback: default direction based on role
+    // 3. Final fallback: default direction based on role
     const roleLower = role.toLowerCase();
     const defaultDirection = /enemy|敵|エネミー|monster|ボス/.test(roleLower) ? 'left' : 'right';
     const enhanced = `${originalPrompt}, facing ${defaultDirection}, side view, 2D game sprite`;
