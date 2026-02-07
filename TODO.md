@@ -8,6 +8,20 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-08: クォータスキップ — スタイル選択の無料化 ✅
+
+**詳細:** `.claude/logs/2026-02-08-quota-skip-style-selection.md`
+**計画書:** `.claude/plans/binary-watching-globe.md`
+
+- フリープラン 1ゲーム作成のクォータ消費を 2-3 → 1 に削減
+- スタイル選択ステップ（styleOptions 送信 → 選択応答）をクォータ消費なしで処理
+- `STYLE.md` 存在チェックで判定、`.style-pending.json` で WS 再接続復旧対応
+- セキュリティ: フラグ検証（projectId, dimension, TTL, one-time use）、不正時は通常クォータ消費にフォールバック
+- GCE デプロイ済み、テスト OK（`019c390f` で 1 クォータ消費確認）
+- コミット: `250a273`, `fc592fa`, `619c547`
+
+---
+
 ### 2026-02-08: CLI デーモン化 計画策定 📋
 
 **詳細:** `.claude/logs/2026-02-08-cli-daemon-plan.md`
