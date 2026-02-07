@@ -89,12 +89,24 @@ async function hasActiveTasks(db, jobId) {
 }
 
 /**
- * Count tasks that are stuck (pending/blocked but should not be if DAG is healthy).
+ * Count truly stuck tasks: pending/blocked tasks where ALL predecessors
+ * are in a terminal state (succeeded/skipped/failed/canceled) but the
+ * task hasn't been promoted.
+ *
+ * Tasks waiting on a 'running' or 'ready' predecessor are NOT stuck —
+ * they're just waiting for normal execution to complete.
  */
 async function countStuckTasks(db, jobId) {
   const { rows } = await db.query(
-    `SELECT count(*)::int AS cnt FROM engine_v2.job_tasks
-     WHERE job_id = $1::uuid AND status IN ('pending', 'blocked')`,
+    `SELECT count(*)::int AS cnt FROM engine_v2.job_tasks t
+     WHERE t.job_id = $1::uuid
+       AND t.status IN ('pending', 'blocked')
+       AND NOT EXISTS (
+         SELECT 1 FROM engine_v2.job_task_dependencies d
+         JOIN engine_v2.job_tasks pred ON pred.id = d.predecessor_task_id
+         WHERE d.successor_task_id = t.id
+           AND pred.status NOT IN ('succeeded', 'skipped', 'failed', 'canceled')
+       )`,
     [jobId]
   );
   return rows[0].cnt;
@@ -248,10 +260,22 @@ async function runWorker(db, jobId, executeTask, onEvent) {
           continue;
         }
 
-        // Check for stuck tasks (deadlock detection)
+        // Deadlock detection with retry: another worker may be between
+        // markTaskStatus('succeeded') and promoteReadyTasks().
+        // Wait briefly and retry before declaring deadlock.
         const stuckCount = await countStuckTasks(db, jobId);
         if (stuckCount > 0) {
-          throw new DagDeadlockError(jobId, stuckCount);
+          await wait(POLL_INTERVAL_MS * 3);
+          await promoteReadyTasks(db, jobId);
+          const lastRetry = await claimNextTask(db, jobId);
+          if (lastRetry) {
+            await executeAndHandle(db, lastRetry, jobId, executeTask, onEvent);
+            continue;
+          }
+          const finalStuck = await countStuckTasks(db, jobId);
+          if (finalStuck > 0) {
+            throw new DagDeadlockError(jobId, finalStuck);
+          }
         }
 
         // Normal completion — no more work
@@ -290,7 +314,32 @@ async function runWorkflow(db, jobId, executeTask, onEvent) {
     runWorker(db, jobId, executeTask, onEvent)
   );
 
-  await Promise.all(workers);
+  // Use allSettled: a worker may detect a false deadlock due to race
+  // with another worker's promote cycle. Wait for all workers to finish,
+  // then verify the actual DAG state.
+  const results = await Promise.allSettled(workers);
+
+  // Check for real deadlock vs race-condition false positive
+  const deadlockErr = results.find(
+    (r) => r.status === 'rejected' && r.reason instanceof DagDeadlockError
+  );
+
+  if (deadlockErr) {
+    // Final ground-truth check: are there truly stuck tasks now?
+    const finalStuck = await countStuckTasks(db, jobId);
+    if (finalStuck > 0) {
+      throw deadlockErr.reason;
+    }
+    // All tasks completed despite false deadlock detection — continue
+  }
+
+  // Re-throw any non-deadlock error
+  const otherErr = results.find(
+    (r) => r.status === 'rejected' && !(r.reason instanceof DagDeadlockError)
+  );
+  if (otherErr) {
+    throw otherErr.reason;
+  }
 }
 
 // ---------------------------------------------------------------------------
