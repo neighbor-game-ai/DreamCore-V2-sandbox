@@ -1704,14 +1704,14 @@ wss.on('connection', (ws) => {
           if (data.selectedStyle) {
             if (isValidSelectionFlag(awaitingStyleSelect, currentProjectId) &&
                 awaitingStyleSelect.dimension === data.selectedStyle.dimension) {
-              console.log(`[Quota Skip] Style selected with valid flag dimension=${data.selectedStyle.dimension} userId=${userId}`);
+              console.log(`[Selection] Style selected with valid flag dimension=${data.selectedStyle.dimension} userId=${userId}`);
             } else {
               console.warn(`[Quota Abuse] selectedStyle without valid flag reason=${!awaitingStyleSelect ? 'no_flag' : awaitingStyleSelect.dimension !== data.selectedStyle?.dimension ? 'dimension_mismatch' : 'expired'} userId=${userId}`);
             }
             awaitingStyleSelect = null; // Always clear
           } else if (data.skipStyleSelection) {
             if (isValidSelectionFlag(awaitingStyleSelect, currentProjectId)) {
-              console.log(`[Quota Skip] Style skipped with valid flag userId=${userId}`);
+              console.log(`[Selection] Style skipped with valid flag userId=${userId}`);
             } else {
               console.warn(`[Quota Abuse] skipStyleSelection without valid flag userId=${userId}`);
             }
