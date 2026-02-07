@@ -308,23 +308,41 @@ p.preload = () => {
   assets.enemy = p.loadImage('assets/enemy.png', null, () => assets.enemy = null);
 };
 
-// 描画時のフォールバック
-function drawSprite(p, img, x, y, w, h, fallbackColor) {
+// ★アスペクト比を維持して描画（必須）
+// 画像は正方形PNGだが、キャラクターの実際の形状は縦長や横長
+function drawSprite(p, img, x, y, displayW, fallbackColor) {
   if (img) {
-    p.image(img, x, y, w, h);
+    const displayH = img.height ? displayW * (img.height / img.width) : displayW;
+    p.image(img, x, y, displayW, displayH);
   } else {
     p.fill(fallbackColor || p.color(255, 0, 255));
     p.noStroke();
-    p.rect(x - w/2, y - h/2, w, h);
+    p.rect(x - displayW/2, y - displayW/2, displayW, displayW);
   }
 }
 
 // 使用例
 class Player {
   draw() {
-    drawSprite(this.p, assets.player, this.x, this.y, 50, 50, this.p.color(0, 255, 255));
+    drawSprite(this.p, assets.player, this.x, this.y, 50, this.p.color(0, 255, 255));
   }
 }
+```
+
+### ★画像描画の注意（重要）
+
+**画像アセットは正方形PNGですが、キャラクターの実際の形状は縦長や横長です。**
+`p.image()` で描画する際は、幅と高さを同じ値にせず、**必ずアスペクト比を計算**してください：
+
+```javascript
+// ✅ 正しい: アスペクト比を維持
+const img = assets.player;
+const displayW = 50;
+const displayH = img.height ? displayW * (img.height / img.width) : displayW;
+p.image(img, x, y, displayW, displayH);
+
+// ❌ 禁止: 正方形固定（キャラが潰れる）
+p.image(img, x, y, 50, 50);
 ```
 
 ---
@@ -479,9 +497,11 @@ document.getElementById('left-btn').addEventListener('pointerup', () => {
 
         if (!gameStarted) return;
 
-        // ゲーム描画
+        // ゲーム描画（★アスペクト比を維持）
         if (assets.player) {
-          p.image(assets.player, p.width/2, p.height/2, 50, 50);
+          const pw = 50;
+          const ph = assets.player.height ? pw * (assets.player.height / assets.player.width) : pw;
+          p.image(assets.player, p.width/2, p.height/2, pw, ph);
         } else {
           p.fill(0, 255, 255);
           p.rect(p.width/2 - 25, p.height/2 - 25, 50, 50);
