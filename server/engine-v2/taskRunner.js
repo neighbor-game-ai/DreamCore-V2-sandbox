@@ -343,9 +343,30 @@ async function saveTaskArtifacts(db, jobId, taskId, taskKey, output) {
       break;
     case 'codegen':
       if (output.files) {
-        await saveArtifact(db, jobId, taskId, 'code', output.files, {
-          file_count: output.files.length,
-        });
+        // Check if this is a shadow run to avoid DB bloat
+        const { rows: runRows } = await db.query(
+          `SELECT mode FROM engine_v2.job_runs WHERE job_id = $1::uuid`,
+          [jobId]
+        );
+        const isShadow = runRows[0]?.mode === 'shadow';
+
+        if (isShadow) {
+          // Shadow: store only metadata (path + size + sha256), not full content
+          const crypto = require('crypto');
+          const fileMeta = output.files.map(f => ({
+            path: f.path,
+            size: Buffer.byteLength(f.content || '', 'utf8'),
+            sha256: crypto.createHash('sha256').update(f.content || '').digest('hex'),
+          }));
+          await saveArtifact(db, jobId, taskId, 'code', fileMeta, {
+            file_count: output.files.length,
+            shadow_lightweight: true,
+          });
+        } else {
+          await saveArtifact(db, jobId, taskId, 'code', output.files, {
+            file_count: output.files.length,
+          });
+        }
       }
       break;
     case 'asset':

@@ -2689,6 +2689,173 @@ async def generate_gemini(request: Request):
 # v1 functions above are NEVER modified. v2 adds new functions.
 # =============================================================================
 
+# ---------------------------------------------------------------------------
+# V2 Codegen Helpers
+# ---------------------------------------------------------------------------
+
+# Welcome template SHA-256 (server/userManager.js initial HTML)
+_WELCOME_TEMPLATE_SHA256 = "7716b8adef8746137351008393b0ec7cae043c684d16f62f396b6bf355661489"
+
+# Allowed output file paths (regex allowlist)
+_ALLOWED_OUTPUT_PATHS = [
+    re.compile(r'^index\.html$'),
+    re.compile(r'^game\.js$'),
+    re.compile(r'^styles?\.css$'),
+    re.compile(r'^assets/[a-zA-Z0-9_-]+\.(json|png|jpg|svg)$'),
+    re.compile(r'^[a-zA-Z0-9_-]+\.(html|js|css)$'),
+]
+
+
+def _read_project_files(project_dir, max_total_bytes=100_000):
+    """Read existing project code from volume. Returns None for new projects."""
+    import os
+
+    if not os.path.isdir(project_dir):
+        return None
+
+    READABLE_EXTS = {'.html', '.js', '.css', '.md', '.json'}
+    files_content = {}
+    total_bytes = 0
+
+    try:
+        for fname in sorted(os.listdir(project_dir)):
+            if fname.startswith('.'):
+                continue
+            ext = os.path.splitext(fname)[1].lower()
+            if ext not in READABLE_EXTS:
+                continue
+            fpath = os.path.join(project_dir, fname)
+            if not os.path.isfile(fpath):
+                continue
+            try:
+                content = open(fpath, 'r', encoding='utf-8', errors='replace').read()
+                content_bytes = len(content.encode('utf-8'))
+                if total_bytes + content_bytes > max_total_bytes:
+                    break
+                files_content[fname] = content
+                total_bytes += content_bytes
+            except Exception:
+                continue
+    except Exception:
+        return None
+
+    if not files_content:
+        return None
+
+    # Welcome template detection (hash-based + fallback)
+    index_html = files_content.get("index.html", "")
+    if index_html:
+        content_hash = hashlib.sha256(index_html.strip().encode('utf-8')).hexdigest()
+        if content_hash == _WELCOME_TEMPLATE_SHA256:
+            return None
+
+        if len(index_html) < 2000 and "Welcome to Game Creator" in index_html:
+            return None
+
+    return "\n\n".join(f"--- {name} ---\n{content}" for name, content in files_content.items())
+
+
+def _build_codegen_prompt(user_message, existing_code, is_new_project):
+    """Build code generation prompt for Claude Haiku."""
+    if is_new_project:
+        return f"""あなたはスマートフォン向けブラウザゲーム開発の専門家です。
+ユーザーの指示に従って、単一HTMLファイルのブラウザゲームを作成してください。
+
+ユーザーの指示: {user_message}
+
+必須ルール:
+- 出力は JSON 形式のみ。他のテキストは一切含めない
+- index.html は完全な HTML（CSS/JS インライン可）
+- スマートフォン向け（タッチ操作、viewport 設定必須）
+- CDN から P5.js or Three.js を読み込み可
+- ゲームは即座に開始（タイトル画面不要）
+- 日本語でUI表示
+
+出力形式（このJSON以外のテキストは絶対に出力しないこと）:
+{{"files": [{{"path": "index.html", "content": "完全なHTMLコード"}}], "summary": "作成内容の日本語説明（1-2文）"}}"""
+    else:
+        return f"""あなたはスマートフォン向けブラウザゲーム開発の専門家です。
+以下の既存コードを、ユーザーの指示に従って修正してください。
+
+--- 既存コード ---
+{existing_code}
+--- 既存コード終わり ---
+
+ユーザーの指示: {user_message}
+
+必須ルール:
+- 出力は JSON 形式のみ。他のテキストは一切含めない
+- 修正後の完全なファイルを出力すること（差分ではなく全体）
+- 変更箇所以外のコードは維持すること
+
+出力形式（このJSON以外のテキストは絶対に出力しないこと）:
+{{"files": [{{"path": "index.html", "content": "修正後の完全なHTMLコード"}}], "summary": "変更内容の日本語説明（1-2文）"}}"""
+
+
+def _extract_json_from_response(raw_text):
+    """Extract JSON from Claude CLI output. 3-tier strategy."""
+    if not raw_text or not raw_text.strip():
+        raise ValueError("v2_output_invalid: empty response")
+
+    text = raw_text.strip()
+
+    # 1. ```json ... ``` code fence
+    fence_match = re.search(r'```json\s*\n(.*?)\n\s*```', text, re.DOTALL)
+    if fence_match:
+        try:
+            return json.loads(fence_match.group(1))
+        except json.JSONDecodeError:
+            pass
+
+    # 2. Full text as JSON
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # 3. Last JSON block (scan backward for matching braces)
+    brace_depth = 0
+    json_end = -1
+    json_start = -1
+    for i in range(len(text) - 1, -1, -1):
+        if text[i] == '}':
+            if brace_depth == 0:
+                json_end = i
+            brace_depth += 1
+        elif text[i] == '{':
+            brace_depth -= 1
+            if brace_depth == 0:
+                json_start = i
+                break
+
+    if json_start >= 0 and json_end > json_start:
+        try:
+            return json.loads(text[json_start:json_end + 1])
+        except json.JSONDecodeError:
+            pass
+
+    raise ValueError("v2_output_invalid: no valid JSON found in response")
+
+
+def _sanitize_output_files(files):
+    """Filter output files through path allowlist."""
+    sanitized = []
+    for f in (files or []):
+        path = f.get("path", "")
+        content = f.get("content", "")
+        # Reject traversal and absolute paths
+        if path.startswith("/") or ".." in path:
+            print(f"[v2_codegen] REJECTED path (traversal): {path}")
+            continue
+        # Allowlist check
+        if not any(pattern.match(path) for pattern in _ALLOWED_OUTPUT_PATHS):
+            print(f"[v2_codegen] REJECTED path (not allowed): {path}")
+            continue
+        if not content:
+            continue
+        sanitized.append({"path": path, "content": content})
+    return sanitized
+
 
 @app.function(image=web_image, secrets=[api_proxy_secret, internal_secret, proxy_secret, vertex_ai_secret, vertex_config_secret], volumes={MOUNT_DATA: data_volume})
 @modal.fastapi_endpoint(method="POST")
@@ -2778,7 +2945,7 @@ async def v2_chat_haiku(request: Request):
 @app.function(image=web_image, secrets=[api_proxy_secret, internal_secret, proxy_secret, vertex_ai_secret, vertex_config_secret], volumes={MOUNT_DATA: data_volume})
 @modal.fastapi_endpoint(method="POST")
 async def v2_generate_code(request: Request):
-    """V2 code generation - returns placeholder until full implementation."""
+    """V2 code generation — calls Claude Haiku in sandbox to generate/edit game code."""
     from starlette.responses import JSONResponse
 
     if not verify_internal_auth(request):
@@ -2791,20 +2958,69 @@ async def v2_generate_code(request: Request):
 
     user_id = body.get("user_id", "")
     project_id = body.get("project_id", "")
+    prompt = body.get("prompt", "")
 
     if not user_id:
         return JSONResponse({"error": "user_id is required"}, status_code=400)
     if not project_id:
         return JSONResponse({"error": "project_id is required"}, status_code=400)
+    if not prompt:
+        return JSONResponse({"error": "prompt is required"}, status_code=400)
 
     try:
         validate_ids(user_id, project_id)
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
 
-    # Stub: return empty result. Full implementation connects to Claude CLI.
-    return JSONResponse({
-        "files": [],
-        "summary": "v2_generate_code stub — no code generated",
-        "engine_version": "v2",
-    })
+    # Read existing project files from volume
+    project_dir = f"{MOUNT_DATA}/users/{user_id}/projects/{project_id}"
+    existing_code = _read_project_files(project_dir)
+    is_new_project = (existing_code is None)
+    print(f"[v2_codegen] project={project_id}, new={is_new_project}, prompt_len={len(prompt)}")
+
+    # Build code generation prompt
+    codegen_prompt = _build_codegen_prompt(prompt, existing_code, is_new_project)
+
+    try:
+        # Call Claude Haiku (120s timeout for code generation)
+        raw_response = await run_haiku_in_sandbox(codegen_prompt, timeout_seconds=120)
+        print(f"[v2_codegen] raw_response length={len(raw_response) if raw_response else 0}")
+
+        # Parse JSON (3-tier robust extraction)
+        result = _extract_json_from_response(raw_response)
+
+        # Sanitize file paths through allowlist
+        sanitized_files = _sanitize_output_files(result.get("files", []))
+
+        # Validate: must have index.html
+        if not sanitized_files or not any(f["path"] == "index.html" for f in sanitized_files):
+            print(f"[v2_codegen] INVALID: no index.html in output (files={len(sanitized_files)})")
+            return JSONResponse({
+                "error": "invalid codegen output: missing index.html",
+                "error_code": "v2_output_invalid",
+            }, status_code=502)
+
+        summary = str(result.get("summary", ""))[:500]
+        print(f"[v2_codegen] OK: {len(sanitized_files)} files, summary='{summary[:50]}...'")
+
+        return JSONResponse({
+            "files": sanitized_files,
+            "summary": summary,
+            "engine_version": "v2",
+        })
+
+    except ValueError as e:
+        # JSON extraction failed
+        error_msg = str(e)
+        print(f"[v2_codegen] PARSE ERROR: {error_msg}")
+        return JSONResponse({
+            "error": error_msg,
+            "error_code": "v2_output_invalid",
+        }, status_code=502)
+
+    except Exception as e:
+        print(f"[v2_codegen] ERROR: {type(e).__name__}: {e}")
+        return JSONResponse({
+            "error": str(e),
+            "error_code": "v2_codegen_error",
+        }, status_code=502)

@@ -1,127 +1,85 @@
 # Engine V2 — 次にやること
 
 作成日: 2026-02-07
-更新日: 2026-02-07（CTO レビュー反映）
-前提: M1（設計）、M2（実装）、M3インフラ（Shadow Mode 基盤）完了
+更新日: 2026-02-07（M3 クローズ、アクション#2 開始）
+前提: M1（設計）、M2（実装）、M3（Shadow Mode 基盤 + 契約テスト + スケジューラ修正）完了
+
+---
+
+## M3 クローズ（CTO 承認済み 2026-02-07）
+
+### PASS した内容: 配管と安定性
+
+- 契約テスト: v2_detect_intent 200 + スキーマ検証、v2_generate_code 400 許容/5xx 不合格
+- スケジューラ: 偽デッドロック検出バグを修正（3層防御: countStuckTasks改善 + リトライ + allSettled）
+- Shadow 20ジョブ: **成功率 100%、デッドロック 0、5xx 0、V1 巻き添え 0**
+
+### 未完了: 品質/速度の本番評価
+
+- codegen はスタブ（`{ files: [], summary: "..." }`）
+- 実際のコード生成品質・レイテンシは未計測
+- → アクション#2 で解消
+
+### コミット履歴
+
+| コミット | 内容 |
+|---------|------|
+| `61a1e3c` | propagateFailure の未使用パラメータ修正 |
+| `403d523` | 契約テスト初版 |
+| `59bf352` | Modal V2 シークレット修正 + 契約テスト強化 |
+| `9a89026` | スケジューラ偽デッドロック修正 |
 
 ---
 
 ## 現在の状態
 
-Shadow Mode のインフラは動作確認済み:
-- GCE → Supabase Pooler 経由で `engine_v2.*` テーブルへの読み書きが成功
-- DAG ワークフロー（タスク作成 → 実行 → 失敗伝播 → 完了）が正常動作
-- `job_runs` に shadow 実行が `succeeded` で記録されている
-
-**ただし、V2 agent は実質スタブ状態:**
-- `intent` タスク → Modal の `v2DetectIntent` が 404（エンドポイント未デプロイ or ルーティング不一致）
-- `plan`, `asset`, `qa_review`, `fix`, `publish_prep` → コード内スタブ（Modal 呼び出しなし）
-- `codegen` → Modal の `v2GenerateCode` を呼ぶが、intent が先に失敗するため到達しない
-
-つまり「パイプラインの配管は通った」が「水はまだ流れていない」状態。
-
----
-
-## 今週のタスク（最短パス）
-
-### 1. Modal v2DetectIntent の 404 解消
-
-**問題:** `modalClient.v2DetectIntent()` が Modal で 404 を返す。
-
-**やること:**
-1. `modal/app.py` の `v2_detect_intent` エンドポイントが正しくデプロイされているか確認
-2. `server/modalClient.js` の V2 メソッドが正しい URL パスを呼んでいるか確認
-3. 必要なら Modal を再デプロイ (`cd modal && modal deploy app.py`)
-4. ローカルで `modal serve app.py` + curl でエンドポイント単体テスト
-
-**契約テスト（CTO 指示）:**
-起動時ヘルスチェックで `v2_detect_intent` / `v2_generate_code` を必須確認する。
-エンドポイントが応答しなければ `ENGINE_V2_ENABLED` を自動で無効化。
-
-```javascript
-// 起動時 or 初回呼び出し時にヘルスチェック
-async function checkV2Endpoints() {
-  const endpoints = ['v2/detect-intent', 'v2/generate-code'];
-  for (const ep of endpoints) {
-    const ok = await modalClient.healthCheck(ep);
-    if (!ok) {
-      console.error(`[EngineV2] Endpoint ${ep} not available, disabling v2`);
-      return false;
-    }
-  }
-  return true;
-}
-```
-
-### 2. intent / codegen 実接続
-
-`server/engine-v2/taskRunner.js` の `callAgent()` で:
-
-| task_key | 現状 | 今週の目標 |
-|----------|------|-----------|
-| `intent` | Modal 404 | **修正して実接続** |
-| `codegen` | Modal 呼び出し（到達しない） | **intent 修正後に動作確認** |
-| `plan` | スタブ `{ plan: 'auto' }` | そのまま（パススルーで十分） |
+| task_key | 状態 | 備考 |
+|----------|------|------|
+| `intent` | **実接続済み** | Modal v2_detect_intent → 200 + intent 判定 |
+| `plan` | スタブ `{ plan: 'auto' }` | パススルー（後段） |
+| `codegen` | **スタブ** `{ files: [] }` | ← **次に実装** |
 | `asset` | スタブ `{ images: [] }` | 後段 |
 | `qa_review` | スタブ `{ issues: 0 }` | 後段 |
-| `fix` | スタブ `{ files: [] }` | 後段 |
+| `fix` | スタブ（skipped） | qa_review.issues=0 で自動スキップ |
 | `publish_prep` | スタブ `{ ready: true }` | 後段 |
-
-**最低限 `intent` + `codegen` が動けば Shadow の計測が意味を持つ。**
-
-### 3. スタッフ限定 shadow を 3-5 日再収集
-
-intent / codegen が動くようになったら、有意なデータを収集:
-
-```bash
-# GCE .env
-ENGINE_V2_ENABLED=true
-ENGINE_V2_MODE=shadow
-ENGINE_V2_ALLOWLIST_ONLY=true
-ENGINE_V2_ALLOWLIST=notef@neighbor.gg   # 内部テスターを追加
-```
-
-### 4. M4a（internal live）へ進む判断
-
-3-5 日の shadow データでロールアウトゲートを確認（後述）。
-合格なら `ENGINE_V2_MODE=live`（スタッフ限定）に切り替え。
 
 ---
 
-## Step 3: Shadow 計測（M3 本格運用）
+## アクション#2: codegen 実エージェント接続（CTO 承認済み）
 
-### 観測項目
-| 項目 | 合格基準 |
-|------|----------|
-| v2 成功率 | ≥ 80% |
-| フォールバック後 v1 成功率 | ≥ 95% |
-| v2 レイテンシ（v1 比） | ≤ 120% |
+### 作業順序（固定）
+
+1. **codegen を実エージェント化**（スタブ除去）
+2. **Shadow で再度 20〜50 ジョブ計測**
+3. **ゲート判定**（下記）
+4. **合格後に M4a（staff live）**
+
+### ゲート判定基準
+
+| ゲート | 基準 |
+|--------|------|
+| v2 成功率 | ≥ 90% |
+| v2_output_invalid | < 5% |
+| fallback_triggered 内訳 | 想定内（既知エラーのみ） |
+| P95 レイテンシ | v1 比 120% 以内（目安） |
 | DAG デッドロック | 0件 |
-| v1 巻き添え障害 | 0件 |
+| V1 巻き添え障害 | 0件 |
 
-### 観測クエリ
-```sql
--- 成功率
-SELECT status, count(*) FROM engine_v2.job_runs
-WHERE mode = 'shadow' GROUP BY status;
+### codegen 実装方針
 
--- タスク別レイテンシ
-SELECT task_key, avg(latency_ms)::int, max(latency_ms)
-FROM engine_v2.job_task_attempts
-GROUP BY task_key;
-```
+Modal `v2_generate_code` エンドポイントで:
+- ユーザーメッセージ + プロンプトを受け取る
+- Claude Haiku (proxy 経由) でゲームコードを生成
+- `{ files: [{path, content}], summary: "..." }` 形式で返す
 
-### 期間
-- 内部テスター 5-10 名で 3-5 日（最低限の有意データ）
-- ロールアウトゲート判定後に M4a へ
+**注意:** Shadow モードでは codegen の出力はユーザーに返されない（計測のみ）。
+品質評価は DB に記録された output を後から分析。
 
 ---
 
 ## Step 4: M4 段階的ロールアウト（CTO レビュー済み）
 
 ### M4a: スタッフ限定 live
-
-Shadow 計測で合格基準を満たしたら:
 
 ```bash
 ENGINE_V2_ENABLED=true
@@ -130,13 +88,7 @@ ENGINE_V2_ALLOWLIST_ONLY=true    # スタッフのみ
 ENGINE_V2_ALLOWLIST=notef@neighbor.gg,staff2@...
 ```
 
-- スタッフが実際に v2 結果でゲームを作成
-- v1 フォールバックは維持（v2 失敗時に自動切り替え）
-- 1-2 週間運用
-
 ### M4b: 一般ユーザー canary
-
-M4a で問題なければ段階的に拡大:
 
 | フェーズ | 対象 | 期間 |
 |---------|------|------|
@@ -146,13 +98,7 @@ M4a で問題なければ段階的に拡大:
 | 50% | | 1週間 |
 | 100% | 全ユーザー | — |
 
-各フェーズでロールアウトゲートを再確認。
-
----
-
-## ロールアウトゲート（CTO 承認済み）
-
-M4a → M4b、および各 canary フェーズの進行条件:
+### ロールアウトゲート（CTO 承認済み）
 
 | ゲート | 基準 |
 |--------|------|
@@ -161,14 +107,6 @@ M4a → M4b、および各 canary フェーズの進行条件:
 | v2_output_invalid | < 5% |
 | DAG デッドロック | 0件 |
 | kill switch 切替訓練 | 済 |
-
-**kill switch 切替訓練:**
-```bash
-# 本番で ENGINE_V2_ENABLED=false にして v1 に即座に戻れることを確認
-# PM2 restart 後 30 秒以内に v1 のみで正常動作することを検証
-```
-
-異常検知 → 即座に `ENGINE_V2_ENABLED=false` でロールバック。
 
 ---
 
@@ -190,5 +128,8 @@ M4a → M4b、および各 canary フェーズの進行条件:
 | `.claude/plans/m3-shadow-observation.md` | M3 観測項目・クエリ |
 | `.claude/plans/engine-v2-teardown.md` | 緊急撤去手順 |
 | `server/engine-v2/taskRunner.js` | agent 呼び出しロジック（callAgent） |
+| `server/engine-v2/contractTest.js` | 契約テスト（M3 で実装） |
+| `server/engine-v2/scheduler.js` | DAG スケジューラ（M3 で修正） |
 | `server/modalClient.js` | Modal HTTP クライアント |
 | `modal/app.py` | Modal V2 エンドポイント定義 |
+| `test-shadow-20.js` | Shadow 20ジョブテストスクリプト |
