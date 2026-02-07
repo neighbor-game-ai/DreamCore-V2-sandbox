@@ -8,6 +8,40 @@ Phase 1 リファクタリング完了。セキュリティ・安定性の改善
 
 ## 最近の作業
 
+### 2026-02-08: CLI デーモン化 計画策定 📋
+
+**詳細:** `.claude/logs/2026-02-08-cli-daemon-plan.md`
+**計画書:** `.claude/plans/cli-daemon.md`
+
+- detectIntent の平均所要時間 7.5 秒の根本原因を特定（CLI コールドスタート）
+- Modal Sandbox 内に Claude CLI 常駐デーモンを置く設計を策定
+- CTO 承認済み、レビュー指摘 6 件 + Info 2 件を反映
+- **次のアクション:**
+  1. Phase 0: stream-json スモークテスト（Gate 1-4 クリア）
+  2. Phase 1: detectIntent + detectSkills 統合（デーモンと独立、先行可能）
+  3. Phase 2: デーモン実装（本命）→ 7.5秒 → 2-3秒
+
+---
+
+### 2026-02-07: V1 Cleanup 回帰テスト → GO ✅
+
+**詳細:** `.claude/logs/2026-02-07-v1-regression-test.md`
+
+- 6 カテゴリ 100+ テスト実施、全判定基準 PASS
+- V1 成功率: 新規 95%, 編集 100% / V2 runs = 0
+- **次スプリント P1（インフラガードレール・優先度高）:**
+  1. WS レート制限の配線（`config.js` の `RATE_LIMIT.ws` は定義済みだが `index.js` に未接続）
+  2. `maxPayload` を `WebSocket.Server` オプションに配線（`config.js` の値が適用されていない）
+  3. WS 入力バリデーション（type ごとに必須フィールド/型/長さチェック）
+  4. `maxConcurrentPerUser: 1` の WS メッセージレベル反映
+  - **背景:** クォータスキップ実装（`250a273`）でDB/AI到達を防いだが、WS層自体のレート制限がないとイベントループ占有のリスクが残る
+  - **下準備済み:** `server/config.js` に `RATE_LIMIT.ws` 追加済み（未配線）
+  - **TODO:** `server/errorResponse.js` に `RATE_LIMITED` 追加
+- **次スプリント P2:**
+  1. Bubble Magic Puzzle no_job 原因調査
+
+---
+
 ### 2026-02-07: Engine V2 統合の巻き戻し（V1 解放） ✅
 
 **詳細:** `.claude/logs/2026-02-07-v1-cleanup.md`

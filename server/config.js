@@ -271,6 +271,21 @@ const RATE_LIMIT = {
     maxTokens: 100000,
     maxOutputSize: 1 * 1024 * 1024    // 1MB
   },
+  // WebSocket limits (server-side, in-memory)
+  // NOTE: These are not user-facing quotas; they are guardrails against WS spam/DoS.
+  ws: {
+    maxPayloadBytes: 1 * 1024 * 1024,  // 1MB per message
+    // Per-connection token bucket for non-trivial messages (excludes ping/viewState).
+    perConnection: {
+      capacity: 120,
+      refillPerMinute: 120
+    },
+    // Per-user token bucket for AI-triggering messages (type="message").
+    perUserAiMessage: {
+      capacity: 8,
+      refillPerMinute: 8
+    }
+  },
   // Weekly chat limit
   chat: {
     weeklyLimit: 50,
